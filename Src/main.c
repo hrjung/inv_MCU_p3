@@ -76,8 +76,8 @@ DMA_HandleTypeDef hdma_usart1_tx;
 osThreadId defaultTaskHandle;
 osThreadId NfcNvmTaskHandle;
 osThreadId userIoTaskHandle;
-osThreadId YstcEventTaskHandle;
-osThreadId rs485TaskHandle;
+osThreadId mainHandlerTaskHandle;
+osThreadId mbus485TaskHandle;
 osThreadId opt485TaskHandle;
 osMessageQId YSTC_eventQHandle;
 osTimerId YstcTriggerTimerHandle;
@@ -114,8 +114,8 @@ static void MX_TIM11_Init(void);
 void StartDefaultTask(void const * argument);
 void NfcNvmTaskFunc(void const * argument);
 void userIoTaskFunc(void const * argument);
-void YstcEventTaskFunc(void const * argument);
-void rs485TaskFunc(void const * argument);
+void mainHandlerTaskFunc(void const * argument);
+void mbus485TaskFunc(void const * argument);
 void opt485TaskFunc(void const * argument);
 void YstcTriggerTimerCallback(void const * argument);
 void YstcUpdateTimerCallback(void const * argument);
@@ -129,13 +129,13 @@ void AccReadTimerCallback(void const * argument);
 #define ACC_READ_TIME_INTERVAL		1000 // 1sec
 
 #define WATCHDOG_NFC		0x01
-#define WATCHDOG_YSTC		0x02
+#define WATCHDOG_MAIN		0x02
 #define WATCHDOG_USERIO		0x04
-#define WATCHDOG_RS485		0x08
-#define WATCHDOG_ALL		0x0F
+#define WATCHDOG_MODBUS		0x08
+#define WATCHDOG_RS485		0x10
+#define WATCHDOG_ALL		0x1F
 
-uint32_t ystc_event_cnt=0, default_cnt=0, nfc_cnt=0, rs485_cnt=0, user_io_cnt=0;
-uint32_t key_scan_cnt=0, nfc_app_cnt=0, ystc_trigger_cnt=0;
+uint32_t default_cnt=0, main_cnt=0, nfc_cnt=0, mbus_cnt=0, rs485_cnt=0, user_io_cnt=0;
 
 extern uint16_t adc_value;
 
@@ -232,12 +232,12 @@ int main(void)
   MX_SPI1_Init();
   MX_SPI3_Init();
   MX_USART1_UART_Init();
-  //MX_USART3_UART_Init();
+  MX_USART3_UART_Init();
   MX_RTC_Init();
   MX_TIM3_Init();
   MX_TIM7_Init();
   MX_TIM10_Init();
-  //MX_IWDG_Init();
+  MX_IWDG_Init();
   MX_ADC1_Init();
   MX_UART4_Init();
   MX_USART2_UART_Init();
@@ -255,6 +255,13 @@ int main(void)
 
   // ADC self calibration
   while(!(HAL_ADCEx_Calibration_Start(&hadc1)==HAL_OK));
+
+
+  // TODO : initialize NVM
+
+
+  HAL_IWDG_Refresh(&hiwdg); // kick
+
 
   /* USER CODE END 2 */
 
@@ -324,13 +331,13 @@ int main(void)
   osThreadDef(userIoTask, userIoTaskFunc, osPriorityBelowNormal, 0, 128);
   userIoTaskHandle = osThreadCreate(osThread(userIoTask), NULL);
 
-  /* definition and creation of YstcEventTask */
-  osThreadDef(YstcEventTask, YstcEventTaskFunc, osPriorityNormal, 0, 256);
-  YstcEventTaskHandle = osThreadCreate(osThread(YstcEventTask), NULL);
+  /* definition and creation of mainHandlerTask */
+  osThreadDef(mainHandlerTask, mainHandlerTaskFunc, osPriorityNormal, 0, 512);
+  mainHandlerTaskHandle = osThreadCreate(osThread(mainHandlerTask), NULL);
 
-  /* definition and creation of rs485Task */
-  osThreadDef(rs485Task, rs485TaskFunc, osPriorityIdle, 0, 256);
-  rs485TaskHandle = osThreadCreate(osThread(rs485Task), NULL);
+  /* definition and creation of mbus485Task */
+  osThreadDef(mbus485Task, mbus485TaskFunc, osPriorityIdle, 0, 256);
+  mbus485TaskHandle = osThreadCreate(osThread(mbus485Task), NULL);
 
   /* definition and creation of opt485Task */
   osThreadDef(opt485Task, opt485TaskFunc, osPriorityIdle, 0, 256);
@@ -1052,13 +1059,12 @@ void StartDefaultTask(void const * argument)
 {
 
   /* USER CODE BEGIN 5 */
-  osDelay(500);
+  osDelay(10);
   kputs(PORT_DEBUG, "start DefaultTask\r\n");
   /* Infinite loop */
   for(;;)
   {
 
-#if 0
 #ifdef SUPPORT_TASK_WATCHDOG
 	if((watchdog_f&WATCHDOG_ALL) == WATCHDOG_ALL)
 	{
@@ -1068,7 +1074,7 @@ void StartDefaultTask(void const * argument)
 #else
 	HAL_IWDG_Refresh(&hiwdg); // kick
 #endif
-#endif
+
 	default_cnt++;
     osDelay(100);
   }
@@ -1094,6 +1100,23 @@ void NfcNvmTaskFunc(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+	  // read NFC tag flag
+
+	  // if tagged, wait tag_end
+
+
+	  // if tag end, update NVM -> table
+	  //	check parameter table
+	  //	check system parameter
+
+
+	  // else if tag error, restore NVM <- table
+
+
+	  // no tag state,
+	  //	handle NVM update request
+
+
 
 #ifdef SUPPORT_TASK_WATCHDOG
 	  watchdog_f |= WATCHDOG_NFC;
@@ -1122,67 +1145,69 @@ void userIoTaskFunc(void const * argument)
 #ifdef SUPPORT_TASK_WATCHDOG
 	watchdog_f |= WATCHDOG_USERIO;
 #endif
-    osDelay(10);
+    osDelay(100);
   }
   /* USER CODE END userIoTaskFunc */
 }
 
-/* USER CODE BEGIN Header_YstcEventTaskFunc */
+/* USER CODE BEGIN Header_mainHandlerTaskFunc */
 /**
-* @brief Function implementing the YstcEventTask thread.
+* @brief Function implementing the mainHandlerTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_YstcEventTaskFunc */
-void YstcEventTaskFunc(void const * argument)
+/* USER CODE END Header_mainHandlerTaskFunc */
+void mainHandlerTaskFunc(void const * argument)
 {
-  /* USER CODE BEGIN YstcEventTaskFunc */
+  /* USER CODE BEGIN mainHandlerTaskFunc */
+  /* Infinite loop */
   osDelay(50);
   kputs(PORT_DEBUG, "YstcEvent task started\r\n");
   /* Infinite loop */
   for(;;)
   {
 
+
 #ifdef SUPPORT_TASK_WATCHDOG
-	watchdog_f |= WATCHDOG_YSTC;
+	watchdog_f |= WATCHDOG_MAIN;
 #endif
-    osDelay(5);
+	main_cnt++;
+	osDelay(5);
   }
-  /* USER CODE END YstcEventTaskFunc */
+  /* USER CODE END mainHandlerTaskFunc */
 }
 
-/* USER CODE BEGIN Header_rs485TaskFunc */
+/* USER CODE BEGIN Header_mbus485TaskFunc */
 /**
-* @brief Function implementing the rs485Task thread.
+* @brief Function implementing the mbus485Task thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_rs485TaskFunc */
-void rs485TaskFunc(void const * argument)
+/* USER CODE END Header_mbus485TaskFunc */
+void mbus485TaskFunc(void const * argument)
 {
-  /* USER CODE BEGIN rs485TaskFunc */
-  
-  MB_init();
-  osDelay(5);
+  /* USER CODE BEGIN mbus485TaskFunc */
 
-  kputs(PORT_DEBUG, "rs485Task started\r\n");
+	MB_init();
+	osDelay(5);
+
+	kputs(PORT_DEBUG, "rs485Task started\r\n");
 
 
-  /* Infinite loop */
-  for(;;)
-  {
+	/* Infinite loop */
+	for(;;)
+	{
 	  MB_TaskFunction();
 	  //rs485TaskFunction();
 
-	  rs485_cnt++;
+	  mbus_cnt++;
 
 #ifdef SUPPORT_TASK_WATCHDOG
-	  watchdog_f |= WATCHDOG_RS485;
+	  watchdog_f |= WATCHDOG_MODBUS;
 #endif
 	  osDelay(5);
-
-  }
-  /* USER CODE END rs485TaskFunc */
+	}
+  /* USER CODE END mbus485TaskFunc */
 }
 
 /* USER CODE BEGIN Header_opt485TaskFunc */
@@ -1198,7 +1223,14 @@ void opt485TaskFunc(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(10);
+	  //rs485TaskFunction();
+
+	  rs485_cnt++;
+
+#ifdef SUPPORT_TASK_WATCHDOG
+	  watchdog_f |= WATCHDOG_RS485;
+#endif
+	  osDelay(5);
   }
   /* USER CODE END opt485TaskFunc */
 }
