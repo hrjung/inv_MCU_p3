@@ -47,7 +47,9 @@
 /*******************************************************************************
  * GLOBAL VARIABLES
  */
-extern MODBUS_SLAVE_QUEUE modbusRx, modbusTx;
+extern int16_t state_run_stop;
+
+extern MODBUS_SLAVE_QUEUE mbBufRx, modbusTx;
 
 extern MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 extern MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
@@ -84,53 +86,53 @@ void test_modbusBasic(void)
 	// normal request : read holding register
 	uint8_t read_holding_reg[] = {0x1, 0x3, 0x0, 0x0, 0x0, 0xA, 0xC5, 0xCD}; // normal register
 	exp = 1;
-	modbusRx.wp = 8;
-	memcpy(modbusRx.buf, read_holding_reg, (int)modbusRx.wp);
+	mbBufRx.wp = 8;
+	memcpy(mbBufRx.buf, read_holding_reg, (int)mbBufRx.wp);
 	result = MB_isValidRecvPacket();
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// normal request : read input register
 	uint8_t read_input_reg[] = {0x1, 0x4, 0x0, 0x0, 0x0, 0xA, 0x70, 0x0D}; // normal input
-	memset(modbusRx.buf, 0, MODBUS_BUF_SIZE);
+	memset(mbBufRx.buf, 0, MODBUS_BUF_SIZE);
 	exp = 1;
-	modbusRx.wp = 8;
-	memcpy(modbusRx.buf, read_input_reg, (int)modbusRx.wp);
+	mbBufRx.wp = 8;
+	memcpy(mbBufRx.buf, read_input_reg, (int)mbBufRx.wp);
 	result = MB_isValidRecvPacket();
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// normal request : write single register
 	uint8_t write_input_reg[] = {0x1, 0x6, 0x0, 0x14, 0x0, 0x0, 0xC9, 0xCE}; // normal write single register
-	memset(modbusRx.buf, 0, MODBUS_BUF_SIZE);
+	memset(mbBufRx.buf, 0, MODBUS_BUF_SIZE);
 	exp = 1;
-	modbusRx.wp = 8;
-	memcpy(modbusRx.buf, write_input_reg, (int)modbusRx.wp);
+	mbBufRx.wp = 8;
+	memcpy(mbBufRx.buf, write_input_reg, (int)mbBufRx.wp);
 	result = MB_isValidRecvPacket();
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// normal write multiple register
 	uint8_t write_multi_reg[] = {0x1, 0x10, 0x0, 0x14, 0x0, 0x2, 0x4, 0x0, 0x0, 0x0, 0x0, 0xF3, 0x50}; // multi write single register
-	memset(modbusRx.buf, 0, MODBUS_BUF_SIZE);
+	memset(mbBufRx.buf, 0, MODBUS_BUF_SIZE);
 	exp = 1;
-	modbusRx.wp = 13;
-	memcpy(modbusRx.buf, write_multi_reg, (int)modbusRx.wp);
+	mbBufRx.wp = 13;
+	memcpy(mbBufRx.buf, write_multi_reg, (int)mbBufRx.wp);
 	result = MB_isValidRecvPacket();
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// slave address error
 	uint8_t slave_addr_test[] = {0x2, 0x4, 0x0, 0x0, 0x0, 0xA, 0x70, 0x0D}; // wrong slave address
-	memset(modbusRx.buf, 0, MODBUS_BUF_SIZE);
+	memset(mbBufRx.buf, 0, MODBUS_BUF_SIZE);
 	exp = 0;
-	modbusRx.wp = 8;
-	memcpy(modbusRx.buf, slave_addr_test, (int)modbusRx.wp);
+	mbBufRx.wp = 8;
+	memcpy(mbBufRx.buf, slave_addr_test, (int)mbBufRx.wp);
 	result = MB_isValidRecvPacket();
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// CRC error
 	uint8_t crc_err_test[] = {0x1, 0x4, 0x0, 0x0, 0x0, 0xA, 0x71, 0x0D}; // crc error
-	memset(modbusRx.buf, 0, MODBUS_BUF_SIZE);
+	memset(mbBufRx.buf, 0, MODBUS_BUF_SIZE);
 	exp = 0;
-	modbusRx.wp = 8;
-	memcpy(modbusRx.buf, crc_err_test, (int)modbusRx.wp);
+	mbBufRx.wp = 8;
+	memcpy(mbBufRx.buf, crc_err_test, (int)mbBufRx.wp);
 	result = MB_isValidRecvPacket();
 	TEST_ASSERT_EQUAL_INT(exp, result);
 }
@@ -726,8 +728,8 @@ void test_readCommand(uint8_t func_code)
 	exp = MOD_EX_NO_ERR;
 	index = MB_handleReadRegister(func_code, test_addr, count);
 	TEST_ASSERT_EQUAL_INT(exp, index);
-	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x7);
-	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0xD0); // 2000
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x2);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x58); // 600
 
 	test_addr = MB_EXT_IO_END_ADDR; // baudrate
 	exp = MOD_EX_NO_ERR;
@@ -882,6 +884,8 @@ void test_modbusFC06(void)
 {
 	uint16_t test_addr, w_val, r_val;
 	int exp, result;
+
+	state_run_stop= 0;
 
 	test_addr = MB_DRIVER_START_ADDR;
 	exp = MOD_EX_NO_ERR;

@@ -74,7 +74,7 @@ void test_handleDout(void)
 	exp_result0 = 0;
 	exp_result1 = 1;
 #ifdef SUPPORT_NFC_OLD
-	table_setStatusValue(run_status2_type, 0x10000);
+	table_setStatusValue(run_status2_type, 0x100);
 #else
 	table_setStatusValue(overload_alarm_type, 0);
 	table_setStatusValue(shaftbrake_status_type, 1);
@@ -100,13 +100,14 @@ void test_handleDout(void)
 	TEST_ASSERT_EQUAL_INT(exp_result1, mdout_value[1]);
 
 	// trip at 1
+	err_state = 0; // no error
 	exp_result1 = 0;
 	table_setValue(index1, DOUT_trip_notify);
 	EXT_DO_handleDout();
 	TEST_ASSERT_EQUAL_INT(exp_result0, mdout_value[0]); //
 	TEST_ASSERT_EQUAL_INT(exp_result1, mdout_value[1]);
 
-	err_state=1;
+	err_state = 1; // set error state
 	exp_result1 = 1;
 	EXT_DO_handleDout();
 	TEST_ASSERT_EQUAL_INT(exp_result0, mdout_value[0]); //

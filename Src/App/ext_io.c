@@ -341,9 +341,7 @@ void EXT_DO_setDoutPin(int do_idx, int32_t DO_config)
 		break;
 
 	case DOUT_trip_notify:
-		// TODO : need implementation
-		//value = (int32_t)ERR_isErrorState();
-		value = 0;
+		value = (int32_t)ERR_isErrorState();
 		if(value)
 			mdout_value[do_idx] = 1;
 		else

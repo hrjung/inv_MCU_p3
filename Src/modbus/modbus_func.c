@@ -102,7 +102,7 @@ int MB_isCRC_OK(uint8_t *buf, uint32_t len)
 {
 	uint16_t recvCRC, caclCRC;
 
-	recvCRC = (((uint16_t)buf[len-2] << 8) & 0xFF00) | ((uint16_t)modbusRx.buf[len-1] & 0x0FF);
+	recvCRC = (((uint16_t)buf[len-2] << 8) & 0xFF00) | ((uint16_t)buf[len-1] & 0x0FF);
 	caclCRC = CRC16(buf, len-2);
 
 	if(recvCRC == caclCRC) return 1;

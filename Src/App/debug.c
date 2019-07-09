@@ -903,7 +903,7 @@ STATIC int utest_ser(uint8_t dport)
 
 	UNITY_BEGIN();
 
-#if 1
+#if 0
 	// add nvm_queue test
 	RUN_TEST(test_nfc_q_basic);
 	RUN_TEST(test_nfc_q_muliple);
@@ -921,6 +921,7 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_parseMessage);
 	RUN_TEST(test_sendCommand);
 
+
 	// ext_di_
 	RUN_TEST(test_setupMultiFuncDin);
 	RUN_TEST(test_convertMultiStep);
@@ -935,6 +936,7 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_setValue);
 #endif
 
+#if 1
 	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);
@@ -945,7 +947,7 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_modbusFC04_multi);
 	RUN_TEST(test_modbusFC06);
 	//RUN_TEST(test_modbusFC16);
-
+#endif
 	UNITY_END();
 
 	kputs(dport, " End of Unit Test!\r\n Reset Device!!\r\n");

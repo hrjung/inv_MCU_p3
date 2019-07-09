@@ -2,7 +2,7 @@
  * test_table.c
  *
  *  Created on: 2019. 6. 29.
- *      Author: skson8495
+ *      Author: hrjung
  */
 
 #include "includes.h"

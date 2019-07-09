@@ -384,8 +384,8 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(overload_alarm_type, (int32_t)st_overload);
 		table_setStatusValue(shaftbrake_status_type, (int32_t)st_brake);
 #endif
-		table_setStatusValue(run_freq_type, (int32_t)(10.0*run_freq_index) );
-		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index) );
+		table_setStatusValue(run_freq_type, (int32_t)(10.0*run_freq_index + 0.05) );
+		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index + 0.05) );
 		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index) );
 		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index) );
 		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index) );

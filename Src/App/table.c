@@ -723,7 +723,11 @@ int32_t table_getInitValue(PARAM_IDX_t index)
 
 int8_t table_runFunc(PARAM_IDX_t idx, int32_t value, int16_t opt)
 {
+#ifdef SUPPORT_UNIT_TEST
+	return param_table[idx].param_func(idx, value, REQ_FROM_TEST);
+#else
 	return param_table[idx].param_func(idx, value, opt);
+#endif
 }
 
 int32_t table_getCtrllIn(void)

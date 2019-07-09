@@ -327,8 +327,8 @@ void test_parseMessage(void)
 	exp_ovload_st = (int32_t)0;
 	exp_brake_st = (int32_t)1;
 #endif
-	exp_i_rms = (int32_t)(test_i_rms*10.0);
-	exp_freq = (int32_t)(test_freq*10.0);
+	exp_i_rms = (int32_t)(test_i_rms*10.0 + 0.05);
+	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	exp_dc_volt = (int32_t)(test_dc_volt*10.0);
 	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0);
 	exp_mtr_temp = (int32_t)1;
@@ -369,8 +369,8 @@ void test_parseMessage(void)
 	exp_ovload_st = (int32_t)1;
 	exp_brake_st = (int32_t)0;
 #endif
-	exp_i_rms = (int32_t)(test_i_rms*10.0);
-	exp_freq = (int32_t)(test_freq*10.0);
+	exp_i_rms = (int32_t)(test_i_rms*10.0 + 0.05);
+	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	exp_dc_volt = (int32_t)(test_dc_volt*10.0);
 	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0);
 	exp_mtr_temp = (int32_t)2;
@@ -406,8 +406,8 @@ void test_parseMessage(void)
 	exp_result = COMM_SUCCESS;
 	exp_err_code = (int32_t)err_code;
 	exp_run_status = (int32_t)run_status;
-	exp_current = (int32_t)(test_current*10.0);
-	exp_freq = (int32_t)(test_freq*10.0);
+	exp_current = (int32_t)(test_current*10.0 + 0.05);
+	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_err_code, table_data[err_code_0_type]);
@@ -425,8 +425,8 @@ void test_parseMessage(void)
 	exp_result = COMM_SUCCESS;
 	exp_err_code = (int32_t)err_code;
 	exp_run_status = (int32_t)run_status;
-	exp_current = (int32_t)(test_current*10.0);
-	exp_freq = (int32_t)(test_freq*10.0);
+	exp_current = (int32_t)(test_current*10.0 + 0.05);
+	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_err_code, table_data[err_code_0_type]);
@@ -436,7 +436,7 @@ void test_parseMessage(void)
 
 	//========= RESP_PARAM : valid dsp_index
 	dsp_index = value_dsp;
-	for(i=0; i<10; i++) recvMsg[i] = rcvMsg_PARAM[i];
+	for(i=0; i<8; i++) recvMsg[i] = rcvMsg_PARAM[i];
 	recvMsg[5] = dsp_index;
 	recvMsg[6] = 0, recvMsg[7] = 0; // no need to set
 	exp_result = COMM_SUCCESS;
@@ -445,7 +445,7 @@ void test_parseMessage(void)
 	TEST_ASSERT_EQUAL_INT(dsp_index, read_idx);
 
 	dsp_index = fan_onoff_dsp;
-	for(i=0; i<10; i++) recvMsg[i] = rcvMsg_PARAM[i];
+	for(i=0; i<8; i++) recvMsg[i] = rcvMsg_PARAM[i];
 	recvMsg[5] = dsp_index;
 	recvMsg[6] = 0, recvMsg[7] = 0; // no need to set
 	exp_result = COMM_SUCCESS;
@@ -455,7 +455,7 @@ void test_parseMessage(void)
 
 	//========= invalid dsp_index
 	dsp_index = none_dsp;
-	for(i=0; i<10; i++) recvMsg[i] = rcvMsg_PARAM[i];
+	for(i=0; i<8; i++) recvMsg[i] = rcvMsg_PARAM[i];
 	recvMsg[5] = dsp_index;
 	recvMsg[6] = 0, recvMsg[7] = 0; // no need to set
 	exp_result = COMM_FAILED;
@@ -463,7 +463,7 @@ void test_parseMessage(void)
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	dsp_index = DSP_PARAM_SIZE;
-	for(i=0; i<10; i++) recvMsg[i] = rcvMsg_PARAM[i];
+	for(i=0; i<8; i++) recvMsg[i] = rcvMsg_PARAM[i];
 	recvMsg[5] = dsp_index;
 	recvMsg[6] = 0, recvMsg[7] = 0; // no need to set
 	exp_result = COMM_FAILED;
@@ -472,7 +472,7 @@ void test_parseMessage(void)
 
 
 	//========= invalid cmd
-	for(i=0; i<10; i++) recvMsg[i] = rcvMsg_PARAM[i];
+	for(i=0; i<8; i++) recvMsg[i] = rcvMsg_PARAM[i];
 	recvMsg[4] = SPICMD_REQ_ST;
 	exp_result = COMM_FAILED;
 	result = COMM_parseMessage();
