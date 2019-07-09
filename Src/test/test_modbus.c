@@ -5,15 +5,14 @@
  *      Author: hrjung
  */
 
+#include "includes.h"
+
 #ifdef SUPPORT_UNIT_TEST
 
-#include <stdio.h>
-#include <string.h>
 #include <memory.h>
 
 #include "unity.h"
 
-#include "proc_uart.h"
 #include "modbus_func.h"
 #include "table.h"
 /*******************************************************************************
@@ -48,18 +47,20 @@
 /*******************************************************************************
  * GLOBAL VARIABLES
  */
-extern uint8_t	mb_slaveAddress;
 extern MODBUS_SLAVE_QUEUE modbusRx, modbusTx;
 
 extern MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
-extern MODBUS_addr_st mb_motor, mb_device, mb_err;
+extern MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
 /*******************************************************************************
  * EXTERNS
  */
 
-extern uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count);
+extern void MB_initAddrMap(void);
+extern int8_t table_initializeBlankEEPROM(void);
+extern void table_setStatusValue(int16_t index, int32_t value);
+
+extern uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count, int8_t *type);
 extern int MB_isValidRecvPacket(void);
-extern int MB_processModbusPacket(void);
 extern int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt);
 extern int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value);
 /*
@@ -140,36 +141,39 @@ void test_modbusAddress(void)
 	int result=0;
 	int exp=0;
 	uint16_t test_addr, count=1;
+	int8_t type=0, exp_type;
+
+	MB_initAddrMap();
 
 	// control parameter range, normal,
 	test_addr = 40113; // direction command
-	exp = (uint16_t)direction_control_type;
-	result = MB_convModbusAddr(test_addr, count);
+	exp = (uint16_t)dir_cmd_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//start,
 	test_addr = MB_DRIVER_START_ADDR; //
 	exp = (uint16_t)value_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//end,
 	test_addr = MB_DRIVER_END_ADDR; //
 	exp = acc_base_set_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//out of range
 	test_addr = MB_DRIVER_END_ADDR+1;
 	exp = MODBUS_ADDR_MAP_ERR;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// valid flag test
 	mb_drive.map[10].valid = 0;
 	test_addr = 40110;
 	exp = MODBUS_ADDR_MAP_ERR-1;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_drive.map[10].valid = 1; // restore
 
@@ -177,14 +181,14 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = MB_DRIVER_END_ADDR-4;
 	exp = jmp_high0_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid count
 	count = 5;
 	test_addr = MB_DRIVER_END_ADDR-3;
 	exp = MODBUS_ADDR_MAP_ERR-2;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid flag on multiple
@@ -192,7 +196,7 @@ void test_modbusAddress(void)
 	count = 10;
 	test_addr = 40101;
 	exp = MODBUS_ADDR_MAP_ERR-3;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_drive.map[10].valid = 1; // restore
 
@@ -201,32 +205,32 @@ void test_modbusAddress(void)
 	count = 1;
 	test_addr = 40203;
 	exp = brake_type_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//start,
 	test_addr = MB_CONFIG_START_ADDR; //
 	exp = ctrl_in_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//end,
 	test_addr = MB_CONFIG_END_ADDR; //
-	exp = dci_brake_rate_type;
-	result = MB_convModbusAddr(test_addr, count);
+	exp = dci_brk_rate_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//out of range
 	test_addr = MB_CONFIG_END_ADDR+1;
 	exp = MODBUS_ADDR_MAP_ERR;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// valid flag test
 	mb_config.map[5].valid = 0;
 	test_addr = 40205;
 	exp = MODBUS_ADDR_MAP_ERR-1;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_config.map[5].valid = 1; // restore
 
@@ -234,14 +238,14 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = MB_CONFIG_END_ADDR-4;
 	exp = brake_freq_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid count
 	count = 5;
 	test_addr = MB_CONFIG_END_ADDR-3;
 	exp = MODBUS_ADDR_MAP_ERR-2;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid flag on multiple
@@ -249,7 +253,7 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = 40202;
 	exp = MODBUS_ADDR_MAP_ERR-3;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_config.map[5].valid = 1; //restore
 
@@ -258,32 +262,32 @@ void test_modbusAddress(void)
 	count = 1;
 	test_addr = 40282; //
 	exp = ovl_enable_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//start,
 	test_addr = MB_PROTECT_START_ADDR; //
 	exp = ovl_warn_limit_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//end,
 	test_addr = MB_PROTECT_END_ADDR; //
 	exp = fan_onoff_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//out of range
 	test_addr = MB_PROTECT_END_ADDR+1;
 	exp = MODBUS_ADDR_MAP_ERR;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// valid flag test
 	mb_protect.map[3].valid = 0;
 	test_addr = 40283;
 	exp = MODBUS_ADDR_MAP_ERR-1;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_protect.map[3].valid = 1; // restore
 
@@ -291,14 +295,14 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = MB_PROTECT_END_ADDR-4;
 	exp = ovl_trip_limit_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid count
 	count = 5;
 	test_addr = MB_PROTECT_END_ADDR-3;
 	exp = MODBUS_ADDR_MAP_ERR-2;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid flag on multiple
@@ -306,7 +310,7 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = 40281;
 	exp = MODBUS_ADDR_MAP_ERR-3;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_protect.map[3].valid = 1; //restore
 
@@ -315,32 +319,32 @@ void test_modbusAddress(void)
 	count = 1;
 	test_addr = 40305; //
 	exp = multi_Dout_1_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//start,
 	test_addr = MB_EXT_IO_START_ADDR; //
 	exp = multi_Din_0_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//end,
 	test_addr = MB_EXT_IO_END_ADDR; //
 	exp = baudrate_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//out of range
 	test_addr = MB_EXT_IO_END_ADDR+1;
 	exp = MODBUS_ADDR_MAP_ERR;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// valid flag test
 	mb_ext_io.map[9].valid = 0;
 	test_addr = 40309;
 	exp = MODBUS_ADDR_MAP_ERR-1;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_ext_io.map[9].valid = 1; // restore
 
@@ -348,14 +352,14 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = MB_EXT_IO_END_ADDR-4;
 	exp = v_in_max_freq_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid count
 	count = 5;
 	test_addr = MB_EXT_IO_END_ADDR-3;
 	exp = MODBUS_ADDR_MAP_ERR-2;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid flag on multiple
@@ -363,7 +367,7 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = 40306;
 	exp = MODBUS_ADDR_MAP_ERR-3;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_ext_io.map[9].valid = 1; //restore
 
@@ -372,32 +376,32 @@ void test_modbusAddress(void)
 	count = 1;
 	test_addr = 40023; //
 	exp = noload_current_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//start,
 	test_addr = MB_MOTOR_START_ADDR; //
 	exp = Rs_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//end,
 	test_addr = MB_MOTOR_END_ADDR; //
 	exp = rated_freq_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//out of range
 	test_addr = MB_MOTOR_END_ADDR+1;
 	exp = MODBUS_ADDR_MAP_ERR;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// valid flag test
 	mb_motor.map[4].valid = 0;
 	test_addr = 40024;
 	exp = MODBUS_ADDR_MAP_ERR-1;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_motor.map[4].valid = 1; // restore
 
@@ -405,14 +409,14 @@ void test_modbusAddress(void)
 	count = 3;
 	test_addr = MB_MOTOR_END_ADDR-2;
 	exp = poles_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid count
 	count = 5;
 	test_addr = MB_MOTOR_END_ADDR-3;
 	exp = MODBUS_ADDR_MAP_ERR-2;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid flag on multiple
@@ -420,7 +424,7 @@ void test_modbusAddress(void)
 	count = 5;
 	test_addr = 40023;
 	exp = MODBUS_ADDR_MAP_ERR-3;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_motor.map[4].valid = 1; //restore
 
@@ -428,48 +432,48 @@ void test_modbusAddress(void)
 	// device setting parameter, normal
 	count = 1;
 	test_addr = 40063; //
-	exp = motor_on_count_type;
-	result = MB_convModbusAddr(test_addr, count);
+	exp = motor_on_cnt_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//start,
 	test_addr = MB_DEVICE_START_ADDR; //
 	exp = model_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//end,
 	test_addr = MB_DEVICE_END_ADDR; //
 	exp = operating_hour_type;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//out of range
 	test_addr = MB_DEVICE_END_ADDR+1;
 	exp = MODBUS_ADDR_MAP_ERR;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// valid flag test
 	mb_device.map[4].valid = 0;
 	test_addr = 40064;
 	exp = MODBUS_ADDR_MAP_ERR-1;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_device.map[4].valid = 1; // restore
 
 	// valid count
 	count = 3;
 	test_addr = MB_DEVICE_END_ADDR-2;
-	exp = motor_on_count_type;
-	result = MB_convModbusAddr(test_addr, count);
+	exp = motor_on_cnt_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid count
 	count = 3;
 	test_addr = MB_DEVICE_END_ADDR-1;
 	exp = MODBUS_ADDR_MAP_ERR-2;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	// invalid flag on multiple
@@ -477,28 +481,133 @@ void test_modbusAddress(void)
 	count = 3;
 	test_addr = 40061;
 	exp = MODBUS_ADDR_MAP_ERR-3;
-	result = MB_convModbusAddr(test_addr, count);
+	result = MB_convModbusAddr(test_addr, count, &type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	mb_device.map[3].valid = 1; //restore
 
 
 
 	// error parameter, normal
+	count = 1;
+	test_addr = 40408; //
+	exp = err_current_1_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//start,
+	test_addr = MB_ERROR_START_ADDR; //
+	exp = err_date_0_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//end,
+	test_addr = MB_ERROR_END_ADDR; //
+	exp = err_freq_4_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
 
 	//out of range
+	test_addr = MB_ERROR_END_ADDR+1;
+	exp = MODBUS_ADDR_MAP_ERR;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+
+	// valid flag test
+	mb_err.map[4].valid = 0;
+	test_addr = 40404;
+	exp = MODBUS_ADDR_MAP_ERR-1;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	mb_err.map[4].valid = 1; // restore
+
+	// valid count
+	count = 3;
+	test_addr = MB_ERROR_END_ADDR-2;
+	exp = err_status_4_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+
+	// invalid count
+	count = 3;
+	test_addr = MB_ERROR_END_ADDR-1;
+	exp = MODBUS_ADDR_MAP_ERR-2;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+
+	// invalid flag on multiple
+	mb_err.map[3].valid = 0;
+	count = 3;
+	test_addr = 40401;
+	exp = MODBUS_ADDR_MAP_ERR-3;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	mb_err.map[3].valid = 1; //restore
 
 
 	// status parameter, normal
+	count = 1;
+	test_addr = 40164; //
+	exp_type = 8;
+	exp = dc_voltage_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
 
 	//start,
+	test_addr = MB_STATUS_START_ADDR; //
+	exp = run_status1_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
 
 	//end,
+	test_addr = MB_STATUS_END_ADDR; //
+	exp = mtr_temperature_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
 
 	//out of range
+	test_addr = MB_STATUS_END_ADDR+1;
+	exp = MODBUS_ADDR_MAP_ERR;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
+
+	// valid flag test
+	mb_status.map[4].valid = 0;
+	test_addr = 40164;
+	exp = MODBUS_ADDR_MAP_ERR-1;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
+	mb_status.map[4].valid = 1; // restore
+
+	// valid count
+	count = 3;
+	test_addr = MB_STATUS_END_ADDR-2;
+	exp = dc_voltage_type;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
+
+	// invalid count
+	count = 3;
+	test_addr = MB_STATUS_END_ADDR-1;
+	exp = MODBUS_ADDR_MAP_ERR-2;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
+
+	// invalid flag on multiple
+	mb_status.map[3].valid = 0;
+	count = 3;
+	test_addr = 40161;
+	exp = MODBUS_ADDR_MAP_ERR-3;
+	result = MB_convModbusAddr(test_addr, count, &type);
+	TEST_ASSERT_EQUAL_INT(exp, result);
+	TEST_ASSERT_EQUAL_INT(exp_type, type);
+	mb_status.map[3].valid = 1; //restore
 }
 
 
@@ -507,12 +616,15 @@ void test_modbusGetValue(void)
 	uint16_t index, test_addr, count=1;
 	int32_t result, exp;
 	uint8_t buf[10];
+	int8_t type=0;
+
+	table_initializeBlankEEPROM();
 
 	// control parameter range, normal,
 	test_addr = 40100; // command frequency
 	exp = 200;
-	index = MB_convModbusAddr(test_addr, count);
-	result = table_database_getValue(index);
+	index = MB_convModbusAddr(test_addr, count, &type);
+	result = table_getValue(index);
 	TEST_ASSERT_EQUAL_INT32(exp, result);
 	buf[0] = (uint8_t)((result&0xFF00) >> 8);
 	buf[1] = (uint8_t)(result&0x00FF);
@@ -523,8 +635,8 @@ void test_modbusGetValue(void)
 	// config parameter range, normal,
 	test_addr = 40312; // mb address
 	exp = 1;
-	index = MB_convModbusAddr(test_addr, count);
-	result = table_database_getValue(index);
+	index = MB_convModbusAddr(test_addr, count, &type);
+	result = table_getValue(index);
 	TEST_ASSERT_EQUAL_INT32(exp, result);
 	buf[0] = (uint8_t)((result&0xFF00) >> 8);
 	buf[1] = (uint8_t)(result&0x00FF);
@@ -625,12 +737,52 @@ void test_readCommand(uint8_t func_code)
 	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x2); // 2
 
 
-	test_addr = 40400; // err_date_0
+	test_addr = MB_ERROR_START_ADDR; // err_date_0
 	exp = MOD_EX_NO_ERR;
 	index = MB_handleReadRegister(func_code, test_addr, count);
 	TEST_ASSERT_EQUAL_INT(exp, index);
 	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x0);
 	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x0); // 0
+
+	test_addr = 40414; // err_freq_2_type
+	exp = MOD_EX_NO_ERR;
+	index = MB_handleReadRegister(func_code, test_addr, count);
+	TEST_ASSERT_EQUAL_INT(exp, index);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x0);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x0); // 0
+
+	test_addr = MB_ERROR_END_ADDR; // err_freq_4_type
+	exp = MOD_EX_NO_ERR;
+	index = MB_handleReadRegister(func_code, test_addr, count);
+	TEST_ASSERT_EQUAL_INT(exp, index);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x0);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x0); // 0
+
+	table_setStatusValue(run_status1_type, (int32_t)0x0101);
+	test_addr = MB_STATUS_START_ADDR; // run_status1_type
+	exp = MOD_EX_NO_ERR;
+	index = MB_handleReadRegister(func_code, test_addr, count);
+	TEST_ASSERT_EQUAL_INT(exp, index);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x01);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x01); // 0
+
+	table_setStatusValue(I_rms_type, (int32_t)25);
+	test_addr = 40162; // I_rms_type
+	exp = MOD_EX_NO_ERR;
+	index = MB_handleReadRegister(func_code, test_addr, count);
+	TEST_ASSERT_EQUAL_INT(exp, index);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x0);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x19); // 0
+
+	table_setStatusValue(mtr_temperature_type, (int32_t)2);
+	test_addr = MB_STATUS_END_ADDR; // mtr_temperature_type
+	exp = MOD_EX_NO_ERR;
+	index = MB_handleReadRegister(func_code, test_addr, count);
+	TEST_ASSERT_EQUAL_INT(exp, index);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x0);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x2); // 0
+
+
 }
 
 void test_modbusReadMultiCommand(uint8_t func_code)
@@ -735,7 +887,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 300;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(value_type);
+	r_val = table_getValue(value_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 200); //restore
@@ -744,7 +896,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 300;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(decel_time_type);
+	r_val = table_getValue(decel_time_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 100); //restore
@@ -753,7 +905,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 1;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(acc_base_set_type);
+	r_val = table_getValue(acc_base_set_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 0); //restore
@@ -763,7 +915,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 2;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(ctrl_in_type);
+	r_val = table_getValue(ctrl_in_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 0); //restore
@@ -772,7 +924,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 20;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(dci_brake_freq_type);
+	r_val = table_getValue(dci_brk_freq_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 30); //restore
@@ -781,7 +933,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 700;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(dci_brake_rate_type);
+	r_val = table_getValue(dci_brk_rate_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 500); //restore
@@ -792,7 +944,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 120;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(ovl_warn_limit_type);
+	r_val = table_getValue(ovl_warn_limit_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 150); //restore
@@ -801,7 +953,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 20;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(ovl_trip_duration_type);
+	r_val = table_getValue(ovl_trip_dur_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 30); //restore
@@ -810,7 +962,7 @@ void test_modbusFC06(void)
 	exp = MOD_EX_NO_ERR;
 	w_val = 1;
 	result = MB_handleWriteSingleRegister(test_addr, w_val);
-	r_val = table_database_getValue(fan_onoff_type);
+	r_val = table_getValue(fan_onoff_type);
 	TEST_ASSERT_EQUAL_INT(exp, result);
 	TEST_ASSERT_EQUAL_UINT16(w_val, r_val);
 	result = MB_handleWriteSingleRegister(test_addr, 0); //restore

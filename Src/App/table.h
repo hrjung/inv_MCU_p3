@@ -8,12 +8,6 @@
 #ifndef SRC_TABLE_H_
 #define SRC_TABLE_H_
 
-#ifdef SUPPORT_UNIT_TEST
-#define STATIC
-#else
-#define STATIC		static
-#endif
-
 #define SUPPORT_NFC_OLD
 
 typedef enum{
@@ -139,11 +133,11 @@ typedef enum {
 	run_freq_type,
 	dc_voltage_type,
 	ipm_temperature_type,
-	motor_temperature_type,
+	mtr_temperature_type,
 
 	PARAM_STATUS_SIZE,
 
-} PARAM_STATUS_IDX_t;;
+} PARAM_STATUS_IDX_t;
 
 typedef enum{
 	none_dsp = -1,
@@ -192,20 +186,25 @@ typedef enum{
 
 
 typedef struct {
-	PARAM_IDX_t idx;
-	uint16_t addr;		// EEPROM address
-	uint16_t mb_addr;	// modbus address
-	int32_t initValue;
+	const PARAM_IDX_t idx;
+	const uint16_t addr;	// EEPROM address
+	const uint16_t mb_addr;	// modbus address
+	const int32_t initValue;
 	int32_t minValue;
 	int32_t maxValue;
 	uint8_t isRW;		// RW or RO
-	uint8_t ratio;		// for int -> 1, for float -> 10, instead of type defs
+	uint16_t ratio;		// for int -> 1, for float -> 10, instead of type defs
 	uint8_t isWriterbleOnRunnuning;
-	TABLE_DSP_PARAM_t dsp_idx;
-	int8_t (*param_func)(PARAM_IDX_t idx, int32_t value);
+	const TABLE_DSP_PARAM_t dsp_idx;
+	int8_t (*param_func)(PARAM_IDX_t idx, int32_t value, int16_t opt);
 } Param_t;
 
-
+typedef struct {
+	PARAM_STATUS_IDX_t	idx;
+	uint16_t 			addr;		// EEPROM address
+	uint16_t 			mb_addr;	// modbus address
+	uint16_t 			ratio;
+} StatusParam_t;
 
 typedef enum{
 	SYSTEM_PARAM_NFC_TAGGED,
@@ -269,19 +268,32 @@ typedef enum{
 
 } DOUT_config_t;
 
-extern int8_t table_isInit(void);
-extern int8_t table_initializeEEPROM(void);
+enum {
+	REQ_FROM_TEST = 0,
+	REQ_FROM_DSP,
+	REQ_FRROM_NFC,
+	REQ_FROM_MODBUS,
+	REQ_FROM_KEPAD,
 
-extern int8_t table_loadEEPROM(void);
-extern int8_t table_init(void);
+};
+
+extern int8_t table_isInit(void);
+//extern int8_t table_isNfcMonitoring(void);
+//extern int8_t table_getNfcStatus(int32_t *tag_started, int32_t *tag_end);
+//extern int8_t table_clearNfcStatus(void);
+
+extern int8_t table_initNVM(void);
 
 extern int32_t table_getValue(PARAM_IDX_t index);
-extern uint8_t table_getRatio(PARAM_IDX_t index);
+extern uint16_t table_getRatio(PARAM_IDX_t index);
+extern uint8_t table_getRW(PARAM_IDX_t index);
 extern int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq);
 
 extern int32_t table_getStatusValue(int16_t index);
 extern void table_setStatusValue(int16_t index, int32_t value);
 
 extern int32_t table_getCtrllIn(void);
+
+extern int8_t table_runFunc(PARAM_IDX_t idx, int32_t value, int16_t opt);
 
 #endif /* SRC_TABLE_H_ */

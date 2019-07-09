@@ -30,8 +30,13 @@
 
 #include "table.h"
 #include "ext_io.h"
+#include "error.h"
+#include "modbus_func.h"
+#include "modbus_queue.h"
+#include "nvm_queue.h"
 
 #include "drv_gpio.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -86,6 +91,7 @@ osTimerId userIoTimerHandle;
 osTimerId NfcAppTimerHandle;
 osTimerId AccReadTimerHandle;
 osSemaphoreId debugSemaphoreIdHandle;
+osSemaphoreId mbus485SemaphoreIdHandle;
 osSemaphoreId rs485SemaphoreIdHandle;
 /* USER CODE BEGIN PV */
 osThreadId debugTaskHandle;
@@ -144,12 +150,19 @@ uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
 uint32_t ain_sum=0;
 uint16_t exec_do_cnt=0;
 
+uint8_t EEPROM_initialized_f=0;
+
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
 #endif
 
+extern void gen_crc_table(void);
 extern void MB_init(void);
 extern void MB_TaskFunction(void);
+
+// NFC task function
+extern int16_t table_restoreNVM(void);
+extern int16_t table_updateParamNVM(void);
 
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
@@ -205,7 +218,7 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  //int8_t status=0;
   /* USER CODE END 1 */
   
 
@@ -245,9 +258,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   initUarts(); // debug UART
-  HAL_TIM_Base_Start_IT(&htim3); // Analog Out timer
+  HAL_TIM_Base_Start_IT(&htim3); // Analog Out timer, no used for P3
   HAL_TIM_Base_Start_IT(&htim10);
-  printf("\r\n======== Started ==========");
+  printf("\r\n======== P3 Started ==========");
   printf("\r\n** Compiled :    %4d/%02d/%02d   **\r\n\r\n ", BUILD_YEAR, BUILD_MONTH, BUILD_DAY);
  
   // LED on
@@ -257,11 +270,34 @@ int main(void)
   while(!(HAL_ADCEx_Calibration_Start(&hadc1)==HAL_OK));
 
 
-  // TODO : initialize NVM
+  gen_crc_table();
+#if 0
+  // initialize EEPROM
+  if(table_isInit() == 1) // correctly initialize
+  {
+	  printf("load EEPROM\r\n");
+	  // load EEPROM, check CRC
+	  status = table_loadEEPROM();
+	  printf("1: status=%d\r\n", status);
+	  if(status)
+	  {
+		  status = table_init();
+		  printf("2: status=%d\r\n", status);
+	  }
+  }
+  else
+  {
+	  // blank NVM : initialize as init value
+	  printf("blank EEPROM\r\n");
+	  status = table_initializeBlankEEPROM();
+	  //printf("EEPROM status=%d\r\n", status);
+  }
+  if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INIT);
+#endif
 
+  //printf("EEPROM initialized=%d\r\n", status);
 
-  HAL_IWDG_Refresh(&hiwdg); // kick
-
+  //HAL_IWDG_Refresh(&hiwdg); // kick
 
   /* USER CODE END 2 */
 
@@ -273,6 +309,10 @@ int main(void)
   /* definition and creation of debugSemaphoreId */
   osSemaphoreDef(debugSemaphoreId);
   debugSemaphoreIdHandle = osSemaphoreCreate(osSemaphore(debugSemaphoreId), 1);
+
+  /* definition and creation of mbus485SemaphoreId */
+  osSemaphoreDef(mbus485SemaphoreId);
+  mbus485SemaphoreIdHandle = osSemaphoreCreate(osSemaphore(mbus485SemaphoreId), 1);
 
   /* definition and creation of rs485SemaphoreId */
   osSemaphoreDef(rs485SemaphoreId);
@@ -348,6 +388,7 @@ int main(void)
   osThreadDef(debugTask, debugTaskFunc, osPriorityLow, 0, 512);
   debugTaskHandle = osThreadCreate(osThread(debugTask), NULL);
 
+
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -359,7 +400,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	 osDelay(10);
+	 osDelay(100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -503,6 +544,9 @@ static void MX_IWDG_Init(void)
 {
 
   /* USER CODE BEGIN IWDG_Init 0 */
+#ifndef SUPPORT_TASK_WATCHDOG
+	return ; // not use watchdog in unit test
+#endif
 
   /* USER CODE END IWDG_Init 0 */
 
@@ -1059,7 +1103,7 @@ void StartDefaultTask(void const * argument)
 {
 
   /* USER CODE BEGIN 5 */
-  osDelay(10);
+  osDelay(800);
   kputs(PORT_DEBUG, "start DefaultTask\r\n");
   /* Infinite loop */
   for(;;)
@@ -1071,8 +1115,7 @@ void StartDefaultTask(void const * argument)
 		watchdog_f = 0;
 		HAL_IWDG_Refresh(&hiwdg); // kick
 	}
-#else
-	HAL_IWDG_Refresh(&hiwdg); // kick
+	//HAL_IWDG_Refresh(&hiwdg); // kick
 #endif
 
 	default_cnt++;
@@ -1091,9 +1134,11 @@ void StartDefaultTask(void const * argument)
 void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
-
+	PARAM_IDX_t index;
+	int32_t value;
+	int8_t status;
   // TODO : wait until EEPROM initialized
-  //while(EEPROM_initialized_f==0);
+  while(EEPROM_initialized_f==0) osDelay(1);
 
   osDelay(10);
   kputs(PORT_DEBUG, "start NfcNvmTask\r\n");
@@ -1115,7 +1160,11 @@ void NfcNvmTaskFunc(void const * argument)
 
 	  // no tag state,
 	  //	handle NVM update request
-
+	  if(!NVMQ_isEmptyNfcQ())
+	  {
+		  status = table_updateParamNVM();
+		  if(status == 0) kputs(PORT_DEBUG, "table_updateParamNVM ERROR\r\n");
+	  }
 
 
 #ifdef SUPPORT_TASK_WATCHDOG
@@ -1136,7 +1185,7 @@ void NfcNvmTaskFunc(void const * argument)
 void userIoTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN userIoTaskFunc */
-  osDelay(200);
+  osDelay(1000);
   kputs(PORT_DEBUG, "start userIoTask\r\n");
   /* Infinite loop */
   for(;;)
@@ -1160,9 +1209,28 @@ void userIoTaskFunc(void const * argument)
 void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
-  /* Infinite loop */
-  osDelay(50);
-  kputs(PORT_DEBUG, "YstcEvent task started\r\n");
+  int8_t status;
+
+  osDelay(10);
+  kputs(PORT_DEBUG, "start mainHandler task\r\n");
+
+  status = table_initNVM();
+  if(status == 0)
+	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
+  else
+	  EEPROM_initialized_f = 1; // EEPROM initialized
+
+  kprintf(PORT_DEBUG, "EEPROM_initialized_f = %d\r\n", EEPROM_initialized_f);
+
+  // init queue
+  MBQ_init();
+  NVMQ_init();
+
+  // init modbus_handler
+  MB_initAddrMap();
+
+
+
   /* Infinite loop */
   for(;;)
   {
@@ -1188,24 +1256,23 @@ void mbus485TaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mbus485TaskFunc */
 
-	MB_init();
-	osDelay(5);
+	osDelay(700);
 
-	kputs(PORT_DEBUG, "rs485Task started\r\n");
+	MB_init();
+	kputs(PORT_DEBUG, "mbus485Task started\r\n");
 
 
 	/* Infinite loop */
 	for(;;)
 	{
-	  MB_TaskFunction();
-	  //rs485TaskFunction();
+		MB_TaskFunction();
 
-	  mbus_cnt++;
+		mbus_cnt++;
 
 #ifdef SUPPORT_TASK_WATCHDOG
-	  watchdog_f |= WATCHDOG_MODBUS;
+		watchdog_f |= WATCHDOG_MODBUS;
 #endif
-	  osDelay(5);
+		osDelay(10);
 	}
   /* USER CODE END mbus485TaskFunc */
 }
@@ -1230,7 +1297,7 @@ void opt485TaskFunc(void const * argument)
 #ifdef SUPPORT_TASK_WATCHDOG
 	  watchdog_f |= WATCHDOG_RS485;
 #endif
-	  osDelay(5);
+	  osDelay(10);
   }
   /* USER CODE END opt485TaskFunc */
 }

@@ -9,17 +9,10 @@
  *  This is for mock implementation for test only
  *
  */
+#include "includes.h"
 
-#define SUPPORT_DRIVER_HW
-
-#ifdef SUPPORT_DRIVER_HW
 #include "main.h"
 #include "cmsis_os.h"
-#endif
-
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
 
 //#include "dsp_comm.h"
 
@@ -80,10 +73,6 @@ HAL_StatusTypeDef SPI_readDSP(uint16_t *rxBuf, uint16_t rxlen)
 	return status;
 }
 #else
-void osDelay(int32_t delay)
-{
-	for(int i=0; i<delay*1000; i++) ;
-}
 
 int8_t SPI_writeDSP(uint16_t *pBuf, uint16_t len)
 {

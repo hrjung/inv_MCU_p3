@@ -20,13 +20,6 @@
 #include <ctype.h>
 
 
-// in case of baudrate > 19200, inter-frame delay is 1.75ms
-// baudrate < 19200, need to calculate as 3.5 character
-#define MODBUS_INTER_FRAME_DELAY		35
-
-// RS485 RTS 1:TX, 0:RX
-#define RS485_TX_ENABLE() {	HAL_GPIO_WritePin(Modbus_RTS_GPIO_Port, Modbus_RTS_Pin, GPIO_PIN_SET);}
-#define RS485_TX_DISABLE() { HAL_GPIO_WritePin(Modbus_RTS_GPIO_Port, Modbus_RTS_Pin, GPIO_PIN_RESET);}
 /* Private variables ---------------------------------------------------------*/
 
 // CRC16 High-Order Byte Table
@@ -73,23 +66,8 @@ MODBUS_SLAVE_QUEUE modbusRx, modbusTx;
 
 uint8_t	mb_slaveAddress = 1;
 
-uint16_t mb_timeout = 0;
-uint16_t mb_downcounter = 0;
-
-uint8_t mb_start_flag = 0;
-uint8_t mb_frame_received = 0;
-uint16_t mb_err_code = 0;
-
-uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400, 115200};
-
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
-MODBUS_addr_st mb_motor, mb_device, mb_err;
-
-/* Global variables ---------------------------------------------------------*/
-
-extern UART_HandleTypeDef huart3;
-extern TIM_HandleTypeDef htim7;
-extern osSemaphoreId rs485SemaphoreIdHandle;
+MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -129,6 +107,12 @@ int MB_isCRC_OK(uint8_t *buf, uint32_t len)
 
 	if(recvCRC == caclCRC) return 1;
 	else return 0;
+}
+
+void MB_setSlaveAddress(uint8_t addr)
+{
+	mb_slaveAddress = addr;
+	printf("Modbus addr = %d\n", addr);
 }
 
 /*
@@ -231,7 +215,7 @@ void MB_initAddrMap(void)
 	for(i=0; i<count; i++)
 	{
 		mb_motor.map[i].valid = 1;
-		mb_motor.map[i].rd_only = 1;
+		mb_motor.map[i].rd_only = 1; // read_only
 		mb_motor.map[i].conv_index = mb_motor.start_index + i;
 	}
 	// clear else
@@ -250,7 +234,7 @@ void MB_initAddrMap(void)
 	for(i=0; i<count; i++)
 	{
 		mb_device.map[i].valid = 1;
-		mb_device.map[i].rd_only = 1;
+		mb_device.map[i].rd_only = 1; // read_only
 		mb_device.map[i].conv_index = mb_device.start_index + i;
 	}
 	// clear else
@@ -269,7 +253,7 @@ void MB_initAddrMap(void)
 	for(i=0; i<count; i++)
 	{
 		mb_err.map[i].valid = 1;
-		mb_err.map[i].rd_only = 1;
+		mb_err.map[i].rd_only = 1; // read_only
 		mb_err.map[i].conv_index = mb_err.start_index + i;
 	}
 	// clear else
@@ -281,76 +265,32 @@ void MB_initAddrMap(void)
 	}
 
 	//printf("\r\n st_addr=%d, end_addr=%d", mb_err.start, mb_err.end);
-}
+	
 
-
-/*
- * 	timer related function
- */
-
-void MB_initTimer(uint16_t timeout_value)
-{
-	mb_timeout = timeout_value;
-}
-
-void MB_enableTimer(void)
-{
-	mb_downcounter = mb_timeout;
-	HAL_TIM_Base_Start_IT(&htim7);
-}
-
-void MB_disableTimer(void)
-{
-	HAL_TIM_Base_Stop_IT(&htim7);
-}
-
-void MB_UART_init(uint32_t baudrate)
-{
-	huart3.Instance = USART3;
-	huart3.Init.BaudRate = baudrate;
-	huart3.Init.WordLength = UART_WORDLENGTH_8B;
-	huart3.Init.StopBits = UART_STOPBITS_1;
-	huart3.Init.Parity = UART_PARITY_NONE;
-	huart3.Init.Mode = UART_MODE_TX_RX;
-	huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-	if (HAL_UART_Init(&huart3) != HAL_OK)
+	// status map
+	mb_status.start = MB_STATUS_START_ADDR;
+	mb_status.end = MB_STATUS_END_ADDR;
+	mb_status.start_index = run_status1_type;
+	count = MB_STATUS_END_ADDR - MB_STATUS_START_ADDR + 1;
+	for(i=0; i<count; i++)
 	{
-		Error_Handler();
+		mb_status.map[i].valid = 1;
+		mb_status.map[i].rd_only = 2; // read from variable, not from EEPROM
+		mb_status.map[i].conv_index = mb_status.start_index + i;
 	}
-}
-
-void MB_init(void)
-{
-	int i;
-	uint16_t b_index=2;
-	uint32_t baudrate;
-
-//	while(getIsEEPROMInit() != 1) osDelay(10);
-//	mb_slaveAddress = table_database_getValue(mb_address_type);
-//	b_index = (uint16_t)table_database_getValue(baudrate_type);
-
-	MB_UART_init(mb_baudrate[b_index]);
-	MB_initTimer(MODBUS_INTER_FRAME_DELAY); // 1.75ms for 3.5 char
-
-	printf("MB init s_addr=%d, baud=%d \r\n", mb_slaveAddress, mb_baudrate[b_index]);
-
-	modbusRx.wp = 0;
-	modbusTx.wp = 0;
-	for(i=0; i<MODBUS_BUF_SIZE; i++)
+	// clear else
+	for(i=count; i<MODBUS_ADDR_MAP_SIZE; i++)
 	{
-		modbusRx.buf[i] = 0;
-		modbusTx.buf[i] = 0;
+		mb_status.map[i].valid = 0;
+		mb_status.map[i].rd_only = 0;
+		mb_status.map[i].conv_index = PARAM_STATUS_SIZE;
 	}
-
-	MB_initAddrMap();
-
-	__HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE); // rs485
-
-	// enable RX
-	RS485_TX_DISABLE();
-	//HAL_GPIO_WritePin(Modbus_RTS_GPIO_Port, Modbus_RTS_Pin, GPIO_PIN_RESET); //485 RX enable
+	
+	//printf("\r\n st_addr=%d, end_addr=%d", mb_status.start, mb_status.end);
+	
 }
+
+
 
 uint16_t MB_getActualAddress(MODBUS_addr_st *mb_addr, uint16_t addr, uint16_t count)
 {
@@ -388,9 +328,9 @@ uint16_t MB_getActualAddress(MODBUS_addr_st *mb_addr, uint16_t addr, uint16_t co
 	return MODBUS_ADDR_MAP_ERR; //not found
 }
 
-uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count)
+uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count, int8_t *type)
 {
-	int find_f = 0;
+	int8_t find_f = 0;
 	uint16_t index=MODBUS_ADDR_MAP_ERR;
 	MODBUS_addr_st *mb_addr;
 
@@ -408,6 +348,8 @@ uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count)
 
 	else if(addr >= mb_device.start && addr <= mb_device.end) {mb_addr = &mb_device; find_f = 7;}
 
+	else if(addr >= mb_status.start && addr <= mb_status.end) {mb_addr = &mb_status; find_f = 8;}
+
 	else return MODBUS_ADDR_MAP_ERR;
 
 	if(find_f)
@@ -416,62 +358,8 @@ uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count)
 		//kprintf(PORT_DEBUG, "\r\n addr=%d, count=%d, find=%d, st_addr=%d, end_addr=%d", addr, count, find_f, mb_addr->start, mb_addr->end);
 	}
 
+	*type = find_f;
 	return index;
-}
-
-void MB_readByte(uint8_t rcv_char)
-{
-
-	if(mb_start_flag == 0)
-	{
-		modbusRx.wp = 0;
-		modbusRx.buf[modbusRx.wp++] = rcv_char;
-  		mb_start_flag = 1;
-  		MB_enableTimer();
-	}
-	else
-	{
-		if(modbusRx.wp < MODBUS_BUF_SIZE)
-		{
-			modbusRx.buf[modbusRx.wp++] = rcv_char;
-			MB_enableTimer();
-		}
-		else
-			mb_err_code = MOD_NORMAL_RX_ERR;
-	}
-}
-
-void MB_writeRespPacket(int len)
-{
-	if (len == 0) return;
-
-	RS485_TX_ENABLE(); osDelay(1);
-	osSemaphoreWait(rs485SemaphoreIdHandle, osWaitForever);
-//	memcpy(testMsgBuf, pStr, num);
-	HAL_UART_Transmit(&huart3, (uint8_t *)modbusTx.buf, len, 1000);
-	osSemaphoreRelease(rs485SemaphoreIdHandle);
-	RS485_TX_DISABLE();
-}
-
-
-void MB_processTimerExpired(void)
-{
-	if(mb_start_flag == 1)
-	{
-		mb_start_flag = 0;
-		mb_frame_received = 1;
-	}
-	MB_disableTimer();
-}
-
-int MB_isValidRecvPacket(void)
-{
-	if(modbusRx.buf[0] != mb_slaveAddress) return 0;
-
-	// CRC error
-	if(!MB_isCRC_OK(modbusRx.buf, modbusRx.wp)) return 0;
-
-	return 1;
 }
 
 void MB_generateErrorResp(uint8_t func_code, uint8_t excep_code)
@@ -488,6 +376,7 @@ void MB_generateErrorResp(uint8_t func_code, uint8_t excep_code)
 int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 {
 	int i, result=MOD_EX_NO_ERR;
+	int8_t type=0; // flag for status data
 	uint16_t index;
 	int32_t value;
 
@@ -498,7 +387,7 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	 */
 
 	// valid address range ?
-	index = MB_convModbusAddr(addr, cnt);
+	index = MB_convModbusAddr(addr, cnt, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC03_ERR; }
 
 	modbusTx.wp = 0;
@@ -508,7 +397,10 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 
 	if(cnt == 1)
 	{
-		value = table_getValue(index);
+		if(type == 8) // status info
+			value = table_getStatusValue(index);
+		else
+			value = table_getValue(index);
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 		kprintf(PORT_DEBUG, "\r\n index=%d, value=%d, wp=%d", index, (uint16_t)value, modbusTx.wp);
@@ -517,7 +409,10 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	{
 		for(i=0; i<cnt; i++)
 		{
-			//value = table_database_getValue(index + i);
+			if(type == 8) // status info
+				value = table_getStatusValue(index + i);
+			else
+				value = table_getValue(index + i);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0x0000FF00) >> 8);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x000000FF);
 		}
@@ -536,6 +431,7 @@ FC03_ERR:
 int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 {
 	int ret, result=MOD_EX_NO_ERR;
+	int8_t type=0; // flag for status data
 	uint16_t index;
 
 	/* return error type
@@ -545,8 +441,12 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	 */
 
 	// valid address range ?
-	index = MB_convModbusAddr(addr, 1);
+	index = MB_convModbusAddr(addr, 1, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC06_ERR; }
+
+	if(type == 8) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : status read only
+
+	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : read only
 
 	modbusTx.wp = 0;
 	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
@@ -554,9 +454,7 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
 	modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
 
-#if 0
-	//TODO : update EEPROM, need new API
-	ret = table_database_setValue(index, (int32_t)value, 0);
+	ret = table_runFunc(index, (int32_t)value, REQ_FROM_MODBUS);
 	if(ret == 1)
 	{
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
@@ -566,7 +464,6 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	}
 	else
 		result = MOD_EX_SLAVE_FAIL;
-#endif
 
 FC06_ERR:
 	if(result != MOD_EX_NO_ERR)
@@ -580,6 +477,7 @@ FC06_ERR:
 int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 {
 	int i, ret, result=MOD_EX_NO_ERR;
+	int8_t type=0; // flag for status data
 	uint16_t index;
 
 	/* return error types
@@ -591,8 +489,12 @@ int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 	if(count == MODBUS_COUNT_ERR) {result = MOD_EX_DataVAL; goto FC16_ERR; }
 
 	// valid address range ?
-	index = MB_convModbusAddr(addr, count);
+	index = MB_convModbusAddr(addr, count, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC16_ERR; }
+
+	if(type == 8) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : status read only
+
+	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : read only
 
 	modbusTx.wp = 0;
 	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
@@ -602,8 +504,7 @@ int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 
 	for(i=0; i<count; i++)
 	{
-		// TODO : read EEPROM, update API
-		//ret = table_database_setValue(index+i, (int32_t)value[i], 0);
+		ret = table_runFunc(index+i, (int32_t)value[i], REQ_FROM_MODBUS);
 		//kprintf(PORT_DEBUG, "\r\n index=%d, value=%d, ret=%d", index+i, (uint16_t)value[i], ret);
 		if(ret == 0)
 		{
@@ -671,32 +572,34 @@ int MB_processModbusPacket(void) // error or response packet
 	calcCRC = CRC16(modbusTx.buf, modbusTx.wp);
 	modbusTx.buf[modbusTx.wp++] = (int8_t)(calcCRC >> 8) &0x00FF;
 	modbusTx.buf[modbusTx.wp] = (int8_t)(calcCRC & 0x00FF);
-	MB_writeRespPacket(modbusTx.wp+1);
+	//MB_writeRespPacket(modbusTx.wp+1);
 
 	return ret_code;
 }
 
-void MB_TaskFunction(void)
+int8_t MB_handlePacket(void)
 {
 	int result=0;
 
-	// get data from 485
-	if(mb_frame_received)
-	{
-		// check received frame
-		// wrong slave address
-		if(MB_isValidRecvPacket() == 0) {mb_frame_received=0; return;}
+	// check modbus queue
+	if(MBQ_isEmptyReqQ()) return 1;
 
-		kprintf(PORT_DEBUG, "RX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-			modbusRx.buf[0], modbusRx.buf[1], modbusRx.buf[2], modbusRx.buf[3], modbusRx.buf[4]);
+	// get packet from queue
+	modbusRx.wp = MBQ_getReqQ(modbusRx.buf);
+	if(modbusRx.wp == 0) { printf("no data in req_q\n"); return 0; } // TODO :return error packet to resp_q
 
-		// generate response or error frame
-		result = MB_processModbusPacket();
+	printf("RX: 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+		modbusRx.buf[0], modbusRx.buf[1], modbusRx.buf[2], modbusRx.buf[3], modbusRx.buf[4]);
 
-		kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-				modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
+	// generate response or error frame
+	result = MB_processModbusPacket();
 
-		mb_frame_received=0;
-	}
+	while(MBQ_isRespQReady()==0) ; // osDelay(1);
+	MBQ_putRespQ(modbusTx.wp, modbusTx.buf);
 
+	printf("TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+		modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
+
+	return 1;
 }
+

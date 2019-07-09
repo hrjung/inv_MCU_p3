@@ -5,18 +5,16 @@
  *      Author: hrjung
  */
 
+#include "includes.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-
+#include "proc_uart.h"
 #include "table.h"
 #include "dsp_comm.h"
 #include "error.h"
 #include "ext_io.h"
 #include "drv_gpio.h"
 
+#define F_CMD_DIFF_HYSTERISIS		(10)
 
 
 STATIC DIN_PIN_NUM_t m_din = {
@@ -29,23 +27,24 @@ STATIC DIN_PIN_NUM_t m_din = {
 		EXT_DIN_COUNT,
 };
 
-uint8_t mdin_value[EXT_DIN_COUNT]={0,}; // actual DI pin value
+uint8_t mdin_value[EXT_DIN_COUNT]; // actual DI pin value
 STATIC uint8_t prev_emergency=0, prev_trip=0, prev_run=0, prev_dir=0, prev_step=0;
 STATIC COMM_CMD_t test_cmd=0;
 STATIC uint8_t step_cmd=0;
 
-STATIC uint8_t mdout_value[EXT_DOUT_COUNT] = {0,};
+STATIC uint8_t mdout_value[EXT_DOUT_COUNT];
 
 uint16_t adc_value=0; // analog input value
 float freq_min=0.0, freq_max=0.0, V_ai_min=0.0, V_ai_max=0.0;
 STATIC int32_t prev_adc_cmd=0;
 
+uint8_t isConfigured=0; // flag for AIN parameter configured
 
-extern int16_t state_run_stop;
-extern int16_t state_direction;
+extern int16_t state_run_stop; // global run/stop status
+extern int16_t state_direction; // global forward/reverse direction status
 
 
-extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value);
+extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 
 int EXT_DI_isMultiStepValid(void)
@@ -96,15 +95,15 @@ uint8_t EXT_DI_convertMultiStep(void)
 }
 
 // same setting for 2 or more pin is not allowed, last one is only set
-void EXT_DI_clearDinSameFunc(DIN_config_t func_set)
+void EXT_DI_clearDinSameFunc(DIN_config_t func_set, int16_t option)
 {
 	int i;
 	DIN_config_t func;
 
 	for(i=0; i<EXT_DIN_COUNT; i++)
 	{
-		func = table_getValue(multi_Din_0_type+i);
-		if(func_set == func) table_setValue(multi_Din_0_type+i, DIN_unuse);
+		func = (DIN_config_t)table_getValue(multi_Din_0_type+i);
+		if(func_set == func) table_setValue(multi_Din_0_type+i, DIN_unuse, option);
 	}
 }
 
@@ -135,13 +134,13 @@ void EXT_DI_updateMultiDinPinIndex(uint8_t index, DIN_config_t func_set)
 
 
 // read from table and init multiDin setting, used at table init
-int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set)
+int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option)
 {
 	if(index >= EXT_DIN_COUNT) return 0;
 
 	if(func_set >= DIN_config_max) return 0;
 
-	EXT_DI_clearDinSameFunc(func_set);
+	EXT_DI_clearDinSameFunc(func_set, option);
 
 	EXT_DI_updateMultiDinPinIndex(index, func_set); // update m_din.pin_num
 
@@ -161,7 +160,7 @@ int8_t EXI_DI_handleDin(void)
 		if(mdin_value[m_din.emergency_pin] == 1 && prev_emergency == 0) // send STOP regardless of run_status
 		{
 			test_cmd = SPICMD_CTRL_STOP;
-			printf("send emergency SPICMD_CTRL_STOP\n");
+			kprintf(PORT_DEBUG, "send emergency SPICMD_CTRL_STOP\r\n");
 			// send STOP cmd
 
 
@@ -176,7 +175,7 @@ int8_t EXI_DI_handleDin(void)
 		if(mdin_value[m_din.trip_pin] == 1 && prev_trip == 0)
 		{
 			test_cmd = SPICMD_CTRL_STOP;
-			printf("send trip SPICMD_CTRL_STOP\n");
+			kprintf(PORT_DEBUG, "send trip SPICMD_CTRL_STOP\r\n");
 			// send STOP cmd
 
 			prev_trip = mdin_value[m_din.trip_pin];
@@ -195,7 +194,7 @@ int8_t EXI_DI_handleDin(void)
 			{
 				// send STOP cmd
 				test_cmd = SPICMD_CTRL_STOP;
-				printf("send SPICMD_CTRL_STOP\n");
+				kprintf(PORT_DEBUG, "send SPICMD_CTRL_STOP\r\n");
 				result++;
 
 			}
@@ -203,7 +202,7 @@ int8_t EXI_DI_handleDin(void)
 			{
 				// send run cmd
 				test_cmd = SPICMD_CTRL_RUN;
-				printf("send SPICMD_CTRL_RUN\n");
+				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN\r\n");
 				result++;
 
 			}
@@ -226,7 +225,7 @@ int8_t EXI_DI_handleDin(void)
 				{
 					// send forward cmd
 					test_cmd = SPICMD_CTRL_DIR_F;
-					printf("send SPICMD_CTRL_DIR_F\n");
+					kprintf(PORT_DEBUG, "send SPICMD_CTRL_DIR_F\r\n");
 					result++;
 				}
 
@@ -238,7 +237,7 @@ int8_t EXI_DI_handleDin(void)
 				{
 					// send reverse cmd
 					test_cmd = SPICMD_CTRL_DIR_R;
-					printf("send SPICMD_CTRL_DIR_R\n");
+					kprintf(PORT_DEBUG, "send SPICMD_CTRL_DIR_R\r\n");
 					result++;
 				}
 			}
@@ -351,7 +350,7 @@ void EXT_DO_setDoutPin(int do_idx, int32_t DO_config)
 			mdout_value[do_idx] = 0;
 		break;
 	}
-	//printf("DO index=%d, config=%d, mout_val=%d\n", do_idx, DO_config, mdout_value[do_idx]);
+	//kprintf(PORT_DEBUG, "DO index=%d, config=%d, mout_val=%d\r\n", do_idx, DO_config, mdout_value[do_idx]);
 }
 
 // DOUT set GPIO 0 -> ON
@@ -377,11 +376,17 @@ int8_t EXT_DO_handleDout(void)
 	return 1;
 }
 
+void EXT_AI_needReconfig(void)
+{
+	isConfigured = 0;
+}
 
 int8_t EXT_AI_setConfig(void)
 {
-	uint8_t ratio;
+	uint16_t ratio;
 	int32_t value;
+
+	if(isConfigured) return 1; // already configured
 
 	ratio = table_getRatio(v_in_min_freq_type);
 	value = table_getValue(v_in_min_freq_type);
@@ -399,7 +404,7 @@ int8_t EXT_AI_setConfig(void)
 	value = table_getValue(v_in_max_type);
 	V_ai_max = (float)value/(float)ratio;
 
-	//printf("EXT_AI config f_min=%f, f_max=%f, V_min=%f, V_max=%f\n", freq_min, freq_max, V_ai_min, V_ai_max);
+	//kprintf(PORT_DEBUG, "EXT_AI config f_min=%f, f_max=%f, V_min=%f, V_max=%f\r\n", freq_min, freq_max, V_ai_min, V_ai_max);
 
 	return 1;
 }
@@ -426,7 +431,7 @@ int32_t EXT_AI_getFreq(uint16_t adc_val)
 
 	freq_l = (int32_t)(freq_calc*10.0);
 
-	//printf("EXT_AI_getFreq calc=%f, feq_l=%d, V_val=%f\n", freq_calc, freq_l, V_val);
+	//kprintf(PORT_DEBUG, "EXT_AI_getFreq calc=%f, feq_l=%d, V_val=%f\r\n", freq_calc, freq_l, V_val);
 
 	return freq_l;
 }
@@ -435,48 +440,49 @@ int8_t EXT_AI_handleAin(void)
 {
 	uint16_t value;
 	int32_t ctrl_in;
-	int32_t freq;
+	int32_t freq, diff=0;
 
 	//
 	ctrl_in = table_getCtrllIn();
-	if(ctrl_in == CTRL_IN_Analog_V)
+	if(ctrl_in != CTRL_IN_Analog_V) return 1; // silently ignore
+
+
+	// read config, can be updated during running
+	EXT_AI_setConfig();
+
+	// read AI value as 12bit ADC
+	value = EXT_AI_readADC();
+
+	// convert to freq value
+	freq = EXT_AI_getFreq(value);
+
+	diff = labs(prev_adc_cmd - freq);
+	if(diff > F_CMD_DIFF_HYSTERISIS) // over 1Hz
 	{
-		// read AI value as 12bit ADC
-		value = EXT_AI_readADC();
-
-		// read config, can be updated during running
-		EXT_AI_setConfig();
-
-		freq = EXT_AI_getFreq(value);
-
-		//
-		if(prev_adc_cmd != freq)
+		if(freq <= 10)
 		{
-			if(freq <= 10)
-			{
-				test_cmd = SPICMD_CTRL_STOP;
-				printf("send SPICMD_CTRL_STOP\n");
-				// TODO : send stop cmd
+			test_cmd = SPICMD_CTRL_STOP;
+			kprintf(PORT_DEBUG, "send SPICMD_CTRL_STOP\r\n");
+			// TODO : send stop cmd
 
+		}
+		else
+		{
+			if(state_run_stop == CMD_STOP)
+			{
+				test_cmd = SPICMD_CTRL_RUN;
+				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN\r\n");
 			}
 			else
 			{
-				if(state_run_stop == CMD_STOP)
-				{
-					test_cmd = SPICMD_CTRL_RUN;
-					printf("send SPICMD_CTRL_RUN\n");
-				}
-				else
-				{
-					test_cmd = SPICMD_PARAM_W;
-					printf("send SPICMD_PARAM_W  freq=%d\n", (int)freq);
+				test_cmd = SPICMD_PARAM_W;
+				kprintf(PORT_DEBUG, "send SPICMD_PARAM_W  freq=%d\r\n", freq);
 
-				}
-				// TODO : send freq cmd to DSP, update EEPROM
 			}
-
-			prev_adc_cmd = freq;
+			// TODO : send freq cmd to DSP, update EEPROM
 		}
+
+		prev_adc_cmd = freq;
 	}
 
 	return 1;

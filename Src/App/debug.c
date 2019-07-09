@@ -15,9 +15,11 @@
 #include "cmsis_os.h"
 
 #include "debug.h"
+#include "proc_uart.h"
 #include "table.h"
 //#include "task.h"
 
+#include "drv_nvm.h"
 #include "drv_ST25DV.h"
 #include "drv_gpio.h"
 
@@ -26,7 +28,6 @@
 #endif
 
 /* Private variables ---------------------------------------------------------*/
-#define STATIC	static
 
 #define KEYPAD_SCAN_TIME_INTERVAL	10
 
@@ -186,6 +187,7 @@ extern uint16_t ain_val[];
 extern uint32_t ain_sum;
 extern uint16_t adc_value;
 extern volatile int8_t ADC_ConvCpltFlag, ADC_error;
+extern int32_t table_nvm[];
 
 //extern osThreadId defaultTaskHandle;
 //extern osThreadId YstcNfcTaskHandle;
@@ -211,11 +213,41 @@ extern uint8_t watchdog_f;
 extern uint16_t EXT_AI_readADC(void);
 extern void MB_UART_init(uint32_t baudrate);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
+extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
+extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 
-extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value);
+extern uint8_t ERR_getErrorState(void);
+extern void test_setTableValue(PARAM_IDX_t idx, int32_t value);
+extern int32_t table_getInitValue(PARAM_IDX_t index);
+extern uint16_t table_getAddr(PARAM_IDX_t index);
 
 #ifdef SUPPORT_UNIT_TEST
 // Unit test function
+//nvm_queue test
+extern void test_nfc_q_basic(void);
+extern void test_nfc_q_muliple(void);
+extern void test_table_q_basic(void);
+extern void test_table_q_muliple(void);
+//error
+extern void test_errorBasic(void);
+//dsp_comm
+extern void test_getRecvLength(void);
+extern void test_generateMessage(void);
+extern void test_parseValue(void);
+extern void test_parseMessage(void);
+extern void test_sendCommand(void);
+//ext_io
+extern void test_setupMultiFuncDin(void);
+extern void test_convertMultiStep(void);
+extern void test_handleDin(void);
+extern void test_handleDout(void);
+extern void test_getFreq(void);
+extern void test_handleAin(void);
+// table
+extern void test_setValue(void);
+
+
+// modbus
 extern void test_modbusBasic(void);
 extern void test_modbusAddress(void);
 extern void test_modbusGetValue(void);
@@ -224,9 +256,11 @@ extern void test_modbusFC03_multi(void);
 extern void test_modbusFC04(void);
 extern void test_modbusFC04_multi(void);
 extern void test_modbusFC06(void);
+
 #endif
 
 /* Private function prototypes -----------------------------------------------*/
+#if 0
 void display_current_time(void)
 {
 	RTC_DateTypeDef sDate;
@@ -239,6 +273,7 @@ void display_current_time(void)
 			sDate.Year+2000, sDate.Month, sDate.Date, \
 			sTime.Hours, sTime.Minutes, sTime.Seconds);
 }
+#endif
 
 char _ToUpper(char c)
 {
@@ -524,6 +559,7 @@ STATIC int write_nv_ser(uint8_t dport)
 	{
 		i2c_status = I2C_writeData((uint8_t *)&i2c_wvalue, addr, 4);
 		kprintf(dport, "\r\n write EEPROM addr=%d, value = %d, status=%d", addr, i2c_wvalue, i2c_status);
+
 	}
 
 	return 0;
@@ -659,13 +695,13 @@ STATIC int uio_enable_ser(uint8_t dport)
 
 STATIC int test_ser(uint8_t dport)
 {
-	uint8_t din, dtm_val;
-	int16_t ain;
-	int32_t l_val;
-	float f_val;
+	int idx;
+	int32_t value;
+	uint8_t status;
+	uint16_t addr;
 	int test_case, arg1;
 
-	if(arg_c != 3)
+	if(arg_c > 4)
 	{
 		kprintf(dport, "\r\nInvalid number of parameters");
 		return -1;
@@ -677,18 +713,30 @@ STATIC int test_ser(uint8_t dport)
 
     if(test_case == '0')
     {
-    	f_val = atof(arg_v[2]);
-    	kprintf(dport, "\r\n f_val = %f", f_val);
+//    	addr = (uint16_t)atoi(arg_v[2]);
+//    	status = NVM_read(addr, &value);
+//    	kprintf(dport, "\r\n NVM_read addr=%d, value=%d, status=%d", addr, (int)value, status);
+    	idx = (int)atoi(arg_v[2]);
+    	status = NVM_readParam((PARAM_IDX_t)idx, &value);
+    	kprintf(dport, "\r\n NVM_readParam idx=%d, value=%d, status=%d", idx, (int)value, status);
     }
     else if(test_case == 1)
     {
-		l_val = (int32_t)atoi(arg_v[2]);
-		kprintf(dport, "\r\n l_val = %d", l_val);
+//    	addr = (uint16_t)atoi(arg_v[2]);
+//    	value = table_getInitValue(idx);
+//    	status = NVM_write(addr, value);
+//		kprintf(dport, "\r\n NVM_write addr=%d, value=%d status=%d", addr, value, status);
+    	idx = (int)atoi(arg_v[2]);
+    	value = table_getInitValue(idx);
+    	status = NVM_writeParam((PARAM_IDX_t)idx, value);
+    	kprintf(dport, "\r\n NVM_writeParam idx=%d, value=%d status=%d", idx, value, status);
+    	status = NVM_setCRC();
+    	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
     }
     else if(test_case == 2)
     {
-		UTIL_readDin();
-		//kprintf(dport, "\r\n debug_on=%d, Din = %d", debugIoFlag, din);
+    	status = NVM_clearInit();
+		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  %d\r\n", status);
     }
     else if(test_case == 3)
     {
@@ -697,34 +745,37 @@ STATIC int test_ser(uint8_t dport)
     	enable = (int)atoi(arg_v[2]);
     	if(enable)
     	{
-    		table_setValue(ctrl_in_type, CTRL_IN_Analog_V);
+    		test_setTableValue(ctrl_in_type, CTRL_IN_Analog_V);
     		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ain_val, EXT_AIN_SAMPLE_CNT);
     		kprintf(dport, "\r\n AIN test start");
     	}
     	else
     	{
-    		table_setValue(ctrl_in_type, CTRL_IN_NFC);
+    		test_setTableValue(ctrl_in_type, CTRL_IN_NFC);
     		kprintf(dport, "\r\n AIN test stop");
     	}
     }
     else if(test_case == 4)
     {
-		//ain = AI_readCurrent();
-		//kprintf(dport, "\r\n debug_on=%d, Iin = %d", debugIoFlag, ain);
+    	idx = (int)atoi(arg_v[2]);
+    	value = table_getValue(idx);
+    	kprintf(dport, "\r\n index=%d, value=%d", idx, (int)value);
     }
     else if(test_case == 5)
     {
-    	uint16_t index;
-    	int32_t value;
 
-    	index = (uint16_t)atoi(arg_v[2]);
-    	value = table_getValue(index);
-		kprintf(dport, "\r\n table[%d]=%d", index, (int)value);
+    	idx = (uint16_t)atoi(arg_v[2]);
+    	if(idx < PARAM_TABLE_SIZE)
+    	{
+			value = table_getValue(idx);
+			kprintf(dport, "\r\n table[%d]=%d", idx, (int)value);
+    	}
+    	else
+    		kprintf(dport, "\r\n index=%d error", idx);
     }
     else if(test_case == 6)
     {
-		//dtm_val = DTM_readNotify();
-		//kprintf(dport, "\r\n dtm_val = %d", dtm_val);
+		kprintf(dport, "\r\n error code = %d", (int)ERR_getErrorState());
     }
     else if(test_case == 7)
     {
@@ -745,27 +796,44 @@ STATIC int test_ser(uint8_t dport)
 		status = HAL_SPI_Transmit(&hspi1, txBuf, 5, 100);
 		kprintf(dport, "\r\n SPI write, status= %d", status);
 	}
-    else if(test_case == 8)
+    else if(test_case == 8) // show all EEPROM table
     {
-    	uint8_t status=0;
-    	uint16_t i2c_addr=0x100, i2c_len=4;
+    	uint8_t i, status=0;
+    	uint16_t i2c_addr, i2c_len=4;
     	uint32_t i2c_value=0;
 
-    	status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
-		kprintf(dport, "\r\n I2C read= %d, status=%d, ", i2c_value, status);
+    	for(i=0; i<SYSTEM_PARAM_SIZE; i++)
+    	{
+    		i2c_addr = NVM_getSystemParamAddr(i);
+    		status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
+    		kprintf(dport, "\r\n addr=%d, value=%d, status=%d, ", i2c_addr, i2c_value, status);
+    		osDelay(5);
+    	}
+
+    	for(i=0; i<PARAM_TABLE_SIZE; i++)
+    	{
+    		i2c_addr = table_getAddr((PARAM_IDX_t)i);
+    		status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
+    		kprintf(dport, "\r\n idx=%d, value=%d, nvm=%d, status=%d, ", i, i2c_value, table_nvm[i], status);
+    		osDelay(5);
+    	}
     }
     else if(test_case == 9)
     {
     	uint16_t b_index;
     	uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400};
 
-    	//b_index = (uint16_t)table_database_getValue(baudrate_type);
-		//kprintf(dport, "\r\n MB_address=%d, baudrate=%d", mb_slaveAddress, mb_baudrate[b_index]);
+
+    	b_index = (int)atoi(arg_v[2]);
+    	MB_UART_init(mb_baudrate[b_index]);
+		kprintf(dport, "\r\n MB_address=%d, baudrate=%d", mb_slaveAddress, mb_baudrate[b_index]);
     }
     else if(test_case == 'A')
     {
-    	MB_UART_init(115200);
-		kprintf(dport, "\r\n set modbus baudrate 115200");
+    	idx = (int)atoi(arg_v[2]);
+    	value = (int32_t)atoi(arg_v[3]);
+    	status = table_runFunc(idx, (int32_t)value, REQ_FROM_MODBUS);
+    	kprintf(dport, "\r\n idx=%d, value=%d, status=%d, ", idx, value, status);
     }
     else if(test_case == 'B')
     {
@@ -779,6 +847,15 @@ STATIC int test_ser(uint8_t dport)
     	}
 
 		kprintf(dport, "\r\n set LED %d", arg1);
+    }
+    else if(test_case == 'C') // temp test only
+    {
+    	idx = 0;
+    	value = 300;
+    	status = NVM_writeParam((PARAM_IDX_t)idx, (int32_t)300);
+    	kprintf(dport, "\r\n NVM_writeParam idx=%d, value=%d status=%d", idx, value, status);
+    	status = NVM_setCRC();
+    	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
     }
 #if 0
     else if(test_case == 'B')
@@ -826,6 +903,39 @@ STATIC int utest_ser(uint8_t dport)
 
 	UNITY_BEGIN();
 
+#if 1
+	// add nvm_queue test
+	RUN_TEST(test_nfc_q_basic);
+	RUN_TEST(test_nfc_q_muliple);
+
+	RUN_TEST(test_table_q_basic);
+	RUN_TEST(test_table_q_muliple);
+
+	// add DSP eror test
+	RUN_TEST(test_errorBasic);
+
+	// Dsp comm
+	RUN_TEST(test_getRecvLength);
+	RUN_TEST(test_generateMessage);
+	RUN_TEST(test_parseValue);
+	RUN_TEST(test_parseMessage);
+	RUN_TEST(test_sendCommand);
+
+	// ext_di_
+	RUN_TEST(test_setupMultiFuncDin);
+	RUN_TEST(test_convertMultiStep);
+	RUN_TEST(test_handleDin);
+	//ext_do
+	RUN_TEST(test_handleDout);
+	//ext_ai
+	RUN_TEST(test_getFreq);
+	RUN_TEST(test_handleAin);
+
+	// table
+	RUN_TEST(test_setValue);
+#endif
+
+	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);
 	RUN_TEST(test_modbusGetValue);
@@ -834,6 +944,7 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_modbusFC04);
 	RUN_TEST(test_modbusFC04_multi);
 	RUN_TEST(test_modbusFC06);
+	//RUN_TEST(test_modbusFC16);
 
 	UNITY_END();
 

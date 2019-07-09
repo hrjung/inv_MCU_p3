@@ -6,37 +6,69 @@
  *      Author: hrjung
  */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <table.h>
+#include "includes.h"
 
+#include "main.h"
+#include "cmsis_os.h"
+
+#include "proc_uart.h"
+#include "table.h"
+
+#include "drv_ST25DV.h"
 #include "drv_nvm.h"
 
 
 #define TABLE_SIZE_MAX	250
 
 
-static int32_t nvm_table[TABLE_SIZE_MAX];
-
-
-uint8_t NVM_read(int32_t addr, int32_t *value)
+static int32_t sysparam_addr[] =
 {
-	uint8_t status=0;
+		0x10,		//SYSTEM_PARAM_NFC_TAGGED
+		0x14,		//SYSTEM_PARAM_CRC_VALUE
+		0x18,		//SYSTEM_PARAM_IS_INITIATED
+		0x1C,		//SYSTEM_PARAM_HAS_SYSTEM_ERROR
+		0x20,		//SYSTEM_PARAM_ENABLE_NFC_WRITER
+		0x24,		//SYSTEM_PARAM_NFC_TRYED
+		0x28,		//SYSTEM_PARAM_ON_MONITORING
+		0x2C,		//SYSTEM_PARAM_IDLE0_RUN1_STOP2
+};
 
+#ifndef SUPPORT_DRIVER_HW
+static int32_t nvm_table[TABLE_SIZE_MAX];
+#endif
+int32_t table_nvm[PARAM_TABLE_SIZE];
+
+extern uint16_t table_getAddr(PARAM_IDX_t index);
+extern uint32_t table_calcCRC(void);
+
+uint8_t NVM_read(uint16_t addr, int32_t *value)
+{
+	uint8_t status=NVM_NOK;
+
+#ifdef SUPPORT_DRIVER_HW
+	status = I2C_readData((uint8_t *)value, addr, sizeof(int32_t));
+	osDelay(5);
+#else
 	*value = nvm_table[addr];
+#endif
 	return status;
 }
 
 uint8_t NVM_write(int32_t addr, int32_t value)
 {
-	uint8_t status=0;
+	uint8_t status=NVM_NOK;
 
+#ifdef SUPPORT_DRIVER_HW
+	status = I2C_writeData((uint8_t *)&value, addr, sizeof(int32_t));
+	osDelay(5);
+#else
 	nvm_table[addr] = value;
+#endif
 
 	return status;
 }
 
-
+#ifndef SUPPORT_DRIVER_HW
 void NVM_clear(void)
 {
 	int i;
@@ -44,3 +76,145 @@ void NVM_clear(void)
 	for(i=0; i<TABLE_SIZE_MAX; i++) nvm_table[i] = 0;
 
 }
+#endif
+
+uint8_t NVM_readParam(PARAM_IDX_t index, int32_t *value)
+{
+	uint8_t status=NVM_NOK;
+	uint16_t nvm_addr;
+
+	nvm_addr = table_getAddr(index);
+	status = NVM_read(nvm_addr, value);
+	if(status != 0 && *value != table_nvm[index])
+		table_nvm[index] = *value;
+
+	return status;
+}
+
+uint8_t NVM_writeParam(PARAM_IDX_t index, int32_t value)
+{
+	uint8_t status;
+	uint16_t nvm_addr;
+
+	nvm_addr = table_getAddr(index);
+	status = NVM_write(nvm_addr, value);
+	if(status)
+		table_nvm[index] = value;
+
+	return status;
+}
+
+uint16_t NVM_getSystemParamAddr(uint16_t index)
+{
+	return (uint16_t)sysparam_addr[index];
+}
+
+int8_t NVM_initSystemParam(void)
+{
+	int i, errflag=0;
+	int8_t status=NVM_OK;
+	int32_t value=0;
+
+	for(i=0; i<SYSTEM_PARAM_SIZE; i++)
+	{
+		status = NVM_write((uint16_t)sysparam_addr[i], value); // clear all flag
+		if(status==NVM_NOK) errflag++;
+	}
+
+	if(errflag) status=NVM_NOK;
+
+	return status;
+}
+
+uint8_t NVM_setInit(void)
+{
+	int32_t value=1;
+	return NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_IS_INITIATED], value);
+}
+
+uint8_t NVM_clearInit(void)
+{
+	int32_t value=0;
+	return NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_IS_INITIATED], value);
+}
+
+int8_t NVM_isInit(void)
+{
+	int32_t isInit;
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_IS_INITIATED], &isInit);
+
+	printf("NVM_isInit init=%d, status=%d\r\n", (int)isInit, status);
+	if(status!=NVM_OK) return -1;
+
+	return (int8_t)isInit;
+}
+
+int8_t NVM_isNfcMonitoring(void)
+{
+	int32_t isMonitoring;
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_ON_MONITORING], &isMonitoring);
+	if(status!=NVM_OK) return -1;
+
+	return (int8_t)isMonitoring;
+}
+
+int8_t NVM_getNfcStatus(int32_t *tag_started, int32_t *tag_end)
+{
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TAGGED], tag_started);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TRYED], tag_end);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t NVM_clearNfcStatus(void)
+{
+	int32_t value=0;
+	uint8_t status;
+
+	status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TAGGED], value);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TRYED], value);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t NVM_verifyCRC(uint32_t crc32_calc)
+{
+	uint8_t status;
+	uint32_t crc32_rd;
+
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_CRC_VALUE], (int32_t *)&crc32_rd);
+
+	//kprintf(PORT_DEBUG, "calc=0x%x, read_crc=0x%x\r\n", crc32_calc, crc32_rd);
+	if(status != NVM_OK) return NVM_NOK;
+
+	if(crc32_calc != crc32_rd) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t NVM_setCRC(void)
+{
+	uint32_t crc32_calc;
+	uint8_t status;
+
+	crc32_calc = table_calcCRC();
+	status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_CRC_VALUE], crc32_calc);
+	//kprintf(PORT_DEBUG, "NVM_setCRC calc=0x%x, status=%d\r\n", crc32_calc, status);
+
+	if(status != NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+

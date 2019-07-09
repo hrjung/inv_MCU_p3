@@ -42,7 +42,7 @@ typedef enum {
 	TRIP_REASON_MCU_SETVALUE	,
 
 
-}TRIP_REASON_t;
+} TRIP_REASON_t;
 
 typedef struct {
 	const int32_t addr;
@@ -71,8 +71,7 @@ typedef struct {
 	float		freq;
 } ERR_info_t;
 
-extern void ERR_setErrCode(int err_code);
-
 extern uint8_t ERR_isErrorState(void);
+extern void ERR_setErrorState(TRIP_REASON_t err_code);
 
 #endif /* SRC_ERROR_H_ */

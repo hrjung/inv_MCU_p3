@@ -4,16 +4,13 @@
  *  Created on: 2019. 6. 11.
  *      Author: hrjung
  */
+#include "includes.h"
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include "proc_uart.h"
 
 #include "table.h"
 #include "dsp_comm.h"
 #include "drv_dsp_spi.h"
-
 
 
 
@@ -34,6 +31,9 @@ int16_t st_brake = 0;
 
 extern void printDBG(char *str);
 
+extern int8_t NVM_isNfcMonitoring(void);
+
+extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 
 const static PARAM_IDX_t DSP_TO_TABLE_IDX[] =
 {
@@ -151,7 +151,7 @@ int16_t COMM_getRecvLength(COMM_CMD_t cmd)
 // MUST check validity of cmd and data before call function
 // data[0] : dsp_index
 // data[1],[2] : data value
-int8_t COMM_generateMessage(COMM_CMD_t cmd, const int16_t* data)
+int8_t COMM_generateMessage(COMM_CMD_t cmd, const uint16_t* data)
 {
 	//printf("make MSG\r\n");
 	comm_state=COMM_DEFAULT;
@@ -170,7 +170,7 @@ int8_t COMM_generateMessage(COMM_CMD_t cmd, const int16_t* data)
 	case SPICMD_REQ_ST:
 	case SPICMD_REQ_ERR:
 #ifdef DEBUG_DSP
-		printf("[COMM_DSP] COMM_generateMessage : cmd = %d\r\n", (int)sendMsg[4]);
+		kprintf(PORT_DEBUG, "[COMM_DSP] COMM_generateMessage : cmd = %d\r\n", (int)sendMsg[4]);
 #endif
 		sendMsg[2] = 6;
 		comm_state = COMM_SUCCESS;
@@ -185,7 +185,7 @@ int8_t COMM_generateMessage(COMM_CMD_t cmd, const int16_t* data)
 #ifdef DEBUG_DSP
 		//int* valueInt = (int*)&data[1];
 		//float* valueFloat = (float*)&data[1];
-		printf("[COMM_DSP] COMM_generateMessage : WRITE idx = %d, data[0] = %d, data[1] = %d, data[2] = %d\r\n",
+		kprintf(PORT_DEBUG, "[COMM_DSP] COMM_generateMessage : WRITE idx = %d, data[0] = %d, data[1] = %d, data[2] = %d\r\n",
 				sendMsg[2], sendMsg[5], sendMsg[6], sendMsg[7]);
 #endif
 		comm_state = COMM_SUCCESS;
@@ -202,7 +202,7 @@ int8_t COMM_generateMessage(COMM_CMD_t cmd, const int16_t* data)
 	case SPICMD_RESP_ERR:
 	case SPICMD_RESP_PARAM:
 	default:
-		printf("[COMM_DSP] Wrong type sender message : cmd = %s\r\n", COMM_getCMDString(cmd));
+		kprintf(PORT_DEBUG, "[COMM_DSP] Wrong type sender message : cmd = %s\r\n", COMM_getCMDString(cmd));
 		comm_state = COMM_FAILED;
 		break;
 	}
@@ -238,10 +238,44 @@ int8_t COMM_recvfromDSP(int16_t recv_len)
 	return COMM_SUCCESS;
 }
 
-// return receive valeu
+// set data for SPICMD_PARAM_W command
+// data[0] = index
+// data[1], data[2] : int32 or float value
+int8_t COMM_convertValue(PARAM_IDX_t table_idx, uint16_t *buf)
+{
+	uint16_t ratio;
+	int8_t ret_value=0;
+	int32_t t_value;
+	float value_f;
+
+	if(table_idx < value_type || table_idx >= PARAM_TABLE_SIZE) { return 0; }
+
+	t_value = table_getValue(table_idx);
+
+	ratio = table_getRatio(table_idx);
+	buf[0] = (uint16_t)table_getDspAddr(table_idx);
+	if(ratio == 1)
+	{
+		memcpy(&buf[1], &t_value, sizeof(int32_t));
+	}
+	else if(ratio == 10)
+	{
+		value_f = (float)((float)t_value/(float)ratio);
+		memcpy(&buf[1], &value_f, sizeof(float));
+	}
+	else
+	{
+		ret_value = 0;
+		kprintf(PORT_DEBUG,"ERR convert: wrong ratio=%d, index=%d\r\n", ratio, table_idx);
+	}
+
+	return ret_value;
+}
+
+// return receive value
 int32_t COMM_parseValue(int16_t dsp_index, uint16_t *data, int8_t *err)
 {
-	uint8_t ratio;
+	uint16_t ratio;
 	int32_t ret_value=0;
 	float value_f;
 
@@ -261,7 +295,7 @@ int32_t COMM_parseValue(int16_t dsp_index, uint16_t *data, int8_t *err)
 	else
 	{
 		*err = 1;
-		printf("ERR: SPICMD_RESP_PARAM invalid dsp_index=%d\n", dsp_index);
+		kprintf(PORT_DEBUG,"ERR parse: wrong ratio=%d, index=%d\r\n", ratio, dsp_index);
 	}
 
 	return ret_value;
@@ -282,11 +316,11 @@ int8_t COMM_parseMessage(void)
 
 	comm_state=COMM_DEFAULT;
 #ifdef DEBUG_DSP
-		printf("[COMM_DSP] handleMSG\r\n");
+	kprintf(PORT_DEBUG, "[COMM_DSP] handleMSG\r\n");
 #endif
 	if((recvMsg[0] != 0xAAAA) || (recvMsg[1] != 0x5555))
 	{
-		printf("[COMM_DSP] ERR: COMM_parseMessage : Broken packet, recvMsg = 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X\r\n",
+		kprintf(PORT_DEBUG, "[COMM_DSP] ERR: COMM_parseMessage : Broken packet, recvMsg = 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X 0x%04X\r\n",
 				recvMsg[0], recvMsg[1], recvMsg[2], recvMsg[3], recvMsg[4], recvMsg[5]);
 
 		return COMM_FAILED;
@@ -313,11 +347,14 @@ int8_t COMM_parseMessage(void)
 #ifndef TEST_ST_READ
 		/*read from DSP*/
 
-		state_run_stop = recvMsg[5]&0x01; 		//run/stop
-		state_direction = (recvMsg[5]>>8)&0x01; 	// forward/backward
+//		state_run_stop = recvMsg[5]&0x01; 		//run/stop
+//		state_direction = (recvMsg[5]>>8)&0x01; 	// forward/backward
+//
+//		st_overload = (recvMsg[5+1])&0x01;		// overload on/off
+//		st_brake = (recvMsg[5+1]>>8)&0x01;  	// external brake on/off
 
-		st_overload = (recvMsg[5+1])&0x01;		// overload on/off
-		st_brake = (recvMsg[5+1]>>8)&0x01;  	// external brake on/off
+		status1 = recvMsg[5];
+		status2 = recvMsg[6];
 
 		memcpy(&i_rms_index, &recvMsg[5+2], sizeof(float));
 		memcpy(&run_freq_index, &recvMsg[5+4], sizeof(float));
@@ -337,8 +374,8 @@ int8_t COMM_parseMessage(void)
 #endif
 
 #ifdef SUPPORT_NFC_OLD
-		status1 = (int32_t)((state_direction<<16) | state_run_stop);
-		status2 = (int32_t)((st_brake<<16) | st_overload);
+//		status1 = (int32_t)((state_direction<<8) | state_run_stop); // only use lower 16 bit for modbus
+//		status2 = (int32_t)((st_brake<<8) | st_overload);
 		table_setStatusValue(run_status1_type, (int32_t)status1);
 		table_setStatusValue(run_status2_type, (int32_t)status2);
 #else
@@ -351,10 +388,17 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index) );
 		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index) );
 		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index) );
-		table_setStatusValue(motor_temperature_type, (int32_t)(motor_temp_index) );
+		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index) );
 
 #ifdef SUPPORT_NFC_OLD
-		// update EEPROM
+		// update EEPROM while NFC tagged
+		if(NVM_isNfcMonitoring())
+		{
+			kprintf(PORT_DEBUG, "update Status to EEPROM\n");
+			// TODO : update EEPROM
+
+		}
+
 #else
 		// TODO: update mailbox
 #endif
@@ -383,7 +427,7 @@ int8_t COMM_parseMessage(void)
 		memcpy(&current, &recvMsg[5+2], sizeof(float));
 		memcpy(&freq, &recvMsg[5+4], sizeof(float));
 #ifdef DEBUG_DSP
-		printf("[COMM_DSP] RESP_ERR : err_code[%d], run_state[%d], freq[%d], current[%d]\r\n",
+		kprintf(PORT_DEBUG, "[COMM_DSP] RESP_ERR : err_code[%d], run_state[%d], freq[%d], current[%d]\r\n",
 						(int)err_code, (int)run_state, *curr, *freq);
 		//printf("[COMM_DSP] RESP_ERR : err_code[%d], run_state[%d]\r\n",(int)err_code, (int)run_state);
 #endif
@@ -405,7 +449,7 @@ int8_t COMM_parseMessage(void)
 		else
 			comm_state = COMM_SUCCESS;
 #ifdef DEBUG_DSP
-		printf("[COMM_DSP] RESP_PARAM : idx[%d], val[%d]\r\n",
+		kprintf(PORT_DEBUG, "[COMM_DSP] RESP_PARAM : idx[%d], val[%d]\r\n",
 				(int)read_idx, (int)read_value);
 #endif
 
@@ -421,7 +465,7 @@ int8_t COMM_parseMessage(void)
 	case SPICMD_PARAM_W:
 	case SPICMD_PARAM_R:
 	default:
-		printf("[COMM_DSP] ERR: Wrong type recv message: cmd = %s\r\n", COMM_getCMDString(cmd));
+		kprintf(PORT_DEBUG, "[COMM_DSP] ERR: Wrong type recv message: cmd = %s\r\n", COMM_getCMDString(cmd));
 		comm_state = COMM_FAILED;
 		break;
 	}
@@ -430,7 +474,7 @@ int8_t COMM_parseMessage(void)
 }
 
 // other command except SPICMD_PARAM_W command
-int8_t COMM_sendCommand(COMM_CMD_t cmd, const int16_t* data)
+int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 {
 	int i, rep_cnt=SPI_REPEAT_CNT;
 	int8_t result;
@@ -478,7 +522,7 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const int16_t* data)
 }
 
 // only for SPICMD_PARAM_W command
-int8_t COMM_sendParamWrite(const int16_t* data)
+int8_t COMM_sendParamWrite(const uint16_t* data)
 {
 	int32_t value;
 	int8_t result;
@@ -501,7 +545,7 @@ int8_t COMM_sendParamWrite(const int16_t* data)
 // TODO: MUST check validity of cmd and data before call function, data should be converted to int32 or float
 // data[0] : dsp_index
 // data[1],[2] : data value
-int8_t COMM_sendMessage(COMM_CMD_t cmd, const int16_t* data)
+int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 {
 	int8_t result;
 
@@ -510,5 +554,5 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const int16_t* data)
 	else
 		result = COMM_sendCommand(cmd, data);
 
-	return result;
+	return (result == COMM_SUCCESS);
 }

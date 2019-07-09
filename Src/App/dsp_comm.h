@@ -63,7 +63,7 @@ typedef struct {
 } DSP_COMM_t ;
 #endif
 
-
-extern int8_t COMM_sendMessage(COMM_CMD_t cmd, const int16_t* data);
+extern int8_t COMM_convertValue(PARAM_IDX_t table_idx, uint16_t *buf);
+extern int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data);
 
 #endif /* SRC_DSP_COMM_H_ */

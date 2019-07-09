@@ -5,16 +5,11 @@
  *      Author: hrjung
  */
 
-#define SUPPORT_DRIVER_HW
+#include "includes.h"
 
-#ifdef SUPPORT_DRIVER_HW
+
 #include "main.h"
 #include "cmsis_os.h"
-#endif
-
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
 
 #include "table.h"
 
@@ -167,10 +162,10 @@ void UTIL_setMTDpin(uint8_t onoff)
 // debug test only
 void UTIL_readDin(void)
 {
+#ifdef SUPPORT_DRIVER_HW
 	static int din_idx=0;
 	int i, di_sum[EXT_DIN_COUNT];
 
-#ifdef SUPPORT_DRIVER_HW
 	// read DI
 	din_idx = din_idx%EXT_DIN_SAMPLE_CNT;
 	din[0][din_idx] = (uint8_t)HAL_GPIO_ReadPin(DI_1_GPIO_Port, DI_1_Pin);
@@ -193,7 +188,9 @@ void UTIL_readDin(void)
 		// else no change
 	}
 #else
-	bit_state = di_val[index];
+	int i;
+
+	for(i=0; i<EXT_DIN_COUNT; i++) mdin_value[i] = di_val[i];
 #endif
 
 }

@@ -27,12 +27,14 @@ typedef struct {
 
 
 
-extern void EXT_DI_updateMultiDinPinIndex(uint8_t index, DIN_config_t func_set);
-extern int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set);
+//extern void EXT_DI_updateMultiDinPinIndex(uint8_t index, DIN_config_t func_set);
+extern int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option);
 
 extern uint8_t EXT_DI_convertMultiStep(void);
 extern int8_t EXI_DI_handleDin(void);
 
 extern int8_t EXT_DO_handleDout(void);
+
+extern void EXT_AI_needReconfig(void);
 
 #endif /* SRC_EXT_IO_H_ */

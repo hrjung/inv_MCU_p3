@@ -1,12 +1,12 @@
-/******************************************************************************
-**  FILENAME:       proc_uart.h
-**
-**  PURPOSE:        
-**  LAST MODIFIED:  2016.08.
-******************************************************************************/ 
+/*
+ * modbus_func.h
+ *
+ *  Created on: 2019. 6. 28.
+ *      Author: hrjung
+ */
 
-#ifndef  __MODBUS_FUNC_H__
-#define  __MODBUS_FUNC_H__
+#ifndef SRC_MODBUS_FUNC_H_
+#define SRC_MODBUS_FUNC_H_
 
 #include "cmsis_os.h"
 #include "main.h"
@@ -54,6 +54,9 @@
 #define MB_ERROR_START_ADDR			(40400)
 #define MB_ERROR_END_ADDR			(40424)
 
+#define MB_STATUS_START_ADDR		(40160)
+#define MB_STATUS_END_ADDR			(40166)
+
 
 /*
 RX485 PDU max size = 253bytes
@@ -75,7 +78,7 @@ typedef struct {
 
 typedef struct {
 	uint8_t		valid;
-	uint8_t		rd_only; // 0: read/write, 1: read only
+	uint8_t		rd_only; // 0: read/write, 1: read only, 2: for status(read from variable, not EEPROM)
 	uint16_t 	conv_index;
 } MODBUS_addr_map_st;
 
@@ -139,6 +142,10 @@ enum
 *                                            FUNCTION PROTOTYPES
 *********************************************************************************************************
 */
+
+
+extern void MB_initAddrMap(void);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -149,4 +156,4 @@ extern "C" {
 }
 #endif
 
-#endif                                                          /* End of module include.                               */
+#endif /* SRC_MODBUS_FUNC_H_ */
