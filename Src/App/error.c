@@ -11,6 +11,8 @@
 #include "table.h"
 #include "error.h"
 
+#include "drv_gpio.h"
+
 
 STATIC uint8_t err_state=TRIP_REASON_NONE;
 
@@ -27,6 +29,8 @@ uint8_t ERR_getErrorState(void)
 void ERR_setErrorState(TRIP_REASON_t err_code)
 {
 	err_state = err_code;
+	if(ERR_isErrorState())
+		UTIL_setLED(LED_COLOR_R, 1);
 
 	//kprintf(PORT_DEBUG, "MCU Error=%d\r\n", err_state);
 }

@@ -36,6 +36,7 @@
 #include "nvm_queue.h"
 
 #include "drv_gpio.h"
+#include "drv_nvm.h"
 
 /* USER CODE END Includes */
 
@@ -143,6 +144,10 @@ void AccReadTimerCallback(void const * argument);
 
 uint32_t default_cnt=0, main_cnt=0, nfc_cnt=0, mbus_cnt=0, rs485_cnt=0, user_io_cnt=0;
 
+
+uint8_t NFC_Access_flag=0;
+
+extern LED_status_t LED_state[]; // 3 color LED state
 extern uint16_t adc_value;
 
 volatile int8_t ADC_ConvCpltFlag=0, ADC_error=0;
@@ -161,8 +166,10 @@ extern void MB_init(void);
 extern void MB_TaskFunction(void);
 
 // NFC task function
+extern int16_t table_updatebyNfc(void);
 extern int16_t table_restoreNVM(void);
 extern int16_t table_updateParamNVM(void);
+
 
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
@@ -1134,8 +1141,7 @@ void StartDefaultTask(void const * argument)
 void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
-	PARAM_IDX_t index;
-	int32_t value;
+	int32_t tag_tryed, tag_end;
 	int8_t status;
   // TODO : wait until EEPROM initialized
   while(EEPROM_initialized_f==0) osDelay(1);
@@ -1145,18 +1151,36 @@ void NfcNvmTaskFunc(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+	  osDelay(5);
+
 	  // read NFC tag flag
+	  status = NVM_getNfcStatus(&tag_tryed, &tag_end);
+	  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); continue;}
+
+	  if(NFC_Access_flag)
+	  {
+		  UTIL_setLED(LED_COLOR_B, 0);
+		  osDelay(10);
+		  continue; // it can skip below EEPROM access until NFC untagged
+	  }
+	  else
+		  UTIL_setLED(LED_COLOR_G, 0);
 
 	  // if tagged, wait tag_end
-
-
-	  // if tag end, update NVM -> table
-	  //	check parameter table
-	  //	check system parameter
-
-
-	  // else if tag error, restore NVM <- table
-
+	  if(tag_tryed == 1 && tag_end == 1)
+	  {
+		  // if tag end, update NVM -> table
+		  //	check parameter table
+		  //	check system parameter
+		  status = table_updatebyNfc();
+		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag update error\r\n"); }
+	  }
+	  else if(tag_tryed == 1 || tag_end == 1)
+	  {
+		  // tag error : restore NVM <- table
+		  status = table_restoreNVM();
+		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
+	  }
 
 	  // no tag state,
 	  //	handle NVM update request
@@ -1214,6 +1238,7 @@ void mainHandlerTaskFunc(void const * argument)
   osDelay(10);
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
 
+  UTIL_setLED(LED_COLOR_G, 1);
   status = table_initNVM();
   if(status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
@@ -1228,8 +1253,6 @@ void mainHandlerTaskFunc(void const * argument)
 
   // init modbus_handler
   MB_initAddrMap();
-
-
 
   /* Infinite loop */
   for(;;)
@@ -1369,7 +1392,8 @@ void userIoTimerCallback(void const * argument)
 void NfcAppTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN NfcAppTimerCallback */
-  
+	NFC_Access_flag = 0; // NFC access end
+
   /* USER CODE END NfcAppTimerCallback */
 }
 
@@ -1378,6 +1402,37 @@ void AccReadTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN AccReadTimerCallback */
   HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
+
+  if(LED_state[0].onoff == GPIO_PIN_SET)
+  {
+	  if(LED_state[0].blink)
+		  HAL_GPIO_TogglePin(R_LED_GPIO_Port, R_LED_Pin);
+	  else
+		  HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_SET);
+  }
+  else
+	  HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_RESET);;
+
+  if(LED_state[1].onoff == GPIO_PIN_SET)
+  {
+	  if(LED_state[1].blink)
+		  HAL_GPIO_TogglePin(G_LED_GPIO_Port, G_LED_Pin);
+	  else
+		  HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_SET);
+  }
+  else
+	  HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_RESET);
+
+  if(LED_state[2].onoff == GPIO_PIN_SET)
+  {
+	  if(LED_state[1].blink)
+		  HAL_GPIO_TogglePin(B_LED_GPIO_Port, B_LED_Pin);
+	  else
+		  HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_SET);
+  }
+  else
+	  HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
+
   /* USER CODE END AccReadTimerCallback */
 }
 

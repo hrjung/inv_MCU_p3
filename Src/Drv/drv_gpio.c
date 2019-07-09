@@ -11,6 +11,8 @@
 #include "main.h"
 #include "cmsis_os.h"
 
+#include "proc_uart.h"
+
 #include "table.h"
 
 #include "drv_gpio.h"
@@ -26,13 +28,20 @@
 static uint8_t di_val[3];
 uint8_t dtm_test_val=0;
 
+LED_status_t LED_state[3] =
+{
+	{0, GPIO_PIN_RESET},
+	{0, GPIO_PIN_RESET},
+	{0, GPIO_PIN_RESET},
+};
+
 static uint8_t din[EXT_DIN_COUNT][EXT_DIN_SAMPLE_CNT] = {0};
 
 extern uint8_t mdin_value[];
 
 void printDBG(char *str)
 {
-	puts(str);putchar('\n');
+	kputs(PORT_DEBUG, str);kputs(PORT_DEBUG,"\r\n");
 }
 
 int8_t UTIL_isDspErrorState(void)
@@ -58,39 +67,37 @@ void UTIL_setLED(uint8_t color, uint8_t blink_on)
 	switch(color)
 	{
 	case LED_COLOR_OFF:
-#ifdef SUPPORT_DRIVER_HW
-		HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
-#endif
-		printf("LED off\n");
+		LED_state[0].onoff = GPIO_PIN_RESET;
+		LED_state[0].blink = 0;
+		LED_state[1].onoff = GPIO_PIN_RESET;
+		LED_state[1].blink = 0;
+		LED_state[2].onoff = GPIO_PIN_RESET;
+		LED_state[2].blink = 0;
+		//printf("LED off\n");
 		break;
 
 	case LED_COLOR_R:
-#ifdef SUPPORT_DRIVER_HW
-		HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
-#endif
-		printf("LED R on, blink=%d\n", blink_on);
+		LED_state[0].onoff = GPIO_PIN_SET;
+		LED_state[0].blink = blink_on;
+		LED_state[1].onoff = GPIO_PIN_RESET;
+		LED_state[2].onoff = GPIO_PIN_RESET;
+		//printf("LED R on, blink=%d\n", blink_on);
 		break;
 
 	case LED_COLOR_G:
-#ifdef SUPPORT_DRIVER_HW
-		HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
-#endif
-		printf("LED G on, blink=%d\n", blink_on);
+		LED_state[0].onoff = GPIO_PIN_RESET;
+		LED_state[1].onoff = GPIO_PIN_SET;
+		LED_state[1].blink = blink_on;
+		LED_state[2].onoff = GPIO_PIN_RESET;
+		//printf("LED G on, blink=%d\n", blink_on);
 		break;
 
 	case LED_COLOR_B:
-#ifdef SUPPORT_DRIVER_HW
-		HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_SET);
-#endif
-		printf("LED B on, blink=%d\n", blink_on);
+		LED_state[0].onoff = GPIO_PIN_RESET;
+		LED_state[1].onoff = GPIO_PIN_RESET;
+		LED_state[2].onoff = GPIO_PIN_SET;
+		LED_state[2].blink = blink_on;
+		//printf("LED B on, blink=%d\n", blink_on);
 		break;
 #if 0
 	case LED_COLOR_RG:

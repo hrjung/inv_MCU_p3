@@ -905,12 +905,12 @@ int16_t table_updatebyNfc(void)
 	while(index < PARAM_TABLE_SIZE)
 	{
 		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status != 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d\r\n", index); errflag++;}
+		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d\r\n", index); errflag++;}
 
 		if(nvm_value != table_data[index])
 		{
 			status = NVMQ_enqueueTableQ(index, nvm_value);
-			if(status != 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d\r\n", index); errflag++;}
+			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d\r\n", index); errflag++;}
 		}
 	}
 

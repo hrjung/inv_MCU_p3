@@ -55,7 +55,10 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#define NFC_APP_ACCESS_INTERVAL		1000
 
+extern uint8_t NFC_Access_flag;
+extern osTimerId NfcAppTimerHandle;
 
 extern uint16_t mb_downcounter;
 extern void MB_processTimerExpired(void);
@@ -221,7 +224,9 @@ void DMA1_Channel4_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-
+  // get RF_BUSY(RF_WIP) sig to identify NFC App access, clear after 1sec
+  osTimerStart(NfcAppTimerHandle, NFC_APP_ACCESS_INTERVAL);
+  NFC_Access_flag = 1;
   /* USER CODE END EXTI9_5_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */

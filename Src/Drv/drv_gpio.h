@@ -21,6 +21,12 @@
 #define LED_COLOR_GB	6
 #define LED_COLOR_RGB	7
 
+typedef struct
+{
+	uint8_t blink;
+	uint8_t onoff;
+} LED_status_t;
+
 extern void UTIL_setTestPin(uint8_t index, uint8_t onoff);
 extern void UTIL_setLED(uint8_t color, uint8_t blink_on);
 
