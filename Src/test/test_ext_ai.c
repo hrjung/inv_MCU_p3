@@ -25,6 +25,10 @@ extern void test_clear(void);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 
+extern int8_t table_setAinValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+extern int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+
+extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option);
 
 extern int8_t EXT_AI_setConfig(void);
 extern int32_t EXT_AI_getFreq(uint16_t adc_val);
@@ -170,7 +174,7 @@ void test_handleAin(void)
 
 	// set CTRL_in as Analog_V
 	//table_setValue(ctrl_in_type, CTRL_IN_Analog_V);
-	table_setStatusValue(run_status1_type, 0x0); // fwd, stop
+	table_setStatusValue(run_status1_type, 0x0, REQ_FROM_TEST); // fwd, stop
 
 
 

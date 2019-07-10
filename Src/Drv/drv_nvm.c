@@ -18,9 +18,9 @@
 #include "drv_nvm.h"
 
 
-#define TABLE_SIZE_MAX	250
+//#define TABLE_SIZE_MAX	250
 
-
+#if 0
 static int32_t sysparam_addr[] =
 {
 		0x10,		//SYSTEM_PARAM_NFC_TAGGED
@@ -32,9 +32,22 @@ static int32_t sysparam_addr[] =
 		0x28,		//SYSTEM_PARAM_ON_MONITORING
 		0x2C,		//SYSTEM_PARAM_IDLE0_RUN1_STOP2
 };
+#else
+static int32_t sysparam_addr[] =
+{
+		400,		//SYSTEM_PARAM_NFC_TAGGED
+		404,		//SYSTEM_PARAM_CRC_VALUE
+		408,		//SYSTEM_PARAM_IS_INITIATED
+		412,		//SYSTEM_PARAM_HAS_SYSTEM_ERROR
+		416,		//SYSTEM_PARAM_ENABLE_NFC_WRITER
+		420,		//SYSTEM_PARAM_NFC_TRYED
+		424,		//SYSTEM_PARAM_ON_MONITORING
+		428,		//SYSTEM_PARAM_IDLE0_RUN1_STOP2
+};
+#endif
 
 #ifndef SUPPORT_DRIVER_HW
-static int32_t nvm_table[TABLE_SIZE_MAX];
+static int32_t nvm_table[PARAM_TABLE_SIZE];
 #endif
 int32_t table_nvm[PARAM_TABLE_SIZE];
 
@@ -73,7 +86,7 @@ void NVM_clear(void)
 {
 	int i;
 
-	for(i=0; i<TABLE_SIZE_MAX; i++) nvm_table[i] = 0;
+	for(i=0; i<PARAM_TABLE_SIZE; i++) nvm_table[i] = 0;
 
 }
 #endif
@@ -162,15 +175,15 @@ int8_t NVM_isNfcMonitoring(void)
 	return (int8_t)isMonitoring;
 }
 
-int8_t NVM_getNfcStatus(int32_t *tag_started, int32_t *tag_end)
+int8_t NVM_getNfcStatus(int32_t *tag_tryed, int32_t *tag_end)
 {
 	uint8_t status;
 
-	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TAGGED], tag_started);
-	if(status!=NVM_OK) return NVM_NOK;
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TAGGED], tag_end);
+	//if(status!=NVM_OK) return NVM_NOK;
 
-	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TRYED], tag_end);
-	if(status!=NVM_OK) return NVM_NOK;
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TRYED], tag_tryed);
+	//if(status!=NVM_OK) return NVM_NOK;
 
 	return NVM_OK;
 }
@@ -184,6 +197,27 @@ int8_t NVM_clearNfcStatus(void)
 	if(status!=NVM_OK) return NVM_NOK;
 
 	status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_NFC_TRYED], value);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t NVM_getRunStopFlag(int32_t *run_stop)
+{
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_IDLE0_RUN1_STOP2], run_stop);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t MVM_clearRunStopFlag(void)
+{
+	uint8_t status;
+	int32_t value=0;
+
+	status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_IDLE0_RUN1_STOP2], value);
 	if(status!=NVM_OK) return NVM_NOK;
 
 	return NVM_OK;

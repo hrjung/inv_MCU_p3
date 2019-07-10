@@ -30,6 +30,8 @@ extern uint16_t sendMsg[];
 extern uint16_t recvMsg[];
 extern int16_t read_idx;
 
+extern int32_t table_getStatusValue(int16_t index);
+
 extern int16_t COMM_getRecvLength(COMM_CMD_t cmd);
 extern int8_t COMM_generateMessage(COMM_CMD_t cmd, const uint16_t* data);
 extern int32_t COMM_parseValue(int16_t dsp_index, uint16_t *data, int8_t *err);
@@ -330,7 +332,7 @@ void test_parseMessage(void)
 	exp_i_rms = (int32_t)(test_i_rms*10.0 + 0.05);
 	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	exp_dc_volt = (int32_t)(test_dc_volt*10.0);
-	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0);
+	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0 + 0.05);
 	exp_mtr_temp = (int32_t)1;
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
@@ -372,7 +374,7 @@ void test_parseMessage(void)
 	exp_i_rms = (int32_t)(test_i_rms*10.0 + 0.05);
 	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	exp_dc_volt = (int32_t)(test_dc_volt*10.0);
-	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0);
+	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0 + 0.05);
 	exp_mtr_temp = (int32_t)2;
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);

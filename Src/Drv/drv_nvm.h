@@ -25,6 +25,9 @@ extern int8_t NVM_isInit(void);
 extern int8_t NVM_isNfcMonitoring(void);
 extern int8_t NVM_getNfcStatus(int32_t *tag_started, int32_t *tag_end);
 extern int8_t NVM_clearNfcStatus(void);
+extern int8_t NVM_getRunStopFlag(int32_t *run_stop);
+extern int8_t MVM_clearRunStopFlag(void);
+
 extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
 extern int8_t NVM_setCRC(void);
 

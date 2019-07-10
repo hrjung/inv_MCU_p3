@@ -72,6 +72,7 @@ typedef struct {
 } ERR_info_t;
 
 extern uint8_t ERR_isErrorState(void);
+extern uint8_t ERR_getErrorState(void);
 extern void ERR_setErrorState(TRIP_REASON_t err_code);
 
 #endif /* SRC_ERROR_H_ */

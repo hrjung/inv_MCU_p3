@@ -45,7 +45,7 @@ extern int16_t state_direction; // global forward/reverse direction status
 
 
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
-
+extern int32_t table_getStatusValue(int16_t index);
 
 int EXT_DI_isMultiStepValid(void)
 {

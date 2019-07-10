@@ -6,14 +6,13 @@
 ******************************************************************************/ 
 #define  PROC_UART_GLOBALS
 
+#include "includes.h"
+
 #include "stm32f1xx_hal.h"
 #include "cmsis_os.h"
 #include "proc_uart.h"
 #include "debug.h"
 
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
 
 
 /********************************************************************************

@@ -27,7 +27,7 @@ extern uint8_t mdout_value[];
 extern void test_clear(void);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value);
 //extern int32_t table_getStatusValue(int16_t index);
-extern void table_setStatusValue(int16_t index, int32_t value);
+extern void table_setStatusValue(int16_t index, int32_t value, int16_t option);
 
 /*
  * 		test item : EXT_DO_handleDout
@@ -48,9 +48,9 @@ void test_handleDout(void)
 	exp_result0 = 0;
 	exp_result1 = 1;
 #ifdef SUPPORT_NFC_OLD
-	table_setStatusValue(run_status1_type, 0); // STOP
+	table_setStatusValue(run_status1_type, 0, REQ_FROM_TEST); // STOP
 #else
-	table_setStatusValue(run_status_type, 0); // STOP
+	table_setStatusValue(run_status_type, 0, REQ_FROM_TEST); // STOP
 #endif
 	table_setValue(index0, DOUT_running);
 	table_setValue(index1, DOUT_stop);
@@ -62,9 +62,9 @@ void test_handleDout(void)
 	exp_result0 = 1;
 	exp_result1 = 0;
 #ifdef SUPPORT_NFC_OLD
-	table_setStatusValue(run_status1_type, 1);
+	table_setStatusValue(run_status1_type, 1, REQ_FROM_TEST);
 #else
-	table_setStatusValue(run_status_type, 1); // running
+	table_setStatusValue(run_status_type, 1, REQ_FROM_TEST); // running
 #endif
 	EXT_DO_handleDout();
 	TEST_ASSERT_EQUAL_INT(exp_result0, mdout_value[0]);
@@ -74,10 +74,10 @@ void test_handleDout(void)
 	exp_result0 = 0;
 	exp_result1 = 1;
 #ifdef SUPPORT_NFC_OLD
-	table_setStatusValue(run_status2_type, 0x100);
+	table_setStatusValue(run_status2_type, 0x100, REQ_FROM_TEST);
 #else
-	table_setStatusValue(overload_alarm_type, 0);
-	table_setStatusValue(shaftbrake_status_type, 1);
+	table_setStatusValue(overload_alarm_type, 0, REQ_FROM_TEST);
+	table_setStatusValue(shaftbrake_status_type, 1, REQ_FROM_TEST);
 #endif
 	table_setValue(index0, DOUT_overload);
 	table_setValue(index1, DOUT_shaftbrake_on);
@@ -88,10 +88,10 @@ void test_handleDout(void)
 	exp_result0 = 1;
 	exp_result1 = 0;
 #ifdef SUPPORT_NFC_OLD
-	table_setStatusValue(run_status2_type, 1);
+	table_setStatusValue(run_status2_type, 1, REQ_FROM_TEST);
 #else
-	table_setStatusValue(overload_alarm_type, 1);
-	table_setStatusValue(shaftbrake_status_type, 0);
+	table_setStatusValue(overload_alarm_type, 1, REQ_FROM_TEST);
+	table_setStatusValue(shaftbrake_status_type, 0, REQ_FROM_TEST);
 #endif
 	table_setValue(index0, DOUT_overload);
 	table_setValue(index1, DOUT_shaftbrake_on);

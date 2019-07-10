@@ -6,6 +6,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+#include "includes.h"
+
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "cmsis_os.h"
@@ -14,10 +16,6 @@
 #include "modbus_func.h"
 #include "modbus_queue.h"
 #include "table.h"
-
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
 
 // in case of baudrate > 19200, inter-frame delay is 1.75ms
 // baudrate < 19200, need to calculate as 3.5 character
@@ -91,16 +89,15 @@ void MB_UART_init(uint32_t baudrate_index)
 void MB_init(void)
 {
 	int i;
-	uint32_t baudrate_index=2;
+	int32_t b_index=2;
 
-//	while(getIsEEPROMInit() != 1) osDelay(10);
-//	mb_slaveAddress = table_database_getValue(mb_address_type);
-//	b_index = (uint16_t)table_database_getValue(baudrate_type);
+	mb_slaveAddress = (uint8_t)table_getValue(mb_address_type);
+	b_index = table_getValue(baudrate_type);
 
-	MB_UART_init((uint32_t)baudrate_index);
+	MB_UART_init((uint32_t)b_index);
 	MB_initTimer(MODBUS_INTER_FRAME_DELAY); // 1.75ms for 3.5 char
 
-	kprintf(PORT_DEBUG, "MB init s_addr=%d, baud=%d \r\n", mb_slaveAddress, (int)mb_baudrate[baudrate_index]);
+	kprintf(PORT_DEBUG, "MB init s_addr=%d, baud=%d \r\n", mb_slaveAddress, (int)mb_baudrate[b_index]);
 
 	mbBufRx.wp = 0;
 	mbBufTx.wp = 0;

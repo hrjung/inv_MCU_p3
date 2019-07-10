@@ -34,6 +34,7 @@
 #include "modbus_func.h"
 #include "modbus_queue.h"
 #include "nvm_queue.h"
+#include "handler.h"
 
 #include "drv_gpio.h"
 #include "drv_nvm.h"
@@ -164,12 +165,7 @@ uint8_t watchdog_f = 0;
 extern void gen_crc_table(void);
 extern void MB_init(void);
 extern void MB_TaskFunction(void);
-
-// NFC task function
-extern int16_t table_updatebyNfc(void);
-extern int16_t table_restoreNVM(void);
-extern int16_t table_updateParamNVM(void);
-
+extern int8_t MB_handlePacket(void);
 
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
@@ -272,6 +268,8 @@ int main(void)
  
   // LED on
   HAL_GPIO_WritePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin, GPIO_PIN_SET);
+
+  UTIL_setMTDpin(0); // set MTD pin no error
 
   // ADC self calibration
   while(!(HAL_ADCEx_Calibration_Start(&hadc1)==HAL_OK));
@@ -1141,7 +1139,7 @@ void StartDefaultTask(void const * argument)
 void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
-	int32_t tag_tryed, tag_end;
+	int32_t tag_tryed=0, tag_end=0;
 	int8_t status;
   // TODO : wait until EEPROM initialized
   while(EEPROM_initialized_f==0) osDelay(1);
@@ -1151,10 +1149,15 @@ void NfcNvmTaskFunc(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  osDelay(5);
+	  osDelay(10);
+#ifdef SUPPORT_TASK_WATCHDOG
+	  watchdog_f |= WATCHDOG_NFC;
+#endif
 
+#ifndef SUPPORT_UNIT_TEST
 	  // read NFC tag flag
-	  status = NVM_getNfcStatus(&tag_tryed, &tag_end);
+	  tag_tryed=0, tag_end=0;
+	  status = NVM_getNfcStatus(&tag_end, &tag_tryed);
 	  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); continue;}
 
 	  if(NFC_Access_flag)
@@ -1172,13 +1175,13 @@ void NfcNvmTaskFunc(void const * argument)
 		  // if tag end, update NVM -> table
 		  //	check parameter table
 		  //	check system parameter
-		  status = table_updatebyNfc();
+		  status = HDLR_updatebyNfc();
 		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag update error\r\n"); }
 	  }
 	  else if(tag_tryed == 1 || tag_end == 1)
 	  {
 		  // tag error : restore NVM <- table
-		  status = table_restoreNVM();
+		  status = HDLR_restoreNVM();
 		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
 	  }
 
@@ -1186,15 +1189,11 @@ void NfcNvmTaskFunc(void const * argument)
 	  //	handle NVM update request
 	  if(!NVMQ_isEmptyNfcQ())
 	  {
-		  status = table_updateParamNVM();
-		  if(status == 0) kputs(PORT_DEBUG, "table_updateParamNVM ERROR\r\n");
+		  status = HDLR_updateParamNVM();
+		  if(status == 0) kputs(PORT_DEBUG, "HDLR_updateParamNVM ERROR\r\n");
 	  }
-
-
-#ifdef SUPPORT_TASK_WATCHDOG
-	  watchdog_f |= WATCHDOG_NFC;
 #endif
-	  osDelay(10);
+
   }
   /* USER CODE END NfcNvmTaskFunc */
 }
@@ -1239,6 +1238,7 @@ void mainHandlerTaskFunc(void const * argument)
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
 
   UTIL_setLED(LED_COLOR_G, 1);
+#ifndef SUPPORT_UNIT_TEST
   status = table_initNVM();
   if(status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
@@ -1246,6 +1246,9 @@ void mainHandlerTaskFunc(void const * argument)
 	  EEPROM_initialized_f = 1; // EEPROM initialized
 
   kprintf(PORT_DEBUG, "EEPROM_initialized_f = %d\r\n", EEPROM_initialized_f);
+#else
+  EEPROM_initialized_f=1;
+#endif
 
   // init queue
   MBQ_init();
@@ -1257,7 +1260,29 @@ void mainHandlerTaskFunc(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+#ifndef SUPPORT_UNIT_TEST
+	  // read DSP error flag, MCU error state
+	  //HDLR_handleDspError();
+	  //if(status == 0)
 
+	  // read run/stop flag in EEPROM
+	  status = HDLR_handleRunStopFlag();
+
+
+	  // read DSP status
+
+
+	  // read modbus packet
+	  //MB_handlePacket();
+
+
+	  // read nvm_q
+	  if(!NVMQ_isEmptyTableQ())
+	  {
+		  status = table_updatebyTableQ();
+		  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
+	  }
+#endif
 
 #ifdef SUPPORT_TASK_WATCHDOG
 	watchdog_f |= WATCHDOG_MAIN;
@@ -1288,7 +1313,9 @@ void mbus485TaskFunc(void const * argument)
 	/* Infinite loop */
 	for(;;)
 	{
+#ifndef SUPPORT_UNIT_TEST
 		MB_TaskFunction();
+#endif
 
 		mbus_cnt++;
 
@@ -1349,6 +1376,9 @@ void userIoTimerCallback(void const * argument)
 	int32_t ctrl_in;
 
 #ifndef SUPPORT_UNIT_TEST
+	// set DTM pin to check DSP error
+	UTIL_readDspErrorPin();
+
 	ctrl_in = table_getCtrllIn();
 	if(ctrl_in == CTRL_IN_Digital) // UIO_UPDATE_TIME_INTERVAL 10ms
 	{
@@ -1403,35 +1433,7 @@ void AccReadTimerCallback(void const * argument)
   /* USER CODE BEGIN AccReadTimerCallback */
   HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
 
-  if(LED_state[0].onoff == GPIO_PIN_SET)
-  {
-	  if(LED_state[0].blink)
-		  HAL_GPIO_TogglePin(R_LED_GPIO_Port, R_LED_Pin);
-	  else
-		  HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_SET);
-  }
-  else
-	  HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_RESET);;
-
-  if(LED_state[1].onoff == GPIO_PIN_SET)
-  {
-	  if(LED_state[1].blink)
-		  HAL_GPIO_TogglePin(G_LED_GPIO_Port, G_LED_Pin);
-	  else
-		  HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_SET);
-  }
-  else
-	  HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_RESET);
-
-  if(LED_state[2].onoff == GPIO_PIN_SET)
-  {
-	  if(LED_state[1].blink)
-		  HAL_GPIO_TogglePin(B_LED_GPIO_Port, B_LED_Pin);
-	  else
-		  HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_SET);
-  }
-  else
-	  HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
+  UTIL_handleLED(); // handling 3 color LED
 
   /* USER CODE END AccReadTimerCallback */
 }

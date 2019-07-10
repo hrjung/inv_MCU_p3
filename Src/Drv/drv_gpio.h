@@ -9,6 +9,8 @@
 #define SRC_DRV_GPIO_H_
 
 
+#define DTM_DSP_TRIP_ERROR		3
+
 #define EXT_DIN_SAMPLE_CNT			3
 #define EXT_AIN_SAMPLE_CNT			16
 
@@ -29,6 +31,7 @@ typedef struct
 
 extern void UTIL_setTestPin(uint8_t index, uint8_t onoff);
 extern void UTIL_setLED(uint8_t color, uint8_t blink_on);
+extern void UTIL_handleLED(void);
 
 extern uint8_t UTIL_readNotifyDTM(void);
 extern void UTIL_setMTDpin(uint8_t onoff);
@@ -36,6 +39,8 @@ extern void UTIL_setMTDpin(uint8_t onoff);
 extern void UTIL_readDin(void);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 
-extern int8_t UTIL_isDspErrorState(void);
+extern uint8_t UTIL_isDspError(void);
+extern void UTIL_readDspErrorPin(void);
+
 
 #endif /* SRC_DRV_GPIO_H_ */

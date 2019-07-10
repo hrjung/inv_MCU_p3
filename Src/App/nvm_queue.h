@@ -8,15 +8,9 @@
 #ifndef SRC_NVM_QUEUE_H_
 #define SRC_NVM_QUEUE_H_
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
 
 #include "table.h"
 
-
-#define NVM_QUEUE_DATA_TYPE			0
-#define NVM_QUEUE_STATUS_TYPE		1
 
 #define NVM_QUEUE_SIZE		PARAM_TABLE_SIZE
 
@@ -45,7 +39,7 @@ typedef struct {
 
 extern void NVMQ_init(void);
 extern int8_t NVMQ_isEmptyNfcQ(void);
-extern int8_t NVMQ_enqueueNfcQ(uint8_t type, uint16_t index, int32_t value);
+extern int8_t NVMQ_enqueueNfcQ(uint16_t index, int32_t value);
 extern int8_t NVMQ_dequeueNfcQ(uint16_t *addr, int32_t *value);
 
 extern int8_t NVMQ_isEmptyTableQ(void);

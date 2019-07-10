@@ -5,10 +5,6 @@
  *      Author: hrjung
  */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-
 #include "includes.h"
 #include "proc_uart.h"
 
@@ -34,7 +30,6 @@
 
 
 STATIC int32_t table_data[PARAM_TABLE_SIZE]; // parameter table of actual value
-STATIC int32_t table_status[PARAM_STATUS_SIZE]; // status from DSP via mailbox
 extern int32_t table_nvm[PARAM_TABLE_SIZE];
 
 extern int16_t state_run_stop; // run_stop status
@@ -56,7 +51,7 @@ STATIC int8_t table_setAinValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option);
-
+int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_setSlaveAddress(uint8_t addr);
@@ -179,19 +174,13 @@ STATIC Param_t param_table[] =
 	{ err_current_4_type,	0x3DC,	40423,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_doNothing},
 	{ err_freq_4_type,		0x3E0,	40424,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_doNothing},
 
-};
-
-
-const static StatusParam_t status_table[] =
-{
-	//    idx,				addr,	modbus, ratio,
-	{ run_status1_type,		0xA0,	40160,	1	},
-	{ run_status2_type,		0xA4,	40161,	1	},
-	{ I_rms_type,			0xA8,	40162,	10	},
-	{ run_freq_type,		0xAC,	40163,	10	},
-	{ dc_voltage_type,		0xB0,	40164,	10	},
-	{ ipm_temperature_type,	0xB4,	40165,	10	},
-	{ mtr_temperature_type,	0xB8,	40166,	1	},
+	{ run_status1_type,		0xA0,	40160,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setStatusValue},
+	{ run_status2_type,		0xA4,	40161,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setStatusValue},
+	{ I_rms_type,			0xA8,	40162,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+	{ run_freq_type,		0xAC,	40163,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+	{ dc_voltage_type,		0xB0,	40164,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+	{ ipm_temperature_type,	0xB4,	40165,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+	{ mtr_temperature_type,	0xB8,	40166,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
 };
 
 
@@ -240,7 +229,7 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 	if(option != REQ_FROM_TEST)
 	{
 		// request to update EEPROM
-		status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, idx, value);
+		status = NVMQ_enqueueNfcQ(idx, value);
 		if(status == 0) return 0;
 	}
 
@@ -461,14 +450,33 @@ int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 	return status;
 }
 
+int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
+{
+	table_data[index] = value;
+
+	if(index == run_status1_type)
+	{
+		state_run_stop = value&0x01; 		//run/stop
+		state_direction = (value>>8)&0x01; 	// forward/backward
+	}
+	else if(index == run_status2_type)
+	{
+		st_overload = value&0x01;		// overload on/off
+		st_brake = (value>>8)&0x01;  	// external brake on/off
+	}
+
+	return 1;
+}
+
 /*
  * 		test only for debug
  *
  */
 
-void test_setTableValue(PARAM_IDX_t idx, int32_t value)
+void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
-	table_data[idx] = value;
+	if(option == REQ_FROM_TEST)
+		table_data[idx] = value;
 }
 
 /*
@@ -503,27 +511,28 @@ int8_t table_initializeBlankEEPROM(void)
 	{
 		status = NVM_writeParam((PARAM_IDX_t)i, param_table[i].initValue);
 		if(status == 0) errflag++;
+
 		table_data[i] = param_table[i].initValue;
-		//printf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
+		//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
 	}
 
-	//printf("1: err=%d\r\n", errflag);
+	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 
 	// init system param
 	status = NVM_initSystemParam();
 	if(status == 0) errflag++;
 
-	//printf("2: err=%d\r\n", errflag);
+	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
 
 	status = NVM_setInit();
 	if(status == 0) errflag++;
 
-	//printf("3: err=%d\r\n", errflag);
+	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
 
 	status = NVM_setCRC();
 	if(status == 0) errflag++;
 
-	//printf("4: err=%d\r\n", errflag);
+	kprintf(PORT_DEBUG, "4: err=%d\r\n", errflag);
 
 	if(errflag) return 0;
 
@@ -542,19 +551,18 @@ int8_t table_loadEEPROM(void)
 		status = NVM_readParam((PARAM_IDX_t)i, &value);
 		if(status == NVM_NOK)
 		{
-			//printf("idx=%d read error, value=%d\r\n", i, (int)value);
+			kprintf(PORT_DEBUG, "idx=%d read error, value=%d\r\n", i, (int)value);
 			return 0;
 		}
 		else
 			table_data[i] = value;
 
-		HAL_Delay(2);
 	}
 
 	// check CRC
 	crc32_calc = table_calcCRC();
 	status = NVM_verifyCRC(crc32_calc);
-
+	kprintf(PORT_DEBUG, "table_loadEEPROM verify status=%d\r\n", status);
 	return status;
 }
 
@@ -625,10 +633,6 @@ int8_t table_init(void)
 	status = table_updateRange();
 	if(status == 0) return 0;
 
-	// init table_status[] as default
-	for(i=0; i<PARAM_STATUS_SIZE; i++)
-		table_status[i] = (int32_t)0;
-
 	for(i=0; i<PARAM_TABLE_SIZE; i++)
 	{
 		if(table_data[i] != param_table[i].initValue)
@@ -657,20 +661,20 @@ int8_t table_initNVM(void)
 	// initialize EEPROM
 	if(table_isInit() == 1) // correctly initialize
 	{
-	  //printf("load EEPROM\r\n");
+		kputs(PORT_DEBUG, "load EEPROM\r\n");
 	  // load EEPROM, check CRC
 	  status = table_loadEEPROM(); // EEPROM -> table_data[]
-	  //printf("1: status=%d\r\n", status);
+	  kprintf(PORT_DEBUG, "1: status=%d\r\n", status);
 	  if(status)
 	  {
 		  status = table_init();
-		  //printf("2: status=%d\r\n", status);
+		  kprintf(PORT_DEBUG, "2: status=%d\r\n", status);
 	  }
 	}
 	else
 	{
 	  // blank NVM : initialize as init value
-	  //printf("blank EEPROM\r\n");
+	  kputs(PORT_DEBUG, "blank EEPROM\r\n");
 	  status = table_initializeBlankEEPROM();
 	  //printf("EEPROM status=%d\r\n", status);
 	}
@@ -700,7 +704,7 @@ TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index)
 
 uint16_t table_getAddr(PARAM_IDX_t index)
 {
-	if(index >= PARAM_TABLE_SIZE) return 0;;
+	if(index >= PARAM_TABLE_SIZE) return 0;
 
 	return param_table[index].addr;
 }
@@ -735,39 +739,15 @@ int32_t table_getCtrllIn(void)
 	return table_data[ctrl_in_type];
 }
 
+
 int32_t table_getStatusValue(int16_t index)
 {
-	return table_status[index];
-}
+	if(index >= run_status1_type && index <= mtr_temperature_type)
+		return table_data[index];
+	else
+		kprintf(PORT_DEBUG, "table_getStatusValue index=%d error\r\n", index);
 
-void table_setStatusValue(int16_t index, int32_t value)
-{
-	table_status[index] = value;
-
-	if(index == run_status1_type)
-	{
-		state_run_stop = value&0x01; 		//run/stop
-		state_direction = (value>>8)&0x01; 	// forward/backward
-	}
-	else if(index == run_status2_type)
-	{
-		st_overload = value&0x01;		// overload on/off
-		st_brake = (value>>8)&0x01;  	// external brake on/off
-	}
-}
-
-uint16_t table_getStatusRatio(PARAM_STATUS_IDX_t index)
-{
-	if(index >= PARAM_STATUS_SIZE) return 1; // default
-
-	return status_table[index].ratio;
-}
-
-uint16_t table_getStatusNvmAddr(PARAM_STATUS_IDX_t index)
-{
-	if(index >= PARAM_STATUS_SIZE) return 0;
-
-	return status_table[index].addr;
+	return 0;
 }
 
 int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq)
@@ -828,104 +808,30 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	return 1;
 }
 
-/*
- *
- * 			table API for NFC task
- *
- */
-// table data -> EEPROM
-// in case of NFC write failure
-int16_t table_restoreNVM(void)
+int8_t table_updatebyTableQ(void)
 {
-	PARAM_IDX_t index=value_type;
-	int32_t nvm_value;
-	uint8_t nvm_status;
-	int16_t errflag=0;
-
-	while(index < PARAM_TABLE_SIZE)
-	{
-		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status != 0) {kprintf(PORT_DEBUG,"ERROR NVM read error\n"); errflag++;}
-
-		if(nvm_value != table_data[index])
-		{
-			nvm_status = NVM_writeParam(index, table_data[index]);
-			if(nvm_status != 0) {kprintf(PORT_DEBUG,"ERROR NVM write error\n"); errflag++;}
-		}
-		index++;
-	}
-
-	// no need to update CRC
-
-	if(errflag) return 0;
-
-	return 1;
-}
-
-// update EEPROM from table
-int16_t table_updateParamNVM(void)
-{
-	int32_t value, nvm_value;
+	int32_t value;
 	int8_t empty, status;
-	uint8_t nvm_status;
-	uint16_t addr;
+	PARAM_IDX_t index;
 	int16_t errflag=0;
 
 	do {
 
-		status = NVMQ_dequeueNfcQ(&addr, &value);
-		if(status == 0) {kprintf(PORT_DEBUG,"ERROR NfcQ dequeue \r\n"); errflag++;}
+		status = NVMQ_dequeueTableQ(&index, &value);
+		if(status == 0) {kprintf(PORT_DEBUG,"ERROR TableQ dequeue \r\n"); errflag++;}
 
-		nvm_status = NVM_read(addr, &nvm_value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error\r\n"); errflag++;}
-
-		if(nvm_value != value)
+		if(table_data[index] != value)
 		{
-			nvm_status = NVM_write(addr, value);
-			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error\r\n"); errflag++;}
+			status = table_runFunc(index, value, REQ_FROM_NFC);
+			kprintf(PORT_DEBUG,"update table_data[%d] = %d \r\n", index, (int)value);
 		}
 
-		empty = NVMQ_isEmptyNfcQ();
+		empty = NVMQ_isEmptyTableQ();
 	} while(empty == 0); // not empty
-
-	// update CRC
-	status = NVM_setCRC();
-	if(status == 0) errflag++;
 
 	if(errflag) return 0;
 
 	return 1;
 }
 
-// EEPROM is updated by NFC -> inform to table to update
-int16_t table_updatebyNfc(void)
-{
-	PARAM_IDX_t index=value_type;
-	int32_t nvm_value;
-	uint8_t nvm_status;
-	int8_t status;
-	int16_t errflag=0;
 
-	while(index < PARAM_TABLE_SIZE)
-	{
-		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d\r\n", index); errflag++;}
-
-		if(nvm_value != table_data[index])
-		{
-			status = NVMQ_enqueueTableQ(index, nvm_value);
-			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d\r\n", index); errflag++;}
-		}
-	}
-
-	// update CRC
-	status = NVM_setCRC();
-	if(status == 0) errflag++;
-
-	// clear NFC tag flag
-	status = NVM_clearNfcStatus();
-	if(status == -1) {kprintf(PORT_DEBUG, "ERROR clear tag flag \r\n"); return 0;}
-
-	if(errflag) return 0;
-	else	return 1;
-}

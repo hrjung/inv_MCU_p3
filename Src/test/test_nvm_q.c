@@ -12,14 +12,13 @@
 
 #include "unity.h"
 #include "nvm_queue.h"
-
+#include "table.h"
 
 extern NVM_To_Table_Queue_t table_q;
 extern NVM_To_NFC_Queue_t nfc_q;
 
 
 extern uint16_t table_getAddr(PARAM_IDX_t index);
-extern uint16_t table_getStatusNvmAddr(PARAM_STATUS_IDX_t index);
 
 /*
  * 		test items
@@ -37,7 +36,7 @@ extern uint16_t table_getStatusNvmAddr(PARAM_STATUS_IDX_t index);
 void test_nfc_q_basic(void)
 {
 	int8_t i8_result, i8_exp;
-	PARAM_IDX_t idx;
+	uint16_t idx;
 	uint16_t addr, exp_addr;
 	int32_t val, exp;
 
@@ -48,25 +47,18 @@ void test_nfc_q_basic(void)
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 
 	// normal single enqueue : OK
-	idx = value_type;
+	idx = (uint16_t)value_type;
 	val = 300;
 	i8_exp = 1;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, idx, val);
+	i8_result = NVMQ_enqueueNfcQ(idx, val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 	TEST_ASSERT_EQUAL_INT(1, nfc_q.count); // count = 1
 
-	// none_dsp address : NOK
-	idx = -1;
-	val = 100;
-	i8_exp = 0;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, idx, val);
-	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
-
 	// range over address : NOK
-	idx = PARAM_TABLE_SIZE;
+	idx = (uint16_t)PARAM_TABLE_SIZE;
 	val = 100;
 	i8_exp = 0;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, idx, val);
+	i8_result = NVMQ_enqueueNfcQ(idx, val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 
 	// normal single dequeue : OK
@@ -81,10 +73,10 @@ void test_nfc_q_basic(void)
 	TEST_ASSERT_EQUAL_INT(0, nfc_q.count); // count = 0
 
 	// normal int32 single enqueue : OK
-	idx = mb_address_type;
+	idx = (uint16_t)mb_address_type;
 	val = 200;
 	i8_exp = 1;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, idx, val);
+	i8_result = NVMQ_enqueueNfcQ(idx, val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 	TEST_ASSERT_EQUAL_INT(1, nfc_q.count); // count = 1
 
@@ -112,31 +104,24 @@ void test_nfc_q_basic(void)
 
 
 	// normal single enqueue : OK
-	idx = run_status1_type;
+	idx = (uint16_t)run_status1_type;
 	val = 0;
 	i8_exp = 1;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_STATUS_TYPE, idx, val);
+	i8_result = NVMQ_enqueueNfcQ(idx, val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 	TEST_ASSERT_EQUAL_INT(1, nfc_q.count); // count = 1
 
-	// none_dsp address : NOK
-	idx = -1;
-	val = 100;
-	i8_exp = 0;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_STATUS_TYPE, idx, val);
-	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
-
 	// range over address : NOK
-	idx = PARAM_STATUS_SIZE;
+	idx = (uint16_t)PARAM_TABLE_SIZE;
 	val = 100;
 	i8_exp = 0;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_STATUS_TYPE, idx, val);
+	i8_result = NVMQ_enqueueNfcQ(idx, val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 
 	// normal single dequeue : OK
 	val = 0;
 	exp = 0;
-	exp_addr = table_getStatusNvmAddr(run_status1_type);
+	exp_addr = table_getAddr(run_status1_type);
 	i8_exp = 1;
 	i8_result = NVMQ_dequeueNfcQ(&addr, &val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
@@ -145,17 +130,17 @@ void test_nfc_q_basic(void)
 	TEST_ASSERT_EQUAL_INT(0, nfc_q.count); // count = 0
 
 	// normal int32 single enqueue : OK
-	idx = mtr_temperature_type;
+	idx = (uint16_t)mtr_temperature_type;
 	val = 1;
 	i8_exp = 1;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_STATUS_TYPE, idx, val);
+	i8_result = NVMQ_enqueueNfcQ(idx, val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 	TEST_ASSERT_EQUAL_INT(1, nfc_q.count); // count = 1
 
 	// normal int32 single dequeue : OK
 	val = 0;
 	exp = 1;
-	exp_addr = table_getStatusNvmAddr(mtr_temperature_type);
+	exp_addr = table_getAddr(mtr_temperature_type);
 	i8_exp = 1;
 	i8_result = NVMQ_dequeueNfcQ(&addr, &val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
@@ -224,7 +209,7 @@ void test_nfc_q_muliple(void)
 	i8_exp = 1;
 	for(i=0; i<10; i++)
 	{
-		i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, test_idx[i], test_value[i]);
+		i8_result = NVMQ_enqueueNfcQ(test_idx[i], test_value[i]);
 		TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 		TEST_ASSERT_EQUAL_INT(i+1, nfc_q.count);
 	}
@@ -258,12 +243,12 @@ void test_nfc_q_muliple(void)
 	i8_exp = 1;
 	for(i=0; i<PARAM_TABLE_SIZE-1; i++)
 	{
-		i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, test_idx[0], test_value[0]);
+		i8_result = NVMQ_enqueueNfcQ(test_idx[0], test_value[0]);
 		TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 		TEST_ASSERT_EQUAL_INT(i+1, nfc_q.count);
 	}
 	i8_exp = 0;
-	i8_result = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, test_idx[0], test_value[0]);
+	i8_result = NVMQ_enqueueNfcQ(test_idx[0], test_value[0]);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 	TEST_ASSERT_EQUAL_INT(PARAM_TABLE_SIZE-1, nfc_q.count);
 }

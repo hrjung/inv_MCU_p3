@@ -6,10 +6,7 @@
  */
 
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include "includes.h"
 
 #include "proc_uart.h"
 #include "table.h"
@@ -21,7 +18,6 @@ NVM_To_NFC_Queue_t nfc_q;
 
 
 extern uint16_t table_getAddr(PARAM_IDX_t index);
-extern uint16_t table_getStatusNvmAddr(PARAM_STATUS_IDX_t index);
 
 void NVMQ_init(void)
 {
@@ -36,7 +32,7 @@ void NVMQ_init(void)
 	table_q.count = 0;
 	for(i=0; i<NVM_QUEUE_SIZE; i++)
 	{
-		table_q.to_table[i].index = 0;
+		table_q.to_table[i].index = PARAM_TABLE_SIZE;
 		table_q.to_table[i].value = 0;
 	}
 }
@@ -47,7 +43,7 @@ int8_t NVMQ_isEmptyNfcQ(void)
 	return (nfc_q.count == 0);
 }
 
-int8_t NVMQ_enqueueNfcQ(uint8_t type, uint16_t index, int32_t value)
+int8_t NVMQ_enqueueNfcQ(uint16_t index, int32_t value)
 {
 	if(nfc_q.count >= NVM_QUEUE_SIZE-1)
 	{
@@ -57,25 +53,15 @@ int8_t NVMQ_enqueueNfcQ(uint8_t type, uint16_t index, int32_t value)
 
 	if(nfc_q.count < 0) nfc_q.count = 0; // silently fix
 
-	if(type == NVM_QUEUE_DATA_TYPE)
+	if(index >= (uint16_t)PARAM_TABLE_SIZE)
 	{
-		if(index >= PARAM_TABLE_SIZE)
-		{
-			kprintf(PORT_DEBUG, "NVMQ_enqueueNfcQ: invalid data index(%d) error !!\r\n", index);
-			return 0;
-		}
-		nfc_q.to_nvm[nfc_q.count].addr = table_getAddr(index);
-	}
-	else
-	{
-		if(index >= PARAM_STATUS_SIZE)
-		{
-			kprintf(PORT_DEBUG, "NVMQ_enqueueNfcQ: invalid status index(%d) error !!\r\n", index);
-			return 0;
-		}
-		nfc_q.to_nvm[nfc_q.count].addr = table_getStatusNvmAddr(index);
+		kprintf(PORT_DEBUG, "NVMQ_enqueueNfcQ: invalid data index(%d) error !!\r\n", index);
+		return 0;
 	}
 
+	//kprintf(PORT_DEBUG, "NVMQ_enqueueNfcQ index=%d, value=%d\r\n", index, value);
+
+	nfc_q.to_nvm[nfc_q.count].addr = table_getAddr(index);
 	memcpy(&nfc_q.to_nvm[nfc_q.count].value, &value, sizeof(int32_t));
 
 #ifdef DEBUG_NVM_QUEUE

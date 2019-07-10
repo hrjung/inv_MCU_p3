@@ -35,6 +35,8 @@ extern int8_t NVM_isNfcMonitoring(void);
 
 extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 
+extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option);
+
 const static PARAM_IDX_t DSP_TO_TABLE_IDX[] =
 {
 		value_type,
@@ -376,19 +378,19 @@ int8_t COMM_parseMessage(void)
 #ifdef SUPPORT_NFC_OLD
 //		status1 = (int32_t)((state_direction<<8) | state_run_stop); // only use lower 16 bit for modbus
 //		status2 = (int32_t)((st_brake<<8) | st_overload);
-		table_setStatusValue(run_status1_type, (int32_t)status1);
-		table_setStatusValue(run_status2_type, (int32_t)status2);
+		table_setStatusValue(run_status1_type, (int32_t)status1, REQ_FROM_DSP);
+		table_setStatusValue(run_status2_type, (int32_t)status2, REQ_FROM_DSP);
 #else
 		table_setStatusValue(run_status_type, (int32_t)state_run_stop);
 		table_setStatusValue(dir_status_type, (int32_t)state_direction);
 		table_setStatusValue(overload_alarm_type, (int32_t)st_overload);
 		table_setStatusValue(shaftbrake_status_type, (int32_t)st_brake);
 #endif
-		table_setStatusValue(run_freq_type, (int32_t)(10.0*run_freq_index + 0.05) );
-		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index + 0.05) );
-		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index) );
-		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index) );
-		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index) );
+		table_setStatusValue(run_freq_type, (int32_t)(10.0*run_freq_index + 0.05), REQ_FROM_DSP);
+		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index + 0.05), REQ_FROM_DSP);
+		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index), REQ_FROM_DSP);
+		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index + 0.05), REQ_FROM_DSP);
+		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index), REQ_FROM_DSP);
 
 #ifdef SUPPORT_NFC_OLD
 		// update EEPROM while NFC tagged

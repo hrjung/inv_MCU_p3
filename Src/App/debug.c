@@ -17,6 +17,7 @@
 #include "debug.h"
 #include "proc_uart.h"
 #include "table.h"
+#include "error.h"
 //#include "task.h"
 
 #include "drv_nvm.h"
@@ -216,8 +217,7 @@ extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 
-extern uint8_t ERR_getErrorState(void);
-extern void test_setTableValue(PARAM_IDX_t idx, int32_t value);
+extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 
@@ -528,7 +528,7 @@ STATIC int read_nv_ser(uint8_t dport)
 	if(arg_c == 2)
 	{
 		i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
-		kprintf(dport, "\r\n read EEPROM addr=%d, value = %d, status=%d", addr, i2c_rvalue, i2c_status);
+		kprintf(dport, "\r\n read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);
 	}
 
 	return 0;
@@ -745,13 +745,13 @@ STATIC int test_ser(uint8_t dport)
     	enable = (int)atoi(arg_v[2]);
     	if(enable)
     	{
-    		test_setTableValue(ctrl_in_type, CTRL_IN_Analog_V);
+    		test_setTableValue(ctrl_in_type, CTRL_IN_Analog_V, REQ_FROM_TEST);
     		HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ain_val, EXT_AIN_SAMPLE_CNT);
     		kprintf(dport, "\r\n AIN test start");
     	}
     	else
     	{
-    		test_setTableValue(ctrl_in_type, CTRL_IN_NFC);
+    		test_setTableValue(ctrl_in_type, CTRL_IN_NFC, REQ_FROM_TEST);
     		kprintf(dport, "\r\n AIN test stop");
     	}
     }
@@ -903,7 +903,7 @@ STATIC int utest_ser(uint8_t dport)
 
 	UNITY_BEGIN();
 
-#if 0
+#if 1
 	// add nvm_queue test
 	RUN_TEST(test_nfc_q_basic);
 	RUN_TEST(test_nfc_q_muliple);
@@ -931,12 +931,12 @@ STATIC int utest_ser(uint8_t dport)
 	//ext_ai
 	RUN_TEST(test_getFreq);
 	RUN_TEST(test_handleAin);
-
-	// table
-	RUN_TEST(test_setValue);
 #endif
 
-#if 1
+#if 0
+	// table
+	RUN_TEST(test_setValue);
+
 	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);

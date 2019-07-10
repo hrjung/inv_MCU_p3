@@ -8,7 +8,6 @@
 #ifndef SRC_TABLE_H_
 #define SRC_TABLE_H_
 
-#define SUPPORT_NFC_OLD
 
 typedef enum{
 	value_type,
@@ -114,12 +113,6 @@ typedef enum{
 	elapsed_hour_type,
 	operating_hour_type,
 
-	PARAM_TABLE_SIZE,
-}PARAM_IDX_t ;//new
-
-
-typedef enum {
-	// stored at mailbox
 #ifdef SUPPORT_NFC_OLD
 	run_status1_type,
 	run_status2_type,
@@ -135,9 +128,9 @@ typedef enum {
 	ipm_temperature_type,
 	mtr_temperature_type,
 
-	PARAM_STATUS_SIZE,
+	PARAM_TABLE_SIZE,
+} PARAM_IDX_t ;//new
 
-} PARAM_STATUS_IDX_t;
 
 typedef enum{
 	none_dsp = -1,
@@ -199,12 +192,6 @@ typedef struct {
 	int8_t (*param_func)(PARAM_IDX_t idx, int32_t value, int16_t opt);
 } Param_t;
 
-typedef struct {
-	PARAM_STATUS_IDX_t	idx;
-	uint16_t 			addr;		// EEPROM address
-	uint16_t 			mb_addr;	// modbus address
-	uint16_t 			ratio;
-} StatusParam_t;
 
 typedef enum{
 	SYSTEM_PARAM_NFC_TAGGED,
@@ -215,6 +202,7 @@ typedef enum{
 	SYSTEM_PARAM_NFC_TRYED,
 	SYSTEM_PARAM_ON_MONITORING,
 	SYSTEM_PARAM_IDLE0_RUN1_STOP2,
+
 	SYSTEM_PARAM_SIZE,
 
 } SYSTEM_PARAM_t;
@@ -271,7 +259,7 @@ typedef enum{
 enum {
 	REQ_FROM_TEST = 0,
 	REQ_FROM_DSP,
-	REQ_FRROM_NFC,
+	REQ_FROM_NFC,
 	REQ_FROM_MODBUS,
 	REQ_FROM_KEPAD,
 
@@ -289,11 +277,11 @@ extern uint16_t table_getRatio(PARAM_IDX_t index);
 extern uint8_t table_getRW(PARAM_IDX_t index);
 extern int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq);
 
-extern int32_t table_getStatusValue(int16_t index);
-extern void table_setStatusValue(int16_t index, int32_t value);
 
 extern int32_t table_getCtrllIn(void);
 
 extern int8_t table_runFunc(PARAM_IDX_t idx, int32_t value, int16_t opt);
+
+extern int8_t table_updatebyTableQ(void);
 
 #endif /* SRC_TABLE_H_ */

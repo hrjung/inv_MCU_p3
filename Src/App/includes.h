@@ -15,6 +15,8 @@
 
 //#define SUPPORT_TASK_WATCHDOG
 
+#define SUPPORT_NFC_OLD
+
 //#define SUPPORT_UNIT_TEST
 
 #ifdef SUPPORT_UNIT_TEST

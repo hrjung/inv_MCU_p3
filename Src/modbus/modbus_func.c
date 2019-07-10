@@ -6,6 +6,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+#include "includes.h"
+
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "cmsis_os.h"
@@ -13,11 +15,7 @@
 #include "proc_uart.h"
 #include "modbus_func.h"
 #include "table.h"
-
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <ctype.h>
+#include "modbus_queue.h"
 
 
 /* Private variables ---------------------------------------------------------*/
@@ -112,7 +110,6 @@ int MB_isCRC_OK(uint8_t *buf, uint32_t len)
 void MB_setSlaveAddress(uint8_t addr)
 {
 	mb_slaveAddress = addr;
-	printf("Modbus addr = %d\n", addr);
 }
 
 /*
@@ -283,7 +280,7 @@ void MB_initAddrMap(void)
 	{
 		mb_status.map[i].valid = 0;
 		mb_status.map[i].rd_only = 0;
-		mb_status.map[i].conv_index = PARAM_STATUS_SIZE;
+		mb_status.map[i].conv_index = PARAM_TABLE_SIZE;
 	}
 	
 	//printf("\r\n st_addr=%d, end_addr=%d", mb_status.start, mb_status.end);
@@ -324,7 +321,7 @@ uint16_t MB_getActualAddress(MODBUS_addr_st *mb_addr, uint16_t addr, uint16_t co
 		}
 	}
 
-	kprintf(PORT_DEBUG, "\r\n addr=%d, count=%d, st_addr=%d, end_addr=%d", addr, count, mb_addr->start, mb_addr->end);
+	//kprintf(PORT_DEBUG, "\r\n addr=%d, count=%d, st_addr=%d, end_addr=%d", addr, count, mb_addr->start, mb_addr->end);
 	return MODBUS_ADDR_MAP_ERR; //not found
 }
 
@@ -397,10 +394,7 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 
 	if(cnt == 1)
 	{
-		if(type == 8) // status info
-			value = table_getStatusValue(index);
-		else
-			value = table_getValue(index);
+		value = table_getValue(index);
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 		kprintf(PORT_DEBUG, "\r\n index=%d, value=%d, wp=%d", index, (uint16_t)value, modbusTx.wp);
@@ -409,10 +403,7 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	{
 		for(i=0; i<cnt; i++)
 		{
-			if(type == 8) // status info
-				value = table_getStatusValue(index + i);
-			else
-				value = table_getValue(index + i);
+			value = table_getValue(index + i);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0x0000FF00) >> 8);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x000000FF);
 		}
@@ -586,19 +577,19 @@ int8_t MB_handlePacket(void)
 
 	// get packet from queue
 	modbusRx.wp = MBQ_getReqQ(modbusRx.buf);
-	if(modbusRx.wp == 0) { printf("no data in req_q\n"); return 0; } // TODO :return error packet to resp_q
+	if(modbusRx.wp == 0) { kprintf(PORT_DEBUG, "no data in req_q\n"); return 0; }
 
-	printf("RX: 0x%x 0x%x 0x%x 0x%x 0x%x\n",
-		modbusRx.buf[0], modbusRx.buf[1], modbusRx.buf[2], modbusRx.buf[3], modbusRx.buf[4]);
+//	kprintf(PORT_DEBUG, "RX: 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+//		modbusRx.buf[0], modbusRx.buf[1], modbusRx.buf[2], modbusRx.buf[3], modbusRx.buf[4]);
 
 	// generate response or error frame
 	result = MB_processModbusPacket();
 
-	while(MBQ_isRespQReady()==0) ; // osDelay(1);
+	while(MBQ_isRespQReady()==0) osDelay(1);; //
 	MBQ_putRespQ(modbusTx.wp, modbusTx.buf);
 
-	printf("TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-		modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
+//	kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+//		modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
 
 	return 1;
 }

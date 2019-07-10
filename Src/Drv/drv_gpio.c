@@ -19,9 +19,6 @@
 #include "ext_io.h"
 
 
-// DTM pin
-#define DSP_TRIP_ERROR		3
-
 
 //extern uint8_t DTM_readNotify(void);
 
@@ -36,7 +33,9 @@ LED_status_t LED_state[3] =
 };
 
 static uint8_t din[EXT_DIN_COUNT][EXT_DIN_SAMPLE_CNT] = {0};
+static uint8_t dtm[2][EXT_DIN_SAMPLE_CNT] = {0};
 
+uint8_t dtm_value[2];
 extern uint8_t mdin_value[];
 
 void printDBG(char *str)
@@ -44,14 +43,6 @@ void printDBG(char *str)
 	kputs(PORT_DEBUG, str);kputs(PORT_DEBUG,"\r\n");
 }
 
-int8_t UTIL_isDspErrorState(void)
-{
-	//uint8_t errFlag = DTM_readNotify();
-	uint8_t errFlag=0;
-
-	if(errFlag == DSP_TRIP_ERROR) return 1;
-	else	return 0;
-}
 
 void UTIL_setTestPin(uint8_t index, uint8_t onoff)
 {
@@ -141,20 +132,46 @@ void UTIL_setLED(uint8_t color, uint8_t blink_on)
 	}
 }
 
-uint8_t UTIL_readNotifyDTM(void)
+void UTIL_handleLED(void)
 {
-	uint8_t value=0, dtm1_val=0, dtm2_val=0;
+	if(LED_state[0].onoff == GPIO_PIN_SET)
+	{
+		if(LED_state[0].blink)
+			HAL_GPIO_TogglePin(R_LED_GPIO_Port, R_LED_Pin);
+		else
+			HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_SET);
+	}
+	else
+		HAL_GPIO_WritePin(R_LED_GPIO_Port, R_LED_Pin, GPIO_PIN_RESET);;
 
-#ifdef SUPPORT_DRIVER_HW
-	dtm1_val = (uint16_t)HAL_GPIO_ReadPin(DTM1_GPIO_Port, DTM1_Pin);
-	dtm2_val = (uint16_t)HAL_GPIO_ReadPin(DTM2_GPIO_Port, DTM2_Pin);
+	if(LED_state[1].onoff == GPIO_PIN_SET)
+	{
+		if(LED_state[1].blink)
+			HAL_GPIO_TogglePin(G_LED_GPIO_Port, G_LED_Pin);
+		else
+			HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_SET);
+	}
+	else
+		HAL_GPIO_WritePin(G_LED_GPIO_Port, G_LED_Pin, GPIO_PIN_RESET);
 
-	value = (dtm2_val << 1) | dtm1_val;
-#else
-	value = dtm_test_val;
-#endif
+	if(LED_state[2].onoff == GPIO_PIN_SET)
+	{
+		if(LED_state[1].blink)
+			HAL_GPIO_TogglePin(B_LED_GPIO_Port, B_LED_Pin);
+		else
+			HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_SET);
+	}
+	else
+		HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
+}
 
-	return value;
+uint8_t UTIL_isDspError(void)
+{
+	uint8_t value=0;
+
+	value = (dtm_value[1] << 1) | dtm_value[0];
+
+	return (value == DTM_DSP_TRIP_ERROR);
 }
 
 void UTIL_setMTDpin(uint8_t onoff)
@@ -164,6 +181,34 @@ void UTIL_setMTDpin(uint8_t onoff)
 #else
 
 #endif
+}
+
+
+void UTIL_readDspErrorPin(void)
+{
+	static int dtm_idx=0;
+	int i, dtm_sum[2];
+
+	// read DI
+	dtm_idx = dtm_idx%EXT_DIN_SAMPLE_CNT;
+	dtm[0][dtm_idx] = (uint8_t)HAL_GPIO_ReadPin(DTM1_GPIO_Port, DTM1_Pin);
+	dtm[1][dtm_idx] = (uint8_t)HAL_GPIO_ReadPin(DTM2_GPIO_Port, DTM2_Pin);
+	dtm_idx++;
+
+	dtm_sum[0] = 0;
+	dtm_sum[1] = 0;
+	for(i=0; i<EXT_DIN_SAMPLE_CNT; i++)
+	{
+		dtm_sum[0] += dtm[0][i];
+		dtm_sum[1] += dtm[1][i];
+	}
+
+	for(i=0; i<2; i++)
+	{
+		if(dtm_sum[i] == 0) dtm_value[i] = 0;
+		else if(dtm_sum[i] == EXT_DIN_SAMPLE_CNT) dtm_value[i] = 1;
+		// else no change
+	}
 }
 
 // debug test only
