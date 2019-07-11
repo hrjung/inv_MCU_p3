@@ -19,6 +19,9 @@
 #define NFC_COMM_TIMOUT		(100)
 
 
+int32_t i2c_rd_error=0;
+int32_t i2c_wr_error=0;
+
 extern I2C_HandleTypeDef hi2c1;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -40,6 +43,9 @@ uint8_t I2C_writeData(uint8_t *value, uint16_t addr, uint16_t len)
 		//i2c_status = HAL_I2C_Master_Transmit(&hi2c1, NFC_DevAddr_W, (uint8_t *)wrBuff, (len+2), 100);
 		if(i2c_status == HAL_OK) break;
 	}
+
+	if(i2c_status != HAL_OK)
+		i2c_wr_error++;
 
 	return (i2c_status == HAL_OK);
 	//return (uint8_t)i2c_status;
@@ -71,6 +77,8 @@ uint8_t I2C_readData(uint8_t *value, uint16_t addr, uint16_t len)
 	{
 		for(i=0; i<len; i++) value[i] = rdBuff[i];
 	}
+	else
+		i2c_rd_error++;
 
 	return (uint8_t)(i2c_status == HAL_OK);
 	//return (uint8_t)i2c_status;

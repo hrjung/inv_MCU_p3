@@ -133,8 +133,10 @@ void AccReadTimerCallback(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
+// timer setup
 #define UIO_UPDATE_TIME_INTERVAL	10 // 10ms
 #define ACC_READ_TIME_INTERVAL		1000 // 1sec
+#define DSP_STATUS_TIME_INTERVAL	1000 // 1sec
 
 #define WATCHDOG_NFC		0x01
 #define WATCHDOG_MAIN		0x02
@@ -147,6 +149,8 @@ uint32_t default_cnt=0, main_cnt=0, nfc_cnt=0, mbus_cnt=0, rs485_cnt=0, user_io_
 
 
 uint8_t NFC_Access_flag=0;
+uint8_t DSP_status_read_flag=0;
+uint8_t err_info_recieved_f=0;
 
 extern LED_status_t LED_state[]; // 3 color LED state
 extern uint16_t adc_value;
@@ -276,33 +280,6 @@ int main(void)
 
 
   gen_crc_table();
-#if 0
-  // initialize EEPROM
-  if(table_isInit() == 1) // correctly initialize
-  {
-	  printf("load EEPROM\r\n");
-	  // load EEPROM, check CRC
-	  status = table_loadEEPROM();
-	  printf("1: status=%d\r\n", status);
-	  if(status)
-	  {
-		  status = table_init();
-		  printf("2: status=%d\r\n", status);
-	  }
-  }
-  else
-  {
-	  // blank NVM : initialize as init value
-	  printf("blank EEPROM\r\n");
-	  status = table_initializeBlankEEPROM();
-	  //printf("EEPROM status=%d\r\n", status);
-  }
-  if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INIT);
-#endif
-
-  //printf("EEPROM initialized=%d\r\n", status);
-
-  //HAL_IWDG_Refresh(&hiwdg); // kick
 
   /* USER CODE END 2 */
 
@@ -352,6 +329,7 @@ int main(void)
   /* start timers, add new ones, ... */
   osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
   osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1sec to read Accelerometer
+  osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
@@ -1166,8 +1144,8 @@ void NfcNvmTaskFunc(void const * argument)
 		  osDelay(10);
 		  continue; // it can skip below EEPROM access until NFC untagged
 	  }
-	  else
-		  UTIL_setLED(LED_COLOR_G, 0);
+//	  else
+//		  UTIL_setLED(LED_COLOR_G, 0);
 
 	  // if tagged, wait tag_end
 	  if(tag_tryed == 1 && tag_end == 1)
@@ -1175,12 +1153,20 @@ void NfcNvmTaskFunc(void const * argument)
 		  // if tag end, update NVM -> table
 		  //	check parameter table
 		  //	check system parameter
+		  osDelay(5);
 		  status = HDLR_updatebyNfc();
-		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag update error\r\n"); }
+		  if(status == 0)
+		  {
+			  kputs(PORT_DEBUG, "nfc tag update error\r\n");
+			  UTIL_setLED(LED_COLOR_B, 1);
+		  }
+		  else
+			  UTIL_setLED(LED_COLOR_G, 1);
 	  }
 	  else if(tag_tryed == 1 || tag_end == 1)
 	  {
 		  // tag error : restore NVM <- table
+		  osDelay(5);
 		  status = HDLR_restoreNVM();
 		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
 	  }
@@ -1260,6 +1246,13 @@ void mainHandlerTaskFunc(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+
+#ifdef SUPPORT_TASK_WATCHDOG
+	watchdog_f |= WATCHDOG_MAIN;
+#endif
+	main_cnt++;
+	osDelay(5);
+
 #ifndef SUPPORT_UNIT_TEST
 	  // read DSP error flag, MCU error state
 	  //HDLR_handleDspError();
@@ -1268,13 +1261,20 @@ void mainHandlerTaskFunc(void const * argument)
 	  // read run/stop flag in EEPROM
 	  status = HDLR_handleRunStopFlag();
 
-
+#if 0
 	  // read DSP status
+	  if(DSP_status_read_flag)
+	  {
+		  HDLR_handleDspError();
 
+
+
+		  DSP_status_read_flag = 0;
+	  }
 
 	  // read modbus packet
-	  //MB_handlePacket();
-
+	  MB_handlePacket();
+#endif
 
 	  // read nvm_q
 	  if(!NVMQ_isEmptyTableQ())
@@ -1284,11 +1284,6 @@ void mainHandlerTaskFunc(void const * argument)
 	  }
 #endif
 
-#ifdef SUPPORT_TASK_WATCHDOG
-	watchdog_f |= WATCHDOG_MAIN;
-#endif
-	main_cnt++;
-	osDelay(5);
   }
   /* USER CODE END mainHandlerTaskFunc */
 }
@@ -1364,7 +1359,7 @@ void YstcTriggerTimerCallback(void const * argument)
 void YstcUpdateTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN YstcUpdateTimerCallback */
-  
+	DSP_status_read_flag = 1;
   /* USER CODE END YstcUpdateTimerCallback */
 }
 
@@ -1404,15 +1399,13 @@ void userIoTimerCallback(void const * argument)
 	else
 		; // do nothing
 
-#if 0
+
 	if(exec_do_cnt%10 == 0) // 10ms * 10 cycle
 	{
 		EXT_DO_handleDout();
 		if(exec_do_cnt >= 1000) exec_do_cnt=0;
 	}
 	exec_do_cnt++;
-#endif
-
 
 #endif
   /* USER CODE END userIoTimerCallback */

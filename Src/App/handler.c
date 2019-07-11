@@ -23,28 +23,41 @@
 #define RUN_STOP_FLAG_STOP		2
 
 
-
+int8_t err_read_flag=0;
 
 int8_t HDLR_handleDspError(void)
 {
 	uint16_t dummy[] = {0,0,0};
 	int8_t status;
 	int32_t err_code;
-	static int8_t read_flag=0;
 
-	if(UTIL_isDspError() && read_flag == 0)
+	if(UTIL_isDspError() && ERR_isErrorState() == 0)
 	{
 		// request DSP error info
 		status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
 		if(status == COMM_SUCCESS)
 		{
-			read_flag = 1;
 			err_code = table_getValue(err_code_0_type);
 			ERR_setErrorState(err_code);
 		}
 	}
 
 	return 1;
+}
+
+int8_t HDLR_readDspStatus(void)
+{
+	uint16_t dummy[] = {0,0,0};
+	int8_t status;
+
+	 if(ERR_isErrorState() == 0) // no error
+	 {
+		status = COMM_sendMessage(SPICMD_REQ_ST, dummy);
+		if(status == COMM_FAILED)
+			kputs(PORT_DEBUG, "HDLR_readDspStatus error!!\r\n");
+	 }
+
+	 return 1;
 }
 
 int8_t HDLR_handleRunStopFlag(void)
@@ -96,9 +109,10 @@ int8_t HDLR_restoreNVM(void)
 	PARAM_IDX_t index=value_type;
 	int32_t nvm_value, table_value;
 	uint8_t nvm_status;
+	int8_t status;
 	int16_t errflag=0;
 
-	while(index < PARAM_TABLE_SIZE)
+	while(index < baudrate_type) // only writable parameter
 	{
 		nvm_status = NVM_readParam(index, &nvm_value);
 		if(nvm_status != 0) {kprintf(PORT_DEBUG,"ERROR NVM read error\n"); errflag++;}
@@ -108,11 +122,15 @@ int8_t HDLR_restoreNVM(void)
 		{
 			nvm_status = NVM_writeParam(index, table_value);
 			if(nvm_status != 0) {kprintf(PORT_DEBUG,"ERROR NVM write error\n"); errflag++;}
+
+			kprintf(PORT_DEBUG,"HDLR_restoreNVM index=%d, value=%d, status=%d\r\n", index, table_value, nvm_status);
 		}
 		index++;
 	}
 
-	// no need to update CRC
+	// restore CRC as well
+	status = NVM_setCRC();
+	if(status == 0) errflag++;
 
 	if(errflag) return 0;
 
@@ -163,8 +181,9 @@ int8_t HDLR_updatebyNfc(void)
 	int8_t status;
 	int16_t errflag=0;
 
-	while(index < PARAM_TABLE_SIZE)
+	while(index <= baudrate_type) // only writable parameter
 	{
+		osDelay(5);
 		nvm_status = NVM_readParam(index, &nvm_value);
 		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d\r\n", index); errflag++;}
 
@@ -172,12 +191,14 @@ int8_t HDLR_updatebyNfc(void)
 		{
 			status = NVMQ_enqueueTableQ(index, nvm_value);
 			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d\r\n", index); errflag++;}
+			kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d\r\n", index, nvm_value, status);
 		}
+		index++;
 	}
 
-	// update CRC
-	status = NVM_setCRC();
-	if(status == 0) errflag++;
+//	// update CRC is updated by NFC App
+//	status = NVM_setCRC();
+//	if(status == 0) errflag++;
 
 	// clear NFC tag flag
 	status = NVM_clearNfcStatus();

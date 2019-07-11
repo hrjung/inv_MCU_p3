@@ -183,12 +183,17 @@ extern ADC_HandleTypeDef hadc1;
 extern osSemaphoreId debugSemaphoreIdHandle;
 extern osTimerId keyScanTimerHandle;
 
+extern int32_t i2c_rd_error;
+extern int32_t i2c_wr_error;
+
 extern uint8_t mdin_value[];
 extern uint16_t ain_val[];
 extern uint32_t ain_sum;
 extern uint16_t adc_value;
 extern volatile int8_t ADC_ConvCpltFlag, ADC_error;
+
 extern int32_t table_nvm[];
+extern int32_t table_data[];
 
 //extern osThreadId defaultTaskHandle;
 //extern osThreadId YstcNfcTaskHandle;
@@ -220,6 +225,7 @@ extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern uint16_t table_getAddr(PARAM_IDX_t index);
+extern uint32_t table_calcCRC(void);
 
 #ifdef SUPPORT_UNIT_TEST
 // Unit test function
@@ -775,7 +781,7 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 6)
     {
-		kprintf(dport, "\r\n error code = %d", (int)ERR_getErrorState());
+		kprintf(dport, "\r\n error code=%d, i2c_rd_err=%d, i2c_wr_err=%d", (int)ERR_getErrorState(), i2c_rd_error, i2c_wr_error);
     }
     else if(test_case == 7)
     {
@@ -856,6 +862,24 @@ STATIC int test_ser(uint8_t dport)
     	kprintf(dport, "\r\n NVM_writeParam idx=%d, value=%d status=%d", idx, value, status);
     	status = NVM_setCRC();
     	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
+    }
+    else if(test_case == 'D')
+    {
+    	uint32_t crc32_calc;
+
+    	crc32_calc = table_calcCRC();
+    	status = NVM_verifyCRC(crc32_calc);
+    	kprintf(dport, "\r\n verifyCRC status=%d", status);
+    }
+    else if(test_case == 'E')
+    {
+    	int i;
+
+    	for(i=0; i<PARAM_TABLE_SIZE; i++)
+    	{
+
+    		kprintf(dport, "\r\n %d, table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
+    	}
     }
 #if 0
     else if(test_case == 'B')

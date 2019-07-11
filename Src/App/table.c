@@ -29,8 +29,8 @@
 #define FREQ_MAX_VALUE		900
 
 
-STATIC int32_t table_data[PARAM_TABLE_SIZE]; // parameter table of actual value
-extern int32_t table_nvm[PARAM_TABLE_SIZE];
+int32_t table_data[PARAM_TABLE_SIZE]; // parameter table of actual value
+extern int32_t table_nvm[];
 
 extern int16_t state_run_stop; // run_stop status
 extern int16_t state_direction;
@@ -60,29 +60,29 @@ extern void MB_setSlaveAddress(uint8_t addr);
 
 STATIC Param_t param_table[] =
 {   //    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
-	{ value_type,			0x100,	40100,	200,	10,		900,	1, 	10,		1, 	value_dsp,			table_setFreqValue, },
-	{ multi_val_0_type,		0x104,	40101,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_1_type,		0x108,	40102,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_2_type,		0x10C,	40103,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_3_type,		0x110,	40104,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_4_type,		0x114,	40105,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_5_type,		0x118,	40106,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_6_type,		0x11C,	40107,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_7_type,		0x120,	40108,	200,	10,		900,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ freq_min_type,		0x124,	40109,	10,		10,		900,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
-	{ freq_max_type,		0x128,	41010,	600,	10,		900,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
+	{ value_type,			0x100,	40100,	200,	10,		2000,	1, 	10,		1, 	value_dsp,			table_setFreqValue, },
+	{ multi_val_0_type,		0x104,	40101,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_1_type,		0x108,	40102,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_2_type,		0x10C,	40103,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_3_type,		0x110,	40104,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_4_type,		0x114,	40105,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_5_type,		0x118,	40106,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_6_type,		0x11C,	40107,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_7_type,		0x120,	40108,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ freq_min_type,		0x124,	40109,	10,		10,		2000,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
+	{ freq_max_type,		0x128,	41010,	600,	10,		2000,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
 	{ accel_time_type,		0x12C,	40111,	100,	10,		6000,	1, 	10, 	1, 	accel_time_dsp,		table_setValue,},
 	{ decel_time_type,		0x130,	40112,	100,	10,		6000,	1, 	10,		1, 	decel_time_dsp,		table_setValue,},
 	{ dir_cmd_type,			0x134,	40113,	0,		0,		1,		1, 	1, 		1, 	dir_cmd_dsp,		table_setValue,},
 	{ jmp_enable0_type,		0x138,	40114,	0,		0,		1,		1, 	1, 		0, 	jmp_enable0_dsp,	table_setValue,	},
 	{ jmp_enable1_type,		0x13C,	40115,	0,		0,		1,		1, 	1, 		0, 	jmp_enable1_dsp,	table_setValue,	},
 	{ jmp_enable2_type,		0x140,	40116,	0,		0,		1,		1, 	1, 		0, 	jmp_enable2_dsp,	table_setValue,	},
-	{ jmp_low0_type,		0x144,	40117,	10,		10,		900,	1, 	10, 	0, 	jmp_low0_dsp, 		table_setFreqValue,},
-	{ jmp_low1_type,		0x148,	40118,	10,		10,		900,	1, 	10, 	0, 	jmp_low1_dsp, 		table_setFreqValue,},
-	{ jmp_low2_type,		0x14C,	40119,	10,		10,		900,	1, 	10, 	0, 	jmp_low2_dsp, 		table_setFreqValue,},
-	{ jmp_high0_type,		0x150,	40120,	10,		10,		900,	1, 	10, 	0, 	jmp_high0_dsp, 		table_setFreqValue,},
-	{ jmp_high1_type,		0x154,	40121,	10,		10,		900,	1, 	10, 	0, 	jmp_high1_dsp, 		table_setFreqValue,},
-	{ jmp_high2_type,		0x158,	40122,	10,		10,		900,	1, 	10, 	0, 	jmp_high2_dsp, 		table_setFreqValue,},
+	{ jmp_low0_type,		0x144,	40117,	10,		10,		2000,	1, 	10, 	0, 	jmp_low0_dsp, 		table_setFreqValue,},
+	{ jmp_low1_type,		0x148,	40118,	10,		10,		2000,	1, 	10, 	0, 	jmp_low1_dsp, 		table_setFreqValue,},
+	{ jmp_low2_type,		0x14C,	40119,	10,		10,		2000,	1, 	10, 	0, 	jmp_low2_dsp, 		table_setFreqValue,},
+	{ jmp_high0_type,		0x150,	40120,	10,		10,		2000,	1, 	10, 	0, 	jmp_high0_dsp, 		table_setFreqValue,},
+	{ jmp_high1_type,		0x154,	40121,	10,		10,		2000,	1, 	10, 	0, 	jmp_high1_dsp, 		table_setFreqValue,},
+	{ jmp_high2_type,		0x158,	40122,	10,		10,		2000,	1, 	10, 	0, 	jmp_high2_dsp, 		table_setFreqValue,},
 	{ dir_domain_type,		0x15C,	40123,	0,		0,		2,		1, 	1, 		0, 	none_dsp,			table_setValueDir,},
 	{ acc_base_set_type,	0x160,	40124,	0,		0,		1,		1, 	1, 		0, 	acc_base_set_dsp, 	table_setValue,	},
 
@@ -115,9 +115,9 @@ STATIC Param_t param_table[] =
 	{ multi_Dout_0_type,	0x310,	40304,	0,		0,		5,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ multi_Dout_1_type,	0x314,	40305,	0,		0,		5,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ v_in_min_type,		0x318,	40306,	0,		0,		100,	1,	10, 	1, 	none_dsp,		table_setAinValue	},
-	{ v_in_min_freq_type,	0x31C,	40307,	0,		10,		900,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
+	{ v_in_min_freq_type,	0x31C,	40307,	10,		10,		2000,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
 	{ v_in_max_type,		0x320,	40308,	100,	0,		100,	1,	10, 	1, 	none_dsp,		table_setAinValue	},
-	{ v_in_max_freq_type,	0x324,	40309,	600,	10,		900,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
+	{ v_in_max_freq_type,	0x324,	40309,	2000,	10,		2000,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
 	{ aout_type_type,		0x328,	40310,	0,		0,		3,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ aout_rate_type,		0x32C,	40311,	100,	10,		200,	1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ mb_address_type,		0x330,	40312,	1,		1,		254,	1,	1, 		1, 	none_dsp,		table_setBaudValue	},
@@ -235,6 +235,7 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 
 	table_data[idx] = value;
+	table_nvm[idx] = value;
 	//printf("idx=%d set value=%d\n", idx, value);
 
 	if(option > REQ_FROM_DSP) // need DSP comm
@@ -491,7 +492,7 @@ int8_t table_isInit(void)
 // CRC value for initial value : 0xf2364d63
 uint32_t table_calcCRC(void)
 {
-	int table_length = (int)err_date_0_type;
+	int table_length = (int)Rs_type; // RW data only
 	uint8_t* buff = (uint8_t *)table_nvm;
 	uint32_t crc32 = update_crc(-1, buff, table_length *sizeof(int32_t));
 
@@ -551,7 +552,7 @@ int8_t table_loadEEPROM(void)
 		status = NVM_readParam((PARAM_IDX_t)i, &value);
 		if(status == NVM_NOK)
 		{
-			kprintf(PORT_DEBUG, "idx=%d read error, value=%d\r\n", i, (int)value);
+			//kprintf(PORT_DEBUG, " table_loadEEPROM idx=%d read error, value=%d\r\n", i, (int)value);
 			return 0;
 		}
 		else
@@ -568,7 +569,7 @@ int8_t table_loadEEPROM(void)
 
 int8_t table_updateRange(void)
 {
-	int i, range_size=17;
+	int i, range_size=17, index;
 	int32_t min_value, max_value, value;
 	PARAM_IDX_t r_idx[] = {
 			value_type,
@@ -597,13 +598,24 @@ int8_t table_updateRange(void)
 	max_value = table_data[freq_max_type];
 	for(i=0; i<range_size; i++)
 	{
-		param_table[r_idx[i]].minValue = min_value;
-		param_table[r_idx[i]].maxValue = max_value;
+		index = r_idx[i];
+		param_table[index].minValue = min_value;
+		param_table[index].maxValue = max_value;
 
-		value = table_data[r_idx[i]];
-		if(value < param_table[r_idx[i]].minValue && value != 0 ) table_data[r_idx[i]] = param_table[r_idx[i]].minValue;
-		if(value > param_table[r_idx[i]].maxValue) table_data[r_idx[i]] = param_table[r_idx[i]].maxValue;
+#if 0
+		value = table_data[index];
+		if(value < param_table[index].minValue && value != 0 )
+		{
+			table_data[index] = param_table[index].minValue;
+			kprintf(PORT_DEBUG, "table_updateRange min idx=%d, value=%d\r\n", r_idx[i], table_data[r_idx[i]]);
+		}
 
+		if(value > param_table[r_idx[i]].maxValue)
+		{
+			table_data[index] = param_table[index].maxValue;
+			kprintf(PORT_DEBUG, "table_updateRange max idx=%d, value=%d\r\n", r_idx[i], table_data[r_idx[i]]);
+		}
+#endif
 	}
 
 	// update dir range and cmd value
@@ -753,8 +765,8 @@ int32_t table_getStatusValue(int16_t index)
 int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq)
 {
 	int i;
-//	uint8_t nvm_status;
-//	int32_t index;
+	uint8_t nvm_status;
+	int32_t index;
 #ifdef SUPPORT_NFC_OLD
 	int32_t date=0; //TODO : get date info
 #endif
@@ -770,18 +782,18 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 		table_data[err_current_0_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_current_0_type + i*ERRINFO_ITEM_CNT]; // current
 		table_data[err_freq_0_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_freq_0_type + i*ERRINFO_ITEM_CNT]; // freq
 
-#if 0
+#if 1
 		// update EEPROM
 		index = err_date_0_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, index, table_data[addr]);
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
 		index = err_code_0_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, index, table_data[addr]);
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
 		index = err_status_0_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, index, table_data[addr]);
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
 		index = err_current_0_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, index, table_data[addr]);
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
 		index = err_freq_0_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, index, table_data[addr]);
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
 #endif
 	}
 
@@ -794,15 +806,15 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	table_data[err_current_0_type] = (int32_t)(current*(float)param_table[err_current_0_type].ratio);
 	table_data[err_freq_0_type] = (int32_t)(freq*(float)param_table[err_freq_0_type].ratio);
 
-#if 0
+#if 1
 	// update EEPROM
 #ifdef SUPPORT_NFC_OLD
-	nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, err_date_0_type, table_data[err_date_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_date_0_type, table_data[err_date_0_type]);
 #endif
-	nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, err_code_0_type, table_data[err_code_0_type]);
-	nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, err_status_0_type, table_data[err_status_0_type]);
-	nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, err_current_0_type, table_data[err_current_0_type]);
-	nvm_status = NVMQ_enqueueNfcQ(NVM_QUEUE_DATA_TYPE, err_freq_0_type, table_data[err_freq_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_code_0_type, table_data[err_code_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_status_0_type, table_data[err_status_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_current_0_type, table_data[err_current_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_freq_0_type, table_data[err_freq_0_type]);
 #endif
 
 	return 1;

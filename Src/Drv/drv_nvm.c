@@ -56,7 +56,7 @@ extern uint32_t table_calcCRC(void);
 
 uint8_t NVM_read(uint16_t addr, int32_t *value)
 {
-	uint8_t status=NVM_NOK;
+	uint8_t status=NVM_OK;
 
 #ifdef SUPPORT_DRIVER_HW
 	status = I2C_readData((uint8_t *)value, addr, sizeof(int32_t));
@@ -98,8 +98,13 @@ uint8_t NVM_readParam(PARAM_IDX_t index, int32_t *value)
 
 	nvm_addr = table_getAddr(index);
 	status = NVM_read(nvm_addr, value);
-	if(status != 0 && *value != table_nvm[index])
+	if(status == 1)
+	{
 		table_nvm[index] = *value;
+		//kprintf(PORT_DEBUG, "NVM_readParam idx=%d, value=%d\r\n", index, (int)table_nvm[index]);
+	}
+	else
+		kprintf(PORT_DEBUG, "NVM_readParam ERR idx=%d\r\n", index);
 
 	return status;
 }
@@ -113,6 +118,8 @@ uint8_t NVM_writeParam(PARAM_IDX_t index, int32_t value)
 	status = NVM_write(nvm_addr, value);
 	if(status)
 		table_nvm[index] = value;
+	else
+		kprintf(PORT_DEBUG, "NVM_writeParam ERR idx=%d\r\n", index);
 
 	return status;
 }
@@ -230,7 +237,7 @@ int8_t NVM_verifyCRC(uint32_t crc32_calc)
 
 	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_CRC_VALUE], (int32_t *)&crc32_rd);
 
-	//kprintf(PORT_DEBUG, "calc=0x%x, read_crc=0x%x\r\n", crc32_calc, crc32_rd);
+	kprintf(PORT_DEBUG, "calc=0x%x, read_crc=0x%x\r\n", crc32_calc, crc32_rd);
 	if(status != NVM_OK) return NVM_NOK;
 
 	if(crc32_calc != crc32_rd) return NVM_NOK;
