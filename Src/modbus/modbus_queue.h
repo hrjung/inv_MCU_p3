@@ -24,7 +24,7 @@ extern int MBQ_isEmptyReqQ(void);
 extern int8_t MBQ_putReqQ(uint16_t size, uint8_t *data);
 extern uint16_t MBQ_getReqQ(uint8_t *buf);
 
-extern int MBQ_isRespQReady(void);
+extern int MBQ_isEmptyRespQ(void);
 extern int8_t MBQ_putRespQ(uint16_t size, uint8_t *data);
 extern uint16_t MBQ_getRespQ(uint8_t *buf);
 

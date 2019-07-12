@@ -11,7 +11,8 @@
 #include "table.h"
 #include "dsp_comm.h"
 #include "drv_dsp_spi.h"
-
+#include "drv_gpio.h"
+#include "drv_nvm.h"
 
 
 #define LENGTH_BUFFER 20
@@ -28,8 +29,6 @@ int16_t state_run_stop = 0;
 int16_t state_direction = 0;
 int16_t st_overload = 0;
 int16_t st_brake = 0;
-
-extern void printDBG(char *str);
 
 extern int8_t NVM_isNfcMonitoring(void);
 
@@ -217,7 +216,7 @@ int8_t COMM_sendtoDSP(void)
 	comm_state=COMM_DEFAULT;
 
 	comm_state = SPI_writeDSP(&sendMsg[0], sendMsg[2]);
-	if(comm_state == COMM_FAILED) { printDBG("[COMM_DSP] SPI write ERROR!"); return comm_state; }
+	if(comm_state == COMM_FAILED) { kputs(PORT_DEBUG, "[COMM_DSP] SPI write ERROR!\r\n"); return comm_state; }
 
 	return comm_state;
 }
@@ -228,12 +227,12 @@ int8_t COMM_recvfromDSP(int16_t recv_len)
 
 	memset(recvMsg, 0, LENGTH_BUFFER*sizeof(uint16_t));
 	comm_state = SPI_readDSP(&recvMsg[0], recv_len);
-	if(comm_state == COMM_FAILED) { printDBG("[COMM_DSP] SPI read ERROR!"); return comm_state; }
+	if(comm_state == COMM_FAILED) { kputs(PORT_DEBUG, "[COMM_DSP] SPI read ERROR!\r\n"); return comm_state; }
 
 	int8_t isCrcError = SPI_isChecksumError(recvMsg, recv_len);
 	if(isCrcError)
 	{
-		printDBG("[COMM_DSP] CRC ERROR!");
+		kputs(PORT_DEBUG, "[COMM_DSP] CRC ERROR!");
 		return COMM_FAILED;
 	}
 
@@ -318,7 +317,7 @@ int8_t COMM_parseMessage(void)
 
 	comm_state=COMM_DEFAULT;
 #ifdef DEBUG_DSP
-	kprintf(PORT_DEBUG, "[COMM_DSP] handleMSG\r\n");
+	kprintf(PORT_DEBUG, "[COMM_DSP] COMM_parseMessage\r\n");
 #endif
 	if((recvMsg[0] != 0xAAAA) || (recvMsg[1] != 0x5555))
 	{
@@ -340,7 +339,7 @@ int8_t COMM_parseMessage(void)
 		if(recvMsg[5+0]!=SPI_ACK) NAK_flag = 1;
 		comm_state = COMM_SUCCESS;
 
-		//printf("SPICMD_RESP_ACK NAK_flag=%d\n", NAK_flag);
+		//kprintf(PORT_DEBUG, "SPICMD_RESP_ACK NAK_flag=%d\r\n", NAK_flag);
 		break;
 	}
 
@@ -396,10 +395,14 @@ int8_t COMM_parseMessage(void)
 		// update EEPROM while NFC tagged
 		if(NVM_isNfcMonitoring())
 		{
-			kprintf(PORT_DEBUG, "update Status to EEPROM\n");
-			// TODO : update EEPROM
+			kprintf(PORT_DEBUG, "update Status to EEPROM\r\n");
+			if(table_setStatusDSP() == 0)
+				kprintf(PORT_DEBUG, "ERROR in update Status to EEPROM\r\n");
 
+			NVM_clearNfcMonitoring();
+			UTIL_setLED(LED_COLOR_G, 1);
 		}
+		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST dc=%d, \r\n",(int32_t)(10.0*dc_voltage_index));
 
 #else
 		// TODO: update mailbox
@@ -433,7 +436,7 @@ int8_t COMM_parseMessage(void)
 						(int)err_code, (int)run_state, *curr, *freq);
 		//printf("[COMM_DSP] RESP_ERR : err_code[%d], run_state[%d]\r\n",(int)err_code, (int)run_state);
 #endif
-		// TODO: update EEPROM
+
 		table_updateErrorDSP(err_code, run_state, current, freq);
 
 		comm_state = COMM_SUCCESS;
@@ -515,7 +518,7 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 
 	if(repeat_err)
 	{
-		printDBG("ERR: COMM_sendCommand repeat error!!");
+		kputs(PORT_DEBUG, "ERR: COMM_sendCommand repeat error!!\r\n");
 		return COMM_FAILED;
 	}
 

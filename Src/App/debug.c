@@ -871,7 +871,7 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_verifyCRC(crc32_calc);
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
     }
-    else if(test_case == 'E')
+    else if(test_case == 'E') // show table_data and table_nvm to compare
     {
     	int i;
 
@@ -879,6 +879,16 @@ STATIC int test_ser(uint8_t dport)
     	{
 
     		kprintf(dport, "\r\n %d, table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
+    	}
+    }
+    else if(test_case == 'F') // show status info
+    {
+    	int i;
+
+    	for(i=run_status1_type; i<PARAM_TABLE_SIZE; i++)
+    	{
+
+    		kprintf(dport, "\r\n %d, status value table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
     	}
     }
 #if 0

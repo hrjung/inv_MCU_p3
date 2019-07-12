@@ -10,9 +10,9 @@
 
 
 
-
+// mainhandler task function
 extern int8_t HDLR_handleDspError(void);
-
+extern int8_t HDLR_readDspStatus(void);
 extern int8_t HDLR_handleRunStopFlag(void);
 
 // NFC task function

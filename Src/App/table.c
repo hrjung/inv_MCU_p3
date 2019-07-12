@@ -454,6 +454,7 @@ int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 {
 	table_data[index] = value;
+	table_nvm[index] = value;
 
 	if(index == run_status1_type)
 	{
@@ -645,10 +646,12 @@ int8_t table_init(void)
 	status = table_updateRange();
 	if(status == 0) return 0;
 
-	for(i=0; i<PARAM_TABLE_SIZE; i++)
+	for(i=0; i<=baudrate_type; i++)
 	{
 		if(table_data[i] != param_table[i].initValue)
 		{
+			if(table_getDspAddr(i) == none_dsp) continue;
+
 			COMM_convertValue((PARAM_IDX_t)i, buf);
 
 			status = COMM_sendMessage(SPICMD_PARAM_W, buf);
@@ -760,6 +763,31 @@ int32_t table_getStatusValue(int16_t index)
 		kprintf(PORT_DEBUG, "table_getStatusValue index=%d error\r\n", index);
 
 	return 0;
+}
+
+int8_t table_setStatusDSP(void)
+{
+	int8_t nvm_status;
+	int8_t errflag=0;
+
+	nvm_status = NVMQ_enqueueNfcQ(run_status1_type, table_data[run_status1_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(run_status2_type, table_data[run_status2_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(I_rms_type, table_data[I_rms_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(run_freq_type, table_data[run_freq_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(dc_voltage_type, table_data[dc_voltage_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(ipm_temperature_type, table_data[ipm_temperature_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(mtr_temperature_type, table_data[mtr_temperature_type]);
+	if(nvm_status == 0) errflag++;
+
+	if(errflag) return 0;
+	else	return 1;
+
 }
 
 int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq)

@@ -34,6 +34,7 @@ int8_t HDLR_handleDspError(void)
 	if(UTIL_isDspError() && ERR_isErrorState() == 0)
 	{
 		// request DSP error info
+		kputs(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR\r\n");
 		status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
 		if(status == COMM_SUCCESS)
 		{
@@ -55,6 +56,8 @@ int8_t HDLR_readDspStatus(void)
 		status = COMM_sendMessage(SPICMD_REQ_ST, dummy);
 		if(status == COMM_FAILED)
 			kputs(PORT_DEBUG, "HDLR_readDspStatus error!!\r\n");
+
+		//kprintf(PORT_DEBUG, "HDLR_readDspStatus send SPICMD_REQ_ST status=%d\r\n", status);
 	 }
 
 	 return 1;
@@ -114,16 +117,22 @@ int8_t HDLR_restoreNVM(void)
 
 	while(index < baudrate_type) // only writable parameter
 	{
+		osDelay(5);
 		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status != 0) {kprintf(PORT_DEBUG,"ERROR NVM read error\n"); errflag++;}
-
-		table_value = table_getValue(index);
-		if(nvm_value != table_value)
+		if(nvm_status == 0)
 		{
-			nvm_status = NVM_writeParam(index, table_value);
-			if(nvm_status != 0) {kprintf(PORT_DEBUG,"ERROR NVM write error\n"); errflag++;}
+			kprintf(PORT_DEBUG,"ERROR NVM read error index=%d\n", index); errflag++;
+		}
+		else
+		{
+			table_value = table_getValue(index);
+			if(nvm_value != table_value)
+			{
+				nvm_status = NVM_writeParam(index, table_value);
+				if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error index=%d\n", index); errflag++;}
 
-			kprintf(PORT_DEBUG,"HDLR_restoreNVM index=%d, value=%d, status=%d\r\n", index, table_value, nvm_status);
+				kprintf(PORT_DEBUG,"HDLR_restoreNVM index=%d, value=%d, status=%d\r\n", index, table_value, nvm_status);
+			}
 		}
 		index++;
 	}
@@ -152,13 +161,19 @@ int8_t HDLR_updateParamNVM(void)
 		if(status == 0) {kprintf(PORT_DEBUG,"ERROR NfcQ dequeue \r\n"); errflag++;}
 
 		nvm_status = NVM_read(addr, &nvm_value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error\r\n"); errflag++;}
-
-		if(nvm_value != value)
+		if(nvm_status == 0)
 		{
-			nvm_status = NVM_write(addr, value);
-			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error\r\n"); errflag++;}
+			kprintf(PORT_DEBUG,"ERROR NVM read error addr=0x%x\r\n", addr); errflag++;
 		}
+		else
+		{
+			if(nvm_value != value)
+			{
+				nvm_status = NVM_write(addr, value);
+				if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error addr=0x%x\r\n", addr); errflag++;}
+			}
+		}
+		osDelay(5);
 
 		empty = NVMQ_isEmptyNfcQ();
 	} while(empty == 0); // not empty
@@ -185,13 +200,13 @@ int8_t HDLR_updatebyNfc(void)
 	{
 		osDelay(5);
 		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d\r\n", index); errflag++;}
+		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;}
 
 		if(nvm_value != table_getValue(index))
 		{
 			status = NVMQ_enqueueTableQ(index, nvm_value);
-			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d\r\n", index); errflag++;}
-			kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d\r\n", index, nvm_value, status);
+			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
+			kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
 		}
 		index++;
 	}

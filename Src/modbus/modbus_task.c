@@ -185,17 +185,17 @@ void MB_TaskFunction(void)
 		// put packet to req_q
 		result = MBQ_putReqQ(mbBufRx.wp, mbBufRx.buf);
 
-		kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-				mbBufTx.buf[0], mbBufTx.buf[1], mbBufTx.buf[2], mbBufTx.buf[3], mbBufTx.buf[4]);
-
 		mb_frame_received=0;
 	}
 
-	if(MBQ_isRespQReady())
+	if(MBQ_isEmptyRespQ() == 0) // not empty
 	{
 		mbBufTx.wp = MBQ_getRespQ(mbBufTx.buf);
 
-		MB_writeRespPacket(mbBufTx.wp+1);
+		MB_writeRespPacket(mbBufTx.wp);
+
+		kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+				mbBufTx.buf[0], mbBufTx.buf[1], mbBufTx.buf[2], mbBufTx.buf[3], mbBufTx.buf[4]);
 	}
 
 }

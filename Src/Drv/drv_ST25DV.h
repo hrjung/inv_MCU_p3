@@ -12,7 +12,7 @@
 #include "stm32f1xx_hal.h"
 
 
-#define I2C_ERR_REPEAT_CNT	(5)
+#define I2C_ERR_REPEAT_CNT	(10)
 
 // NFC device address
 #define NFC_DevAddr_R		(uint16_t)(0xA6)

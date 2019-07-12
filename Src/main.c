@@ -150,7 +150,7 @@ uint32_t default_cnt=0, main_cnt=0, nfc_cnt=0, mbus_cnt=0, rs485_cnt=0, user_io_
 
 uint8_t NFC_Access_flag=0;
 uint8_t DSP_status_read_flag=0;
-uint8_t err_info_recieved_f=0;
+uint8_t EEPROM_initialized_f=0;
 
 extern LED_status_t LED_state[]; // 3 color LED state
 extern uint16_t adc_value;
@@ -160,7 +160,6 @@ uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
 uint32_t ain_sum=0;
 uint16_t exec_do_cnt=0;
 
-uint8_t EEPROM_initialized_f=0;
 
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
@@ -173,8 +172,8 @@ extern int8_t MB_handlePacket(void);
 
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
-extern void kputs2(const char *pStr);
-extern void kprintf2(const char *fmt, ...);
+//extern void kputs2(const char *pStr);
+//extern void kprintf2(const char *fmt, ...);
 
 
 /* USER CODE END PFP */
@@ -329,7 +328,6 @@ int main(void)
   /* start timers, add new ones, ... */
   osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
   osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1sec to read Accelerometer
-  osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
@@ -1119,7 +1117,8 @@ void NfcNvmTaskFunc(void const * argument)
   /* USER CODE BEGIN NfcNvmTaskFunc */
 	int32_t tag_tryed=0, tag_end=0;
 	int8_t status;
-  // TODO : wait until EEPROM initialized
+
+	// wait until EEPROM initialized
   while(EEPROM_initialized_f==0) osDelay(1);
 
   osDelay(10);
@@ -1154,14 +1153,23 @@ void NfcNvmTaskFunc(void const * argument)
 		  //	check parameter table
 		  //	check system parameter
 		  osDelay(5);
-		  status = HDLR_updatebyNfc();
-		  if(status == 0)
+		  if(NVM_isNfcMonitoring())
 		  {
-			  kputs(PORT_DEBUG, "nfc tag update error\r\n");
-			  UTIL_setLED(LED_COLOR_B, 1);
+
 		  }
 		  else
-			  UTIL_setLED(LED_COLOR_G, 1);
+		  {
+
+			  status = HDLR_updatebyNfc();
+			  if(status == 0)
+			  {
+				  kputs(PORT_DEBUG, "nfc tag update error\r\n");
+				  UTIL_setLED(LED_COLOR_B, 1);
+			  }
+			  else
+				  UTIL_setLED(LED_COLOR_G, 1);
+
+		  }
 	  }
 	  else if(tag_tryed == 1 || tag_end == 1)
 	  {
@@ -1240,9 +1248,7 @@ void mainHandlerTaskFunc(void const * argument)
   MBQ_init();
   NVMQ_init();
 
-  // init modbus_handler
-  MB_initAddrMap();
-
+  osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
   /* Infinite loop */
   for(;;)
   {
@@ -1254,27 +1260,23 @@ void mainHandlerTaskFunc(void const * argument)
 	osDelay(5);
 
 #ifndef SUPPORT_UNIT_TEST
-	  // read DSP error flag, MCU error state
-	  //HDLR_handleDspError();
-	  //if(status == 0)
+	  // read DSP error flag, MCU error state, read DSP status
+	  if(DSP_status_read_flag) // every DSP_STATUS_TIME_INTERVAL
+	  {
+		  HDLR_handleDspError();
+
+		  HDLR_readDspStatus();
+
+		  DSP_status_read_flag = 0;
+		  HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
+	  }
 
 	  // read run/stop flag in EEPROM
 	  status = HDLR_handleRunStopFlag();
 
-#if 0
-	  // read DSP status
-	  if(DSP_status_read_flag)
-	  {
-		  HDLR_handleDspError();
-
-
-
-		  DSP_status_read_flag = 0;
-	  }
-
 	  // read modbus packet
 	  MB_handlePacket();
-#endif
+
 
 	  // read nvm_q
 	  if(!NVMQ_isEmptyTableQ())
@@ -1302,6 +1304,10 @@ void mbus485TaskFunc(void const * argument)
 	osDelay(700);
 
 	MB_init();
+
+	// init modbus_handler
+	MB_initAddrMap();
+
 	kputs(PORT_DEBUG, "mbus485Task started\r\n");
 
 
@@ -1360,6 +1366,7 @@ void YstcUpdateTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN YstcUpdateTimerCallback */
 	DSP_status_read_flag = 1;
+
   /* USER CODE END YstcUpdateTimerCallback */
 }
 
@@ -1424,7 +1431,6 @@ void NfcAppTimerCallback(void const * argument)
 void AccReadTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN AccReadTimerCallback */
-  HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
 
   UTIL_handleLED(); // handling 3 color LED
 

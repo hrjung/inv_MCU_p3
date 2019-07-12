@@ -71,6 +71,22 @@ typedef enum{
 	mb_address_type,
 	baudrate_type,
 
+	Rs_type,
+	Rr_type,
+	Ls_type,
+	noload_current_type,
+	rated_current_type,
+	poles_type,
+	input_voltage_type,
+	rated_freq_type,
+
+	model_type,
+	motor_type_type,
+	gear_ratio_type,
+	motor_on_cnt_type,
+	elapsed_hour_type,
+	operating_hour_type,
+
 	err_date_0_type,
 	err_code_0_type,
 	err_status_0_type,
@@ -96,22 +112,6 @@ typedef enum{
 	err_status_4_type,
 	err_current_4_type,
 	err_freq_4_type,
-
-	Rs_type,
-	Rr_type,
-	Ls_type,
-	noload_current_type,
-	rated_current_type,
-	poles_type,
-	input_voltage_type,
-	rated_freq_type,
-
-	model_type,
-	motor_type_type,
-	gear_ratio_type,
-	motor_on_cnt_type,
-	elapsed_hour_type,
-	operating_hour_type,
 
 #ifdef SUPPORT_NFC_OLD
 	run_status1_type,
@@ -275,6 +275,8 @@ extern int8_t table_initNVM(void);
 extern int32_t table_getValue(PARAM_IDX_t index);
 extern uint16_t table_getRatio(PARAM_IDX_t index);
 extern uint8_t table_getRW(PARAM_IDX_t index);
+
+extern int8_t table_setStatusDSP(void);
 extern int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq);
 
 

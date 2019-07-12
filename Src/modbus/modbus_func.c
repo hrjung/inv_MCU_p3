@@ -562,7 +562,7 @@ int MB_processModbusPacket(void) // error or response packet
 	}
 	calcCRC = CRC16(modbusTx.buf, modbusTx.wp);
 	modbusTx.buf[modbusTx.wp++] = (int8_t)(calcCRC >> 8) &0x00FF;
-	modbusTx.buf[modbusTx.wp] = (int8_t)(calcCRC & 0x00FF);
+	modbusTx.buf[modbusTx.wp++] = (int8_t)(calcCRC & 0x00FF);
 	//MB_writeRespPacket(modbusTx.wp+1);
 
 	return ret_code;
@@ -577,19 +577,22 @@ int8_t MB_handlePacket(void)
 
 	// get packet from queue
 	modbusRx.wp = MBQ_getReqQ(modbusRx.buf);
-	if(modbusRx.wp == 0) { kprintf(PORT_DEBUG, "no data in req_q\n"); return 0; }
+	if(modbusRx.wp == 0) { kprintf(PORT_DEBUG, "no data in req_q\r\n"); return 0; }
 
-//	kprintf(PORT_DEBUG, "RX: 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+//	kprintf(PORT_DEBUG, "main RX: 0x%x 0x%x 0x%x 0x%x 0x%x\n",
 //		modbusRx.buf[0], modbusRx.buf[1], modbusRx.buf[2], modbusRx.buf[3], modbusRx.buf[4]);
 
 	// generate response or error frame
 	result = MB_processModbusPacket();
 
-	while(MBQ_isRespQReady()==0) osDelay(1);; //
+//	kprintf(PORT_DEBUG, "main TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+//		modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
+
+	while(MBQ_isEmptyRespQ()==0) osDelay(1);
+
 	MBQ_putRespQ(modbusTx.wp, modbusTx.buf);
 
-//	kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-//		modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
+
 
 	return 1;
 }

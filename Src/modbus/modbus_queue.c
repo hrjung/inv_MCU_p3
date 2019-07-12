@@ -21,6 +21,8 @@ void MBQ_init(void)
 
 	req_q.size = 0;
 	resp_q.size = 0;
+	req_q.empty = 1;
+	resp_q.empty = 1;
 	for(i=0; i<MODBUS_BUF_SIZE; i++)
 	{
 		req_q.packet[i] = 0;
@@ -61,9 +63,9 @@ uint16_t MBQ_getReqQ(uint8_t *buf)
 	return req_q.size;
 }
 
-int MBQ_isRespQReady(void)
+int MBQ_isEmptyRespQ(void)
 {
-	return (resp_q.empty == 0);
+	return (resp_q.empty == 1);
 }
 
 int8_t MBQ_putRespQ(uint16_t size, uint8_t *data)
