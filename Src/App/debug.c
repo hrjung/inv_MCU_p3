@@ -892,21 +892,6 @@ STATIC int test_ser(uint8_t dport)
     	}
     }
 #if 0
-    else if(test_case == 'B')
-    {
-		kprintf(dport, "\r\n Task ystcEv:%d, userIO: %d, nfc: %d, 485: %d ", \
-				ystc_event_cnt, user_io_cnt, nfc_cnt, rs485_cnt);
-		kprintf(dport, "\r\n Timer keyscan: %d, nfcApp: %d, trg: %d, def:%d ", \
-				key_scan_cnt, nfc_app_cnt, ystc_trigger_cnt, default_cnt);
-		kprintf(dport, "\r\n Ystc run: %d, default: %d, ys_state=%d", \
-				ystc_run_cnt, ystc_default_cnt, ystc_state);
-		kprintf(dport, "\r\n enter:%d 1:%d, 2:%d 3:%d, 4:%d 5:%d", \
-				run_enter,run_enter1,run_enter2, run_enter3,run_enter4,run_enter5);
-		kprintf(dport, "\r\n exit:%d 1:%d, 2:%d 3:%d, 4:%d 5:%d", \
-				run_exit,run_exit1,run_exit2, run_exit3,run_exit4,run_exit5);
-		kprintf(dport, "\r\n rsf 1:%d, 2:%d 3:%d, 4:%d, 5:%d, 6:%d, st=%d", \
-				rs_f1,rs_f2,rs_f3, rs_f4,rs_f5,rs_f6, i2c_st);
-    }
     else if(test_case == 'C')
     {
 #ifdef SUPPORT_TASK_WATCHDOG

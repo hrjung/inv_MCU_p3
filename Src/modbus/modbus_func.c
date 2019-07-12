@@ -302,7 +302,7 @@ uint16_t MB_getActualAddress(MODBUS_addr_st *mb_addr, uint16_t addr, uint16_t co
 				return (index + mb_addr->start_index);
 			else
 			{
-				//kprintf(PORT_DEBUG, "\r\n index=%d, valid=%d, mod_addr=%d", index, mb_addr->map[index].valid, mb_addr->map[index].mod_addr);
+				//kprintf(PORT_DEBUG, " index=%d, valid=%d, mod_addr=%d \r\n", index, mb_addr->map[index].valid, mb_addr->map[index].mod_addr);
 				return MODBUS_ADDR_MAP_ERR-1;
 			}
 		}
@@ -321,7 +321,7 @@ uint16_t MB_getActualAddress(MODBUS_addr_st *mb_addr, uint16_t addr, uint16_t co
 		}
 	}
 
-	//kprintf(PORT_DEBUG, "\r\n addr=%d, count=%d, st_addr=%d, end_addr=%d", addr, count, mb_addr->start, mb_addr->end);
+	//kprintf(PORT_DEBUG, " addr=%d, count=%d, st_addr=%d, end_addr=%d \r\n", addr, count, mb_addr->start, mb_addr->end);
 	return MODBUS_ADDR_MAP_ERR; //not found
 }
 
@@ -352,7 +352,7 @@ uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count, int8_t *type)
 	if(find_f)
 	{
 		index = MB_getActualAddress(mb_addr, addr, count);
-		//kprintf(PORT_DEBUG, "\r\n addr=%d, count=%d, find=%d, st_addr=%d, end_addr=%d", addr, count, find_f, mb_addr->start, mb_addr->end);
+		//kprintf(PORT_DEBUG, " addr=%d, count=%d, find=%d, st_addr=%d, end_addr=%d \r\n", addr, count, find_f, mb_addr->start, mb_addr->end);
 	}
 
 	*type = find_f;
@@ -397,7 +397,7 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 		value = table_getValue(index);
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
-		kprintf(PORT_DEBUG, "\r\n index=%d, value=%d, wp=%d", index, (uint16_t)value, modbusTx.wp);
+		kprintf(PORT_DEBUG, "s_read index=%d, value=%d, wp=%d \r\n", index, (uint16_t)value, modbusTx.wp);
 	}
 	else
 	{
@@ -450,7 +450,7 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	{
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
 		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
-		//kprintf(PORT_DEBUG, "\r\n index=%d, value=%d, wp=%d", index, (uint16_t)value, modbusTx.wp);
+		kprintf(PORT_DEBUG, "s_write index=%d, value=%d, wp=%d \r\n", index, (uint16_t)value, modbusTx.wp);
 		result = MOD_EX_NO_ERR;
 	}
 	else
@@ -496,7 +496,7 @@ int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 	for(i=0; i<count; i++)
 	{
 		ret = table_runFunc(index+i, (int32_t)value[i], REQ_FROM_MODBUS);
-		//kprintf(PORT_DEBUG, "\r\n index=%d, value=%d, ret=%d", index+i, (uint16_t)value[i], ret);
+		kprintf(PORT_DEBUG, "m_write index=%d, value=%d, ret=%d \r\n", index+i, (uint16_t)value[i], ret);
 		if(ret == 0)
 		{
 			result = MOD_EX_SLAVE_FAIL;
@@ -511,7 +511,7 @@ FC16_ERR:
 	{
 		MB_generateErrorResp(MOD_FC16_WRM_REG, result);
 	}
-	//kprintf(PORT_DEBUG, "\r\n result=%d", result);
+	//kprintf(PORT_DEBUG, " result=%d \r\n", result);
 	return result;
 }
 
@@ -551,7 +551,7 @@ int MB_processModbusPacket(void) // error or response packet
 				multi_val[i] = (uint16_t)(((uint16_t)modbusRx.buf[7+i*2] << 8) | modbusRx.buf[8+i*2]);
 			}
 		}
-		//kprintf(PORT_DEBUG, "\r\n addr=%d, reg_cnt=%d, byte_cnt=%d", reg_addr, reg_cnt, byte_cnt);
+		//kprintf(PORT_DEBUG, " addr=%d, reg_cnt=%d, byte_cnt=%d \r\n", reg_addr, reg_cnt, byte_cnt);
 		ret_code = MB_handleWriteMultiRegister(reg_addr, reg_cnt, multi_val);
 		break;
 
@@ -579,13 +579,13 @@ int8_t MB_handlePacket(void)
 	modbusRx.wp = MBQ_getReqQ(modbusRx.buf);
 	if(modbusRx.wp == 0) { kprintf(PORT_DEBUG, "no data in req_q\r\n"); return 0; }
 
-//	kprintf(PORT_DEBUG, "main RX: 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+//	kprintf(PORT_DEBUG, "main RX: 0x%x 0x%x 0x%x 0x%x 0x%x \r\n",
 //		modbusRx.buf[0], modbusRx.buf[1], modbusRx.buf[2], modbusRx.buf[3], modbusRx.buf[4]);
 
 	// generate response or error frame
 	result = MB_processModbusPacket();
 
-//	kprintf(PORT_DEBUG, "main TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+//	kprintf(PORT_DEBUG, "main TX: 0x%x 0x%x 0x%x 0x%x 0x%x \r\n",
 //		modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
 
 	while(MBQ_isEmptyRespQ()==0) osDelay(1);

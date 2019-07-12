@@ -1159,7 +1159,6 @@ void NfcNvmTaskFunc(void const * argument)
 		  }
 		  else
 		  {
-
 			  status = HDLR_updatebyNfc();
 			  if(status == 0)
 			  {
@@ -1268,7 +1267,7 @@ void mainHandlerTaskFunc(void const * argument)
 		  HDLR_readDspStatus();
 
 		  DSP_status_read_flag = 0;
-		  HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
+		  //HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
 	  }
 
 	  // read run/stop flag in EEPROM
@@ -1434,6 +1433,7 @@ void AccReadTimerCallback(void const * argument)
 
   UTIL_handleLED(); // handling 3 color LED
 
+  HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
   /* USER CODE END AccReadTimerCallback */
 }
 

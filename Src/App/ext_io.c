@@ -43,7 +43,6 @@ uint8_t isConfigured=0; // flag for AIN parameter configured
 extern int16_t state_run_stop; // global run/stop status
 extern int16_t state_direction; // global forward/reverse direction status
 
-
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getStatusValue(int16_t index);
 

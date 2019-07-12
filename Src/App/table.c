@@ -37,6 +37,8 @@ extern int16_t state_direction;
 extern int16_t st_overload;
 extern int16_t st_brake;
 
+extern int32_t err_cnt;
+
 TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 
@@ -46,6 +48,7 @@ STATIC int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 static int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
 static int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
 static int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
+static int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setDinValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setAinValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
@@ -56,7 +59,8 @@ int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_setSlaveAddress(uint8_t addr);
 
-
+extern void UTIL_startADC(void);
+extern void UTIL_stopADC(void);
 
 STATIC Param_t param_table[] =
 {   //    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
@@ -70,7 +74,7 @@ STATIC Param_t param_table[] =
 	{ multi_val_6_type,		0x11C,	40107,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
 	{ multi_val_7_type,		0x120,	40108,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
 	{ freq_min_type,		0x124,	40109,	10,		10,		2000,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
-	{ freq_max_type,		0x128,	41010,	600,	10,		2000,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
+	{ freq_max_type,		0x128,	40110,	600,	10,		2000,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
 	{ accel_time_type,		0x12C,	40111,	100,	10,		6000,	1, 	10, 	1, 	accel_time_dsp,		table_setValue,},
 	{ decel_time_type,		0x130,	40112,	100,	10,		6000,	1, 	10,		1, 	decel_time_dsp,		table_setValue,},
 	{ dir_cmd_type,			0x134,	40113,	0,		0,		1,		1, 	1, 		1, 	dir_cmd_dsp,		table_setValue,},
@@ -87,7 +91,7 @@ STATIC Param_t param_table[] =
 	{ acc_base_set_type,	0x160,	40124,	0,		0,		1,		1, 	1, 		0, 	acc_base_set_dsp, 	table_setValue,	},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
-	{ ctrl_in_type,			0x200,	40200,	0,		0,		4,		1, 	1, 		0, 	none_dsp,			table_setValue},
+	{ ctrl_in_type,			0x200,	40200,	0,		0,		4,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
 	{ energy_save_type,		0x204,	40202,	0,		0,		1,		1, 	1, 		0, 	energy_save_dsp,	table_setValue	},
 	{ pwm_freq_type,		0x208,	40203,	0,		0,		3,		1, 	1, 		0, 	pwm_freq_dsp,		table_setValue	},
 	{ brake_type_type,		0x20C,	40206,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
@@ -388,6 +392,26 @@ int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t option)
 	}
 
 	return result;
+}
+
+int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
+{
+	int8_t status=1;
+	int index;
+
+	status = table_setValue(idx, value, option);
+	if(status == 0) return 0;
+
+	if(value == CTRL_IN_Analog_V)
+	{
+		UTIL_startADC();
+	}
+	else
+	{
+		UTIL_stopADC();
+	}
+
+	return status;
 }
 
 int8_t table_setDinValue(PARAM_IDX_t idx, int32_t value, int16_t option)
@@ -694,6 +718,8 @@ int8_t table_initNVM(void)
 	  //printf("EEPROM status=%d\r\n", status);
 	}
 
+	err_cnt = table_getValue(err_date_0_type);
+
 	return status;
 }
 
@@ -795,9 +821,6 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	int i;
 	uint8_t nvm_status;
 	int32_t index;
-#ifdef SUPPORT_NFC_OLD
-	int32_t date=0; //TODO : get date info
-#endif
 
 	for(i=3; i>=0; i--) // push to next pos
 	{
@@ -827,7 +850,7 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 
 	// store latest error info
 #ifdef SUPPORT_NFC_OLD
-	table_data[err_date_0_type] = (int32_t)date;
+	table_data[err_date_0_type] = (int32_t)err_cnt;
 #endif
 	table_data[err_code_0_type] = (int32_t)err_code;
 	table_data[err_status_0_type] = (int32_t)status;

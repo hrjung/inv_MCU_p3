@@ -62,7 +62,6 @@ uint8_t NVM_read(uint16_t addr, int32_t *value)
 
 #ifdef SUPPORT_DRIVER_HW
 	status = I2C_readData((uint8_t *)value, addr, sizeof(int32_t));
-	osDelay(5);
 #else
 	*value = nvm_table[addr];
 #endif
@@ -75,7 +74,6 @@ uint8_t NVM_write(int32_t addr, int32_t value)
 
 #ifdef SUPPORT_DRIVER_HW
 	status = I2C_writeData((uint8_t *)&value, addr, sizeof(int32_t));
-	osDelay(5);
 #else
 	nvm_table[addr] = value;
 #endif
@@ -176,9 +174,12 @@ int8_t NVM_isInit(void)
 int8_t NVM_isNfcMonitoring(void)
 {
 	uint8_t status;
+#if 1
 
+#else
 	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_ON_MONITORING], &isMonitoring);
 	if(status!=NVM_OK) return -1;
+#endif
 
 	return (int8_t)isMonitoring;
 }

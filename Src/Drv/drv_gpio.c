@@ -36,7 +36,12 @@ static uint8_t din[EXT_DIN_COUNT][EXT_DIN_SAMPLE_CNT] = {0};
 static uint8_t dtm[2][EXT_DIN_SAMPLE_CNT] = {0};
 
 uint8_t dtm_value[2];
+
+extern ADC_HandleTypeDef hadc1;
+
 extern uint8_t mdin_value[];
+
+extern uint16_t ain_val[];
 
 void printDBG(char *str)
 {
@@ -260,4 +265,14 @@ void UTIL_writeDout(uint8_t index, uint8_t onoff)
 	else
 		HAL_GPIO_WritePin(DO_2_GPIO_Port, DO_2_Pin, value);
 #endif
+}
+
+void UTIL_startADC(void)
+{
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ain_val, EXT_AIN_SAMPLE_CNT);
+}
+
+void UTIL_stopADC(void)
+{
+	HAL_ADC_Stop_DMA(&hadc1);
 }
