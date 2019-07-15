@@ -92,9 +92,11 @@ osTimerId YstcUpdateTimerHandle;
 osTimerId userIoTimerHandle;
 osTimerId NfcAppTimerHandle;
 osTimerId AccReadTimerHandle;
+osTimerId OperationTimerHandle;
 osSemaphoreId debugSemaphoreIdHandle;
 osSemaphoreId mbus485SemaphoreIdHandle;
 osSemaphoreId rs485SemaphoreIdHandle;
+osSemaphoreId I2CSemaphoreIdHandle;
 /* USER CODE BEGIN PV */
 osThreadId debugTaskHandle;
 
@@ -130,6 +132,7 @@ void YstcUpdateTimerCallback(void const * argument);
 void userIoTimerCallback(void const * argument);
 void NfcAppTimerCallback(void const * argument);
 void AccReadTimerCallback(void const * argument);
+void OperationTimerCallback(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -137,6 +140,7 @@ void AccReadTimerCallback(void const * argument);
 #define UIO_UPDATE_TIME_INTERVAL	10 // 10ms
 #define ACC_READ_TIME_INTERVAL		1000 // 1sec
 #define DSP_STATUS_TIME_INTERVAL	1000 // 1sec
+#define OPERATION_TIME_INTERVAL		600000 // 10 min
 
 #define WATCHDOG_NFC		0x01
 #define WATCHDOG_MAIN		0x02
@@ -160,6 +164,14 @@ uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
 uint32_t ain_sum=0;
 uint16_t exec_do_cnt=0;
 
+// device working hour
+uint32_t motor_run_cnt=0;
+uint32_t motor_run_hour=0;
+uint32_t device_on_hour=0;
+
+uint32_t motor_run_start_time=0;
+
+uint32_t device_10min_cnt=0;
 
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
@@ -169,6 +181,8 @@ extern void gen_crc_table(void);
 extern void MB_init(void);
 extern void MB_TaskFunction(void);
 extern int8_t MB_handlePacket(void);
+
+extern int8_t NVM_setMotorRunCount(uint32_t run_count);
 
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
@@ -213,6 +227,17 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
 {
 	ADC_error=1;
+}
+
+void TM_setStartRunTime(void)
+{
+	int8_t status;
+
+	motor_run_start_time = device_10min_cnt;
+
+	motor_run_cnt++;
+	status = NVM_setMotorRunCount(motor_run_cnt);
+	if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run Count \r\n"); }
 }
 
 /* USER CODE END 0 */
@@ -299,6 +324,10 @@ int main(void)
   osSemaphoreDef(rs485SemaphoreId);
   rs485SemaphoreIdHandle = osSemaphoreCreate(osSemaphore(rs485SemaphoreId), 1);
 
+  /* definition and creation of I2CSemaphoreId */
+  osSemaphoreDef(I2CSemaphoreId);
+  I2CSemaphoreIdHandle = osSemaphoreCreate(osSemaphore(I2CSemaphoreId), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -324,10 +353,15 @@ int main(void)
   osTimerDef(AccReadTimer, AccReadTimerCallback);
   AccReadTimerHandle = osTimerCreate(osTimer(AccReadTimer), osTimerPeriodic, NULL);
 
+  /* definition and creation of OperationTimer */
+  osTimerDef(OperationTimer, OperationTimerCallback);
+  OperationTimerHandle = osTimerCreate(osTimer(OperationTimer), osTimerPeriodic, NULL);
+
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
   osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1sec to read Accelerometer
+  osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 10 min to read Accelerometer
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
@@ -1117,6 +1151,7 @@ void NfcNvmTaskFunc(void const * argument)
   /* USER CODE BEGIN NfcNvmTaskFunc */
 	int32_t tag_tryed=0, tag_end=0;
 	int8_t status;
+	static uint32_t prev_time_tick;
 
 	// wait until EEPROM initialized
   while(EEPROM_initialized_f==0) osDelay(1);
@@ -1185,6 +1220,15 @@ void NfcNvmTaskFunc(void const * argument)
 		  status = HDLR_updateParamNVM();
 		  if(status == 0) kputs(PORT_DEBUG, "HDLR_updateParamNVM ERROR\r\n");
 	  }
+
+	  // time info update
+	  if(prev_time_tick != device_10min_cnt)
+	  {
+		  status = HDLR_updateTime(device_10min_cnt);
+		  if(status == 0) kputs(PORT_DEBUG, "HDLR_updateTime ERROR\r\n");
+
+		  prev_time_tick = device_10min_cnt;
+	  }
 #endif
 
   }
@@ -1248,6 +1292,7 @@ void mainHandlerTaskFunc(void const * argument)
   NVMQ_init();
 
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
+
   /* Infinite loop */
   for(;;)
   {
@@ -1366,6 +1411,7 @@ void YstcUpdateTimerCallback(void const * argument)
   /* USER CODE BEGIN YstcUpdateTimerCallback */
 	DSP_status_read_flag = 1;
 
+	HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
   /* USER CODE END YstcUpdateTimerCallback */
 }
 
@@ -1433,8 +1479,20 @@ void AccReadTimerCallback(void const * argument)
 
   UTIL_handleLED(); // handling 3 color LED
 
-  HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
+  //HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
   /* USER CODE END AccReadTimerCallback */
+}
+
+/* OperationTimerCallback function */
+void OperationTimerCallback(void const * argument)
+{
+  /* USER CODE BEGIN OperationTimerCallback */
+
+  // TODO : motor operation counter
+	device_10min_cnt++;
+
+  
+  /* USER CODE END OperationTimerCallback */
 }
 
 /**

@@ -19,6 +19,9 @@ extern uint8_t NVM_write(int32_t addr, int32_t value);
 extern uint8_t NVM_readParam(PARAM_IDX_t index, int32_t *value);
 extern uint8_t NVM_writeParam(PARAM_IDX_t index, int32_t value);
 
+extern int8_t NVM_readTime(void);
+extern int8_t NVM_initTime(void);
+
 extern int8_t NVM_initSystemParam(void);
 extern uint8_t NVM_setInit(void);
 extern int8_t NVM_isInit(void);
@@ -28,7 +31,7 @@ extern int8_t NVM_clearNfcMonitoring(void);
 extern int8_t NVM_getNfcStatus(int32_t *tag_started, int32_t *tag_end);
 extern int8_t NVM_clearNfcStatus(void);
 extern int8_t NVM_getRunStopFlag(int32_t *run_stop);
-extern int8_t MVM_clearRunStopFlag(void);
+extern int8_t NVM_clearRunStopFlag(void);
 
 extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
 extern int8_t NVM_setCRC(void);

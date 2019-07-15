@@ -45,6 +45,9 @@ extern int16_t state_direction; // global forward/reverse direction status
 
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getStatusValue(int16_t index);
+extern int8_t COMM_setMultiStepFreq(PARAM_IDX_t table_idx, uint16_t *buf);
+
+extern void TM_setStartRunTime(void);
 
 int EXT_DI_isMultiStepValid(void)
 {
@@ -152,7 +155,9 @@ int8_t EXI_DI_handleDin(void)
 	int32_t ctrl_in;
 	int32_t dir_ctrl;
 	uint8_t step=0;
-	int8_t result=0;
+	int8_t result=0, status;
+	uint16_t dummy[3] = {0,0,0};
+	uint16_t buf[3] = {0,0,0};
 
 	if(m_din.emergency_pin != EXT_DIN_COUNT)
 	{
@@ -195,7 +200,10 @@ int8_t EXI_DI_handleDin(void)
 				test_cmd = SPICMD_CTRL_STOP;
 				kprintf(PORT_DEBUG, "send SPICMD_CTRL_STOP\r\n");
 				result++;
-
+				// send run to DSP
+				status = COMM_sendMessage(test_cmd, dummy);
+				if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
+				prev_run = 0;
 			}
 			else if(mdin_value[m_din.run_pin] == 1 && prev_run == 0 && state_run_stop == CMD_STOP)
 			{
@@ -203,7 +211,15 @@ int8_t EXI_DI_handleDin(void)
 				test_cmd = SPICMD_CTRL_RUN;
 				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN\r\n");
 				result++;
+				// send run to DSP
+				status = COMM_sendMessage(test_cmd, dummy);
+				if(status != COMM_FAILED)
+				{
+					TM_setStartRunTime(); // set Run start time, count
+				}
+				else { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
 
+				prev_run = 1;
 			}
 			else
 				result = 0;
@@ -226,6 +242,9 @@ int8_t EXI_DI_handleDin(void)
 					test_cmd = SPICMD_CTRL_DIR_F;
 					kprintf(PORT_DEBUG, "send SPICMD_CTRL_DIR_F\r\n");
 					result++;
+					// send run to DSP
+					status = COMM_sendMessage(test_cmd, dummy);
+					if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR F error! \r\n"); }
 				}
 
 			}
@@ -238,6 +257,9 @@ int8_t EXI_DI_handleDin(void)
 					test_cmd = SPICMD_CTRL_DIR_R;
 					kprintf(PORT_DEBUG, "send SPICMD_CTRL_DIR_R\r\n");
 					result++;
+					// send run to DSP
+					status = COMM_sendMessage(test_cmd, dummy);
+					if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR R error! \r\n"); }
 				}
 			}
 //			else
@@ -256,6 +278,10 @@ int8_t EXI_DI_handleDin(void)
 			{
 				test_cmd = SPICMD_PARAM_W;
 				//TODO: send freq commd with [multi_Din_0_type + step];
+				COMM_setMultiStepFreq((multi_Din_0_type+step), buf);
+
+				status = COMM_sendMessage(test_cmd, buf);
+				if(status == 0) { kprintf(PORT_DEBUG, "set multi-step=%d to DSP error! \r\n", step); return 0;}
 
 				prev_step = step;
 				step_cmd = step; // for test

@@ -51,7 +51,11 @@ static int32_t nvm_table[PARAM_TABLE_SIZE];
 #endif
 int32_t table_nvm[PARAM_TABLE_SIZE];
 
-int32_t isMonitoring;
+int32_t isMonitoring=0;
+
+extern uint32_t motor_run_cnt;
+extern uint32_t motor_run_hour;
+extern uint32_t device_on_hour;
 
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 extern uint32_t table_calcCRC(void);
@@ -124,6 +128,83 @@ uint8_t NVM_writeParam(PARAM_IDX_t index, int32_t value)
 	return status;
 }
 
+int8_t NVM_readTime(void)
+{
+	int errflag=0;
+	int8_t status=NVM_OK;
+	uint16_t addr;
+
+	addr = table_getAddr(motor_on_cnt_type);
+	status = NVM_read(addr, (int32_t *)&motor_run_cnt);
+	if(status==NVM_NOK) errflag++;
+
+	addr = table_getAddr(elapsed_hour_type);
+	status = NVM_read(addr, (int32_t *)&device_on_hour);
+	if(status==NVM_NOK) errflag++;
+
+	addr = table_getAddr(operating_hour_type);
+	status = NVM_read(addr, (int32_t *)&motor_run_hour);
+	if(status==NVM_NOK) errflag++;
+
+	if(errflag) status=NVM_NOK;
+
+	return status;
+}
+
+int8_t NVM_setDeviceOnTime(uint32_t on_time)
+{
+	int8_t status;
+	uint16_t addr;
+
+	addr = table_getAddr(elapsed_hour_type);
+	status = NVM_write(addr, (int32_t)on_time);
+
+	return status;
+}
+
+int8_t NVM_setMotorRunTime(uint32_t run_time)
+{
+	int8_t status;
+	uint16_t addr;
+
+	addr = table_getAddr(operating_hour_type);
+	status = NVM_write(addr, (int32_t)run_time);
+
+	return status;
+}
+
+int8_t NVM_setMotorRunCount(uint32_t run_count)
+{
+	int8_t status;
+	uint16_t addr;
+
+	addr = table_getAddr(motor_on_cnt_type);
+	status = NVM_write(addr, (int32_t)run_count);
+
+	return status;
+}
+
+int8_t NVM_initTime(void)
+{
+	int errflag=0;
+	int8_t status=NVM_OK;
+
+	motor_run_cnt=0;
+	if(status==NVM_NOK) errflag++;
+
+	device_on_hour=0;
+	status = NVM_setDeviceOnTime(device_on_hour);
+	if(status==NVM_NOK) errflag++;
+
+	motor_run_hour=0;
+	status = NVM_setMotorRunTime(motor_run_hour);
+	if(status==NVM_NOK) errflag++;
+
+	if(errflag) status=NVM_NOK;
+
+	return status;
+}
+
 uint16_t NVM_getSystemParamAddr(uint16_t index)
 {
 	return (uint16_t)sysparam_addr[index];
@@ -174,7 +255,7 @@ int8_t NVM_isInit(void)
 int8_t NVM_isNfcMonitoring(void)
 {
 	uint8_t status;
-#if 1
+#if 0
 
 #else
 	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_ON_MONITORING], &isMonitoring);
@@ -232,7 +313,7 @@ int8_t NVM_getRunStopFlag(int32_t *run_stop)
 	return NVM_OK;
 }
 
-int8_t MVM_clearRunStopFlag(void)
+int8_t NVM_clearRunStopFlag(void)
 {
 	uint8_t status;
 	int32_t value=0;

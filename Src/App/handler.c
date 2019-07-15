@@ -25,6 +25,20 @@
 
 int8_t err_read_flag=0;
 
+
+extern int16_t state_run_stop;
+
+extern uint32_t motor_on_cnt;
+extern uint32_t motor_run_hour;
+extern uint32_t device_on_hour;
+
+extern uint32_t motor_run_start_time;
+extern uint32_t device_10min_cnt;
+
+extern void TM_setStartRunTime(void);
+extern int8_t NVM_setMotorRunTime(uint32_t run_time);
+extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
+
 int8_t HDLR_handleDspError(void)
 {
 	uint16_t dummy[] = {0,0,0};
@@ -79,7 +93,10 @@ int8_t HDLR_handleRunStopFlag(void)
 		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
-			status = MVM_clearRunStopFlag();
+		{
+			status = NVM_clearRunStopFlag();
+			TM_setStartRunTime(); // set Run start time
+		}
 		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
 		break;
 
@@ -88,7 +105,9 @@ int8_t HDLR_handleRunStopFlag(void)
 		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
-			status = MVM_clearRunStopFlag();
+		{
+			status = NVM_clearRunStopFlag();
+		}
 		kprintf(PORT_DEBUG, "STOP Flag, send to DSP status=%d\r\n", status);
 		break;
 
@@ -218,6 +237,34 @@ int8_t HDLR_updatebyNfc(void)
 	// clear NFC tag flag
 	status = NVM_clearNfcStatus();
 	if(status == -1) {kprintf(PORT_DEBUG, "ERROR clear tag flag \r\n"); return 0;}
+
+	if(errflag) return 0;
+	else	return 1;
+}
+
+int8_t HDLR_updateTime(uint32_t cur_time)
+{
+	int8_t status;
+	int16_t errflag=0;
+
+	if(cur_time%6 == 0) // 1 hour
+	{
+		device_on_hour++;
+		status = NVM_setDeviceOnTime(device_on_hour);
+		if(status == 0) {kprintf(PORT_DEBUG, "ERROR update On time \r\n"); errflag++;}
+	}
+
+	if(state_run_stop) // run status
+	{
+		if(device_10min_cnt - motor_run_start_time >= 6) // over 1 hour
+		{
+			motor_run_hour++;
+			status = NVM_setMotorRunTime(motor_run_hour);
+			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run time \r\n"); errflag++;}
+
+			motor_run_start_time = device_10min_cnt;
+		}
+	}
 
 	if(errflag) return 0;
 	else	return 1;

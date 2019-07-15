@@ -30,6 +30,8 @@ int16_t state_direction = 0;
 int16_t st_overload = 0;
 int16_t st_brake = 0;
 
+//extern int16_t test_run_stop_f;
+
 extern int8_t NVM_isNfcMonitoring(void);
 
 extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
@@ -239,6 +241,20 @@ int8_t COMM_recvfromDSP(int16_t recv_len)
 	return COMM_SUCCESS;
 }
 
+int8_t COMM_setMultiStepFreq(PARAM_IDX_t table_idx, uint16_t *buf)
+{
+	int32_t t_value;
+	float value_f;
+
+	buf[0] = value_dsp;
+
+	t_value = table_getValue(table_idx);
+	value_f = (float)((float)t_value/10.0);
+	memcpy(&buf[1], &value_f, sizeof(float));
+
+	return 1;
+}
+
 // set data for SPICMD_PARAM_W command
 // data[0] = index
 // data[1], data[2] : int32 or float value
@@ -377,7 +393,15 @@ int8_t COMM_parseMessage(void)
 #ifdef SUPPORT_NFC_OLD
 //		status1 = (int32_t)((state_direction<<8) | state_run_stop); // only use lower 16 bit for modbus
 //		status2 = (int32_t)((st_brake<<8) | st_overload);
-		table_setStatusValue(run_status1_type, (int32_t)status1, REQ_FROM_DSP);
+#if 0
+		if(test_run_stop_f)
+		{
+			status1 = 1;//set run state for test
+			table_setStatusValue(run_status1_type, (int32_t)status1, REQ_FROM_DSP);
+		}
+		else
+#endif
+			table_setStatusValue(run_status1_type, (int32_t)status1, REQ_FROM_DSP);
 		table_setStatusValue(run_status2_type, (int32_t)status2, REQ_FROM_DSP);
 #else
 		table_setStatusValue(run_status_type, (int32_t)state_run_stop);

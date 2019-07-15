@@ -550,15 +550,20 @@ int8_t table_initializeBlankEEPROM(void)
 
 	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
 
-	status = NVM_setInit();
+	status = NVM_initTime();
 	if(status == 0) errflag++;
 
 	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
 
-	status = NVM_setCRC();
+	status = NVM_setInit();
 	if(status == 0) errflag++;
 
 	kprintf(PORT_DEBUG, "4: err=%d\r\n", errflag);
+
+	status = NVM_setCRC();
+	if(status == 0) errflag++;
+
+	kprintf(PORT_DEBUG, "5: err=%d\r\n", errflag);
 
 	if(errflag) return 0;
 
@@ -687,6 +692,9 @@ int8_t table_init(void)
 
 	// sync EEPROM data and table data
 	for(i=0; i<PARAM_TABLE_SIZE; i++) table_nvm[i] = table_data[i];
+
+	status = NVM_readTime();
+	if(status == 0) errflag++;
 
 	if(errflag) return 0;
 

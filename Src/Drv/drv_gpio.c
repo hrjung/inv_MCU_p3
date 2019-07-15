@@ -43,11 +43,6 @@ extern uint8_t mdin_value[];
 
 extern uint16_t ain_val[];
 
-void printDBG(char *str)
-{
-	kputs(PORT_DEBUG, str);kputs(PORT_DEBUG,"\r\n");
-}
-
 
 void UTIL_setTestPin(uint8_t index, uint8_t onoff)
 {
@@ -256,7 +251,7 @@ void UTIL_writeDout(uint8_t index, uint8_t onoff)
 {
 	GPIO_PinState value;
 
-	if(index > 2) {printf("DI index error %d\n", index); return ;}
+	if(index > 2) {kprintf(PORT_DEBUG, "DI index error %d \r\n", index); return ;}
 
 	value = onoff ? GPIO_PIN_RESET : GPIO_PIN_SET;
 #ifdef SUPPORT_DRIVER_HW

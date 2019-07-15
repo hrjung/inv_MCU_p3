@@ -54,15 +54,9 @@ const char	*init_param_msg[] = {
 	0
 };
 
-const char	*lparam_msg[] = {
-	"LPARAM",
-	"Usage: LPARAM index l_value",
-	0
-};
-
-const char	*fparam_msg[] = {
-	"FPARAM",
-	"Usage: FPARAM index f_value",
+const char	*param_msg[] = {
+	"PARAM",
+	"Usage: PARAM index l_value",
 	0
 };
 
@@ -130,8 +124,7 @@ static int display_BoardInfo(uint8_t dport);
 STATIC int help_ser(uint8_t dport);
 STATIC int reset_ser(uint8_t dport);
 STATIC int init_param_ser(uint8_t dport);
-STATIC int lparam_ser(uint8_t dport);
-STATIC int fparam_ser(uint8_t dport);
+STATIC int param_ser(uint8_t dport);
 STATIC int read_nv_ser(uint8_t dport);
 STATIC int write_nv_ser(uint8_t dport);
 STATIC int din_ser(uint8_t dport);
@@ -149,8 +142,7 @@ const COMMAND	Cmd_List[] =
 	{ 1,   	"HELP",			2,		help_ser,			help_msg	},
 	{ 1,  	"RESET",		1,		reset_ser,			help_msg	},
 	{ 1,  	"INITP",		1,		init_param_ser,		init_param_msg	},
-	{ 1,  	"LPARAM",		3,		lparam_ser,			lparam_msg	},
-	{ 1,  	"FPARAM",		3,		fparam_ser,			fparam_msg	},
+	{ 1,  	"PARAM",		3,		param_ser,			param_msg	},
 	{ 1,  	"RNV",			2,		read_nv_ser,		read_nv_msg	},
 	{ 1,  	"WNV",			3,		write_nv_ser,		write_nv_msg},
 	{ 1,  	"DIN",			1,		din_ser,			din_msg		},
@@ -158,7 +150,7 @@ const COMMAND	Cmd_List[] =
 	{ 1,  	"AIN",			1,		ain_ser,			ain_msg		},
 //	{ 1,  	"AOUT",			2,		aout_ser,			aout_msg	},
 //	{ 1,  	"UIOT",			2,		uio_enable_ser,		uio_test_msg},
-	{ 1,  	"TEST",			3,		test_ser,			test_msg	},
+	{ 1,  	"TEST",			2,		test_ser,			test_msg	},
 #ifdef SUPPORT_UNIT_TEST	
 	{ 1,  	"UTEST",		1,		utest_ser,			utest_msg	},
 #endif	
@@ -167,8 +159,8 @@ const COMMAND	Cmd_List[] =
 
 
 uint8_t debugIoFlag=0;
-int16_t	debug_adc_val=0;
-int8_t debug_di_val=0;
+
+int16_t test_run_stop_f=0;
 
 /* Global variables ---------------------------------------------------------*/
 
@@ -183,14 +175,23 @@ extern ADC_HandleTypeDef hadc1;
 extern osSemaphoreId debugSemaphoreIdHandle;
 extern osTimerId keyScanTimerHandle;
 
+extern int32_t mb_baudrate[];
+
 extern int32_t i2c_rd_error;
 extern int32_t i2c_wr_error;
+
+extern int32_t isMonitoring;
+extern int16_t state_run_stop;
+
+extern uint32_t motor_run_cnt;
+extern uint32_t motor_run_hour;
+extern uint32_t device_on_hour;
 
 extern uint8_t mdin_value[];
 extern uint16_t ain_val[];
 extern uint32_t ain_sum;
 extern uint16_t adc_value;
-extern volatile int8_t ADC_ConvCpltFlag, ADC_error;
+extern volatile int8_t ADC_error;
 
 extern int32_t table_nvm[];
 extern int32_t table_data[];
@@ -426,7 +427,7 @@ STATIC int init_param_ser(uint8_t dport)
 	return 0;
 }
 
-STATIC int lparam_ser(uint8_t dport)
+STATIC int param_ser(uint8_t dport)
 {
 	uint16_t index;
 	int32_t l_val;
@@ -444,62 +445,19 @@ STATIC int lparam_ser(uint8_t dport)
 		kprintf(dport, "\r\n out of range index value");
 		return -1;
 	}
-#if 0
+
 	if(arg_c == 2)
 	{
-		l_val = table_database_getValue(index);
+		l_val = table_getValue(index);
 		kprintf(dport, "\r\n index=%d value = %d", index, l_val);
 	}
 	else if(arg_c == 3)
 	{
 		l_val = (int32_t)atoi(arg_v[2]);
-		result = table_database_setValue_DBGI(index, l_val);
+		result = table_runFunc(index, (int32_t)l_val, REQ_FROM_MODBUS);
 		if(result == -1)
 		{
 			kprintf(dport, "\r\n out of range index value");
-			return -1;
-		}
-		else if(result == 0)
-		{
-			kprintf(dport, "\r\n parameter set error!");
-			return -1;
-		}
-	}
-#endif
-	return 0;
-}
-
-STATIC int fparam_ser(uint8_t dport)
-{
-	uint16_t index;
-	int32_t f_val;
-	int result;
-
-	if(arg_c != 2 && arg_c != 3)
-	{
-		kprintf(dport, "\r\nInvalid number of parameters");
-		return -1;
-	}
-
-	index = (uint16_t)atoi(arg_v[1]);
-	if(index >= PARAM_TABLE_SIZE)
-	{
-		kprintf(dport, "\r\n out of range index value");
-		return -1;
-	}
-
-	if(arg_c == 2)
-	{
-		//f_val = table_database_getValue(index);
-		kprintf(dport, "\r\n index=%d fvalue = %f", index, (float)(f_val)/10.0);
-	}
-	else if(arg_c == 3)
-	{
-		f_val = (int32_t)atoi(arg_v[2]);
-		//result = table_database_setValue_DBGF(index, f_val);
-		if(result == -1)
-		{
-			kprintf(dport, "\r\n wrong parameter type");
 			return -1;
 		}
 		else if(result == 0)
@@ -629,9 +587,6 @@ STATIC int ain_ser(uint8_t dport)
 		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d", ain_sum, (int)adc_value, (int)EXT_AI_readADC());
 		//kprintf(dport, "\r\n read Ain value=%d", (int)EXT_AI_readADC());
 	}
-
-//	ADC_ConvCpltFlag=0;
-//	ADC_error = 0;
 	return 0;
 }
 
@@ -782,9 +737,16 @@ STATIC int test_ser(uint8_t dport)
     else if(test_case == 6)
     {
 		kprintf(dport, "\r\n error code=%d, i2c_rd_err=%d, i2c_wr_err=%d", (int)ERR_getErrorState(), i2c_rd_error, i2c_wr_error);
+		kprintf(dport, "\r\n motor_on_cnt=%d, device_on_hour=%d, motor_run_hour=%d", (int)motor_run_cnt, (int)device_on_hour, (int)motor_run_hour);
+		kprintf(dport, "\r\n monitor=%d, run_stop=%d", isMonitoring, state_run_stop);
     }
     else if(test_case == 7)
     {
+#if 1
+    	// for test motor run time
+    	test_run_stop_f = (int16_t)atoi(arg_v[2]);
+    	kprintf(dport, "\r\n set test run_state_f = %d", test_run_stop_f);
+#else
 		uint8_t txBuf[5];
 		HAL_StatusTypeDef status;
 
@@ -801,6 +763,7 @@ STATIC int test_ser(uint8_t dport)
 		osDelay(1);
 		status = HAL_SPI_Transmit(&hspi1, txBuf, 5, 100);
 		kprintf(dport, "\r\n SPI write, status= %d", status);
+#endif
 	}
     else if(test_case == 8) // show all EEPROM table
     {
@@ -827,8 +790,7 @@ STATIC int test_ser(uint8_t dport)
     else if(test_case == 9)
     {
     	uint16_t b_index;
-    	uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400};
-
+    	//uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400};
 
     	b_index = (int)atoi(arg_v[2]);
     	MB_UART_init(mb_baudrate[b_index]);
