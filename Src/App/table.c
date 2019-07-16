@@ -44,7 +44,7 @@ uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 
 STATIC int8_t table_doNothing(PARAM_IDX_t idx, int32_t value, int16_t option);
 int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
-STATIC int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 static int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
 static int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
 static int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);

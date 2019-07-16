@@ -187,6 +187,7 @@ extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
 extern uint32_t device_on_hour;
 
+extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
 extern uint16_t ain_val[];
 extern uint32_t ain_sum;
@@ -223,6 +224,7 @@ extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 
+extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern uint16_t table_getAddr(PARAM_IDX_t index);
@@ -545,24 +547,32 @@ STATIC int din_ser(uint8_t dport)
 
 STATIC int dout_ser(uint8_t dport)
 {
-	uint8_t index, onoff;
+	uint8_t index;
+	int32_t setting;
+	int8_t status;
 
 	if(arg_c != 3)
 	{
 		kprintf(dport, "\r\nInvalid number of parameters");
-		return -1;
+		goto dout_err;
 	}
 
 	index = (uint8_t)atoi(arg_v[1]);
-	if(index != 0 && index != 1) return 1;
+	if(index != 0 && index != 1) goto dout_err;
 
-	onoff = (uint8_t)atoi(arg_v[2]);
-	if(onoff != 0 && onoff != 1) return 1;
+	setting = (int32_t)atoi(arg_v[2]);
+	if(setting > DOUT_shaftbrake_on) goto dout_err;
 
-	UTIL_writeDout(index, onoff);
-	kprintf(dport, "\r\n set Dout index=%d, value=%d", index, onoff);
+	index = multi_Dout_0_type + index;
+	status = table_setValue((PARAM_IDX_t)index, setting, REQ_FROM_TEST);
+	kprintf(dport, "\r\n set Dout index=%d, value=%d, status=%d", index, setting, status);
 
 	return 0;
+
+dout_err:
+	kprintf(dport, "\r\n DOUT error");
+
+	return 1;
 }
 
 STATIC int ain_ser(uint8_t dport)
@@ -699,7 +709,7 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_clearInit();
 		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  %d\r\n", status);
     }
-    else if(test_case == 3)
+    else if(test_case == 3) // analog input test start
     {
     	int enable=0;
 
@@ -818,12 +828,12 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 'C') // temp test only
     {
-    	idx = 0;
-    	value = 300;
-    	status = NVM_writeParam((PARAM_IDX_t)idx, (int32_t)300);
-    	kprintf(dport, "\r\n NVM_writeParam idx=%d, value=%d status=%d", idx, value, status);
-    	status = NVM_setCRC();
-    	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
+//    	idx = 0;
+//    	value = 300;
+//    	status = NVM_writeParam((PARAM_IDX_t)idx, (int32_t)300);
+//    	kprintf(dport, "\r\n NVM_writeParam idx=%d, value=%d status=%d", idx, value, status);
+//    	status = NVM_setCRC();
+//    	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
     }
     else if(test_case == 'D')
     {
@@ -839,7 +849,6 @@ STATIC int test_ser(uint8_t dport)
 
     	for(i=0; i<PARAM_TABLE_SIZE; i++)
     	{
-
     		kprintf(dport, "\r\n %d, table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
     	}
     }
@@ -849,9 +858,18 @@ STATIC int test_ser(uint8_t dport)
 
     	for(i=run_status1_type; i<PARAM_TABLE_SIZE; i++)
     	{
-
     		kprintf(dport, "\r\n %d, status value table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
     	}
+    }
+    else if(test_case == 'G') // test DOUT
+    {
+    	uint8_t index, onoff;
+
+    	index = (uint8_t)atoi(arg_v[2]);
+    	onoff = (uint8_t)atoi(arg_v[3]);
+
+    	mdout_value[index] = onoff;
+    	kprintf(dport, "\r\n set Dout index=%d, value=%d", index, onoff);
     }
 #if 0
     else if(test_case == 'C')

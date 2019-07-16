@@ -164,6 +164,9 @@ uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
 uint32_t ain_sum=0;
 uint16_t exec_do_cnt=0;
 
+uint16_t user_io_handle_cnt=0;
+uint8_t user_io_handle_f = 0;
+
 // device working hour
 uint32_t motor_run_cnt=0;
 uint32_t motor_run_hour=0;
@@ -360,7 +363,7 @@ int main(void)
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
-  osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1sec to read Accelerometer
+  osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1 sec to read Accelerometer
   osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 10 min to read Accelerometer
   /* USER CODE END RTOS_TIMERS */
 
@@ -1270,6 +1273,7 @@ void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
   int8_t status;
+  int32_t ctrl_in;
 
   osDelay(10);
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
@@ -1316,7 +1320,35 @@ void mainHandlerTaskFunc(void const * argument)
 	  }
 
 	  // read run/stop flag in EEPROM
-	  status = HDLR_handleRunStopFlag();
+	  ctrl_in = table_getCtrllIn();
+	  switch(ctrl_in)
+	  {
+	  case CTRL_IN_NFC:
+		  status = HDLR_handleRunStopFlag();
+		  break;
+
+	  case CTRL_IN_Digital:
+		  if(user_io_handle_f)
+		  {
+			  status = EXI_DI_handleDin();
+
+			  user_io_handle_f = 0;
+		  }
+		  break;
+
+	  case CTRL_IN_Analog_V:
+		  if(user_io_handle_f)
+		  {
+			  status = EXT_AI_handleAin();
+
+			  user_io_handle_f = 0;
+		  }
+		  break;
+
+	  case CTRL_IN_Modbus: // only run/stop command
+
+		  break;
+	  }
 
 	  // read modbus packet
 	  MB_handlePacket();
@@ -1436,7 +1468,6 @@ void userIoTimerCallback(void const * argument)
 		// read ADC
 		if(ADC_ConvCpltFlag)
 		{
-
 			for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_val[i] = (ain_val[i]&0x0FFF); // only 12bit available
 
 			ain_sum=0;
@@ -1446,10 +1477,10 @@ void userIoTimerCallback(void const * argument)
 			ADC_ConvCpltFlag=0;
 			HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ain_val, EXT_AIN_SAMPLE_CNT);
 		}
-
 	}
 	else
 		; // do nothing
+
 
 
 	if(exec_do_cnt%10 == 0) // 10ms * 10 cycle
@@ -1458,6 +1489,14 @@ void userIoTimerCallback(void const * argument)
 		if(exec_do_cnt >= 1000) exec_do_cnt=0;
 	}
 	exec_do_cnt++;
+
+
+	if(user_io_handle_cnt++ > 50) // 500 ms, set flag for EXT IO handler
+	{
+		user_io_handle_cnt=0;
+		user_io_handle_f = 1;
+	}
+
 
 #endif
   /* USER CODE END userIoTimerCallback */

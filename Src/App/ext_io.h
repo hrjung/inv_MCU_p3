@@ -15,6 +15,9 @@
 #define EXT_AIN_COUNT		1
 #define EXT_AOUT_COUNT		0
 
+#define EXT_AIN_ADC_MIN		(60.0)
+#define EXT_AIN_ADC_MAX		(3270.0)
+
 typedef struct {
 	uint8_t bit_L; 		// pin_number for bit_L, can be 0, 1, 2, ..  (EXT_DIN_COUNT for not assigned)
 	uint8_t bit_M;
@@ -29,12 +32,12 @@ typedef struct {
 
 //extern void EXT_DI_updateMultiDinPinIndex(uint8_t index, DIN_config_t func_set);
 extern int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option);
-
 extern uint8_t EXT_DI_convertMultiStep(void);
 extern int8_t EXI_DI_handleDin(void);
 
 extern int8_t EXT_DO_handleDout(void);
 
 extern void EXT_AI_needReconfig(void);
+extern int8_t EXT_AI_handleAin(void);
 
 #endif /* SRC_EXT_IO_H_ */

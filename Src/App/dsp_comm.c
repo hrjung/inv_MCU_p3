@@ -13,6 +13,7 @@
 #include "drv_dsp_spi.h"
 #include "drv_gpio.h"
 #include "drv_nvm.h"
+#include "error.h"
 
 
 #define LENGTH_BUFFER 20
@@ -250,6 +251,19 @@ int8_t COMM_setMultiStepFreq(PARAM_IDX_t table_idx, uint16_t *buf)
 
 	t_value = table_getValue(table_idx);
 	value_f = (float)((float)t_value/10.0);
+	memcpy(&buf[1], &value_f, sizeof(float));
+
+	return 1;
+}
+
+int8_t COMM_setAnalogFreq(int32_t freq, uint16_t *buf)
+{
+	int32_t t_value;
+	float value_f;
+
+	buf[0] = value_dsp;
+
+	value_f = (float)((float)freq/10.0);
 	memcpy(&buf[1], &value_f, sizeof(float));
 
 	return 1;
@@ -543,6 +557,7 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 	if(repeat_err)
 	{
 		kputs(PORT_DEBUG, "ERR: COMM_sendCommand repeat error!!\r\n");
+		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
 		return COMM_FAILED;
 	}
 
