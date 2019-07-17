@@ -22,6 +22,7 @@ extern uint8_t NVM_writeParam(PARAM_IDX_t index, int32_t value);
 extern int8_t NVM_readTime(void);
 extern int8_t NVM_initTime(void);
 
+extern int8_t NVM_initError(void);
 extern int8_t NVM_initSystemParam(void);
 extern uint8_t NVM_setInit(void);
 extern int8_t NVM_isInit(void);

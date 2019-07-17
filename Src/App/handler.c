@@ -45,7 +45,7 @@ int8_t HDLR_handleDspError(void)
 	int8_t status;
 	int32_t err_code;
 
-	if(UTIL_isDspError() && ERR_isErrorState() == 0)
+	if(UTIL_isDspError() || ERR_isErrorState())
 	{
 		// request DSP error info
 		kputs(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR\r\n");

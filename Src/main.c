@@ -1526,11 +1526,8 @@ void AccReadTimerCallback(void const * argument)
 void OperationTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN OperationTimerCallback */
-
-  // TODO : motor operation counter
 	device_10min_cnt++;
 
-  
   /* USER CODE END OperationTimerCallback */
 }
 

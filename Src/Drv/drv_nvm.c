@@ -227,6 +227,25 @@ int8_t NVM_initSystemParam(void)
 	return status;
 }
 
+int8_t NVM_initError(void)
+{
+	int i, errflag=0;
+	int8_t status=NVM_OK;
+	uint16_t addr;
+	int32_t value=0;
+
+	for(i=err_date_0_type; i<=err_freq_4_type; i++)
+	{
+		addr = table_getAddr((PARAM_IDX_t)i);
+		status = NVM_write(addr, value); // clear all flag
+		if(status==NVM_NOK) errflag++;
+	}
+
+	if(errflag) status=NVM_NOK;
+
+	return status;
+}
+
 uint8_t NVM_setInit(void)
 {
 	int32_t value=1;

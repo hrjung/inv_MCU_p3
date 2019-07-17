@@ -16,6 +16,7 @@
 #include "drv_nvm.h"
 #include "nvm_queue.h"
 #include "ext_io.h"
+#include "error.h"
 
 
 #ifdef SUPPORT_NFC_OLD
@@ -555,15 +556,20 @@ int8_t table_initializeBlankEEPROM(void)
 
 	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
 
-	status = NVM_setInit();
+	status = NVM_initError();
 	if(status == 0) errflag++;
 
 	kprintf(PORT_DEBUG, "4: err=%d\r\n", errflag);
 
-	status = NVM_setCRC();
+	status = NVM_setInit();
 	if(status == 0) errflag++;
 
 	kprintf(PORT_DEBUG, "5: err=%d\r\n", errflag);
+
+	status = NVM_setCRC();
+	if(status == 0) errflag++;
+
+	kprintf(PORT_DEBUG, "6: err=%d\r\n", errflag);
 
 	if(errflag) return 0;
 
@@ -860,7 +866,10 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 #ifdef SUPPORT_NFC_OLD
 	table_data[err_date_0_type] = (int32_t)err_cnt;
 #endif
-	table_data[err_code_0_type] = (int32_t)err_code;
+	if(ERR_isErrorState())
+		table_data[err_code_0_type] = (int32_t)ERR_getErrorState();
+	else
+		table_data[err_code_0_type] = (int32_t)err_code;
 	table_data[err_status_0_type] = (int32_t)status;
 	table_data[err_current_0_type] = (int32_t)(current*(float)param_table[err_current_0_type].ratio);
 	table_data[err_freq_0_type] = (int32_t)(freq*(float)param_table[err_freq_0_type].ratio);
