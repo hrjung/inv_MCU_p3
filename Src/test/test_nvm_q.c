@@ -105,7 +105,7 @@ void test_nfc_q_basic(void)
 
 	// normal single enqueue : OK
 	idx = (uint16_t)run_status1_type;
-	val = 0;
+	val = STATE_RUN;
 	i8_exp = 1;
 	i8_result = NVMQ_enqueueNfcQ(idx, val);
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
@@ -119,8 +119,8 @@ void test_nfc_q_basic(void)
 	TEST_ASSERT_EQUAL_INT(i8_exp, i8_result);
 
 	// normal single dequeue : OK
-	val = 0;
-	exp = 0;
+	val = 1;
+	exp = STATE_RUN;
 	exp_addr = table_getAddr(run_status1_type);
 	i8_exp = 1;
 	i8_result = NVMQ_dequeueNfcQ(&addr, &val);

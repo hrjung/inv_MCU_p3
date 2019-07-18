@@ -47,7 +47,7 @@ static int32_t sysparam_addr[] =
 #endif
 
 #ifndef SUPPORT_DRIVER_HW
-static int32_t nvm_table[PARAM_TABLE_SIZE];
+static int32_t nvm_table[1024];
 #endif
 int32_t table_nvm[PARAM_TABLE_SIZE];
 
@@ -74,7 +74,7 @@ uint8_t NVM_read(uint16_t addr, int32_t *value)
 
 uint8_t NVM_write(int32_t addr, int32_t value)
 {
-	uint8_t status=NVM_NOK;
+	uint8_t status=NVM_OK;
 
 #ifdef SUPPORT_DRIVER_HW
 	status = I2C_writeData((uint8_t *)&value, addr, sizeof(int32_t));

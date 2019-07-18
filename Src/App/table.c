@@ -483,7 +483,10 @@ int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 
 	if(index == run_status1_type)
 	{
-		state_run_stop = value&0x01; 		//run/stop
+		if((value&0x0F) <= STATE_STOP)	state_run_stop = 0;	// stop
+		else	state_run_stop = 1;		// RUN
+		//state_run_stop = (value>>8)&0x01;
+
 		state_direction = (value>>8)&0x01; 	// forward/backward
 	}
 	else if(index == run_status2_type)
@@ -834,7 +837,7 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 {
 	int i;
 	uint8_t nvm_status;
-	int32_t index;
+	uint16_t index;
 
 	for(i=3; i>=0; i--) // push to next pos
 	{
@@ -887,6 +890,68 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 
 	return 1;
 }
+
+int8_t table_updateCommError(uint16_t err_code)
+{
+	int i;
+	uint8_t nvm_status;
+	uint16_t index;
+	int32_t err_status, err_current, err_freq;
+
+	for(i=3; i>=0; i--) // push to next pos
+	{
+		//printf("i=%d\n", i);
+#ifdef SUPPORT_NFC_OLD
+		table_data[err_date_0_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_date_0_type + i*ERRINFO_ITEM_CNT]; // date
+#endif
+		table_data[err_code_0_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_code_0_type + i*ERRINFO_ITEM_CNT]; // error code
+		table_data[err_status_0_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_status_0_type + i*ERRINFO_ITEM_CNT]; // status, RUN/STOP/ACCEL/DECEL
+		table_data[err_current_0_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_current_0_type + i*ERRINFO_ITEM_CNT]; // current
+		table_data[err_freq_0_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_freq_0_type + i*ERRINFO_ITEM_CNT]; // freq
+
+#if 1
+		// update EEPROM
+		index = err_date_0_type + (i+1)*ERRINFO_ITEM_CNT;
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		index = err_code_0_type + (i+1)*ERRINFO_ITEM_CNT;
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		index = err_status_0_type + (i+1)*ERRINFO_ITEM_CNT;
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		index = err_current_0_type + (i+1)*ERRINFO_ITEM_CNT;
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		index = err_freq_0_type + (i+1)*ERRINFO_ITEM_CNT;
+		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+#endif
+	}
+
+	// store latest status
+	err_status = table_getStatusValue(run_status1_type)&0x0F;
+	err_current = table_getStatusValue(I_rms_type);
+	err_freq = table_getStatusValue(run_freq_type);
+
+	// store latest error info
+#ifdef SUPPORT_NFC_OLD
+	table_data[err_date_0_type] = (int32_t)err_cnt;
+#endif
+	table_data[err_code_0_type] = (int32_t)err_code;
+	table_data[err_status_0_type] = (int32_t)err_status;
+	table_data[err_current_0_type] = err_current;
+	table_data[err_freq_0_type] = err_freq;
+
+#if 1
+	// update EEPROM
+#ifdef SUPPORT_NFC_OLD
+	nvm_status = NVMQ_enqueueNfcQ(err_date_0_type, table_data[err_date_0_type]);
+#endif
+	nvm_status = NVMQ_enqueueNfcQ(err_code_0_type, table_data[err_code_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_status_0_type, table_data[err_status_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_current_0_type, table_data[err_current_0_type]);
+	nvm_status = NVMQ_enqueueNfcQ(err_freq_0_type, table_data[err_freq_0_type]);
+#endif
+
+	return 1;
+}
+
 
 int8_t table_updatebyTableQ(void)
 {

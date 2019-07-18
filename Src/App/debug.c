@@ -726,13 +726,20 @@ STATIC int test_ser(uint8_t dport)
     		kprintf(dport, "\r\n AIN test stop");
     	}
     }
-    else if(test_case == 4)
+    else if(test_case == 4) // set MCU error code to DSP
     {
-    	idx = (int)atoi(arg_v[2]);
-    	value = table_getValue(idx);
-    	kprintf(dport, "\r\n index=%d, value=%d", idx, (int)value);
+//    	int enable=0;
+//
+//    	enable = (int)atoi(arg_v[2]);
+//    	if(enable)
+//    		UTIL_setMTDpin(1);
+//    	else
+//    		UTIL_setMTDpin(0);
+//    	kprintf(dport, "\r\n set MCU to DSP pin=%d", enable);
+    	ERR_setErrorState(TRIP_REASON_MCU_ERR_TEST);
+    	kputs(dport, "\r\n set MCU ERR TEST");
     }
-    else if(test_case == 5)
+    else if(test_case == 5) // read table value
     {
 
     	idx = (uint16_t)atoi(arg_v[2]);
@@ -920,22 +927,25 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_parseMessage);
 	RUN_TEST(test_sendCommand);
 
+#endif
 
+#if 1
 	// ext_di_
 	RUN_TEST(test_setupMultiFuncDin);
 	RUN_TEST(test_convertMultiStep);
 	RUN_TEST(test_handleDin);
+
 	//ext_do
 	RUN_TEST(test_handleDout);
 	//ext_ai
 	RUN_TEST(test_getFreq);
 	RUN_TEST(test_handleAin);
-#endif
 
-#if 0
 	// table
 	RUN_TEST(test_setValue);
+#endif
 
+#if 1
 	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);

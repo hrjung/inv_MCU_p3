@@ -256,6 +256,15 @@ typedef enum{
 
 } DOUT_config_t;
 
+typedef enum
+{
+	STATE_START = 0,
+	STATE_STOP,
+	STATE_ACCEL,
+	STATE_DECEL,
+	STATE_RUN
+} INV_state_e;
+
 enum {
 	REQ_FROM_TEST = 0,
 	REQ_FROM_DSP,
@@ -265,6 +274,7 @@ enum {
 	REQ_FROM_KEPAD,
 
 };
+
 
 extern int8_t table_isInit(void);
 //extern int8_t table_isNfcMonitoring(void);
@@ -279,7 +289,7 @@ extern uint8_t table_getRW(PARAM_IDX_t index);
 
 extern int8_t table_setStatusDSP(void);
 extern int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq);
-
+extern int8_t table_updateCommError(uint16_t err_code);
 
 extern int32_t table_getCtrllIn(void);
 

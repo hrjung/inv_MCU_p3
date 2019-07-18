@@ -41,6 +41,6 @@ extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 
 extern uint8_t UTIL_isDspError(void);
 extern void UTIL_readDspErrorPin(void);
-
+extern void UTIL_setMTDpin(uint8_t onoff);
 
 #endif /* SRC_DRV_GPIO_H_ */

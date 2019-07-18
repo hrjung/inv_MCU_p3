@@ -49,6 +49,8 @@
  */
 extern int16_t state_run_stop;
 
+extern uint8_t	mb_slaveAddress;
+
 extern MODBUS_SLAVE_QUEUE mbBufRx, modbusTx;
 
 extern MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
@@ -82,6 +84,8 @@ void test_modbusBasic(void)
 {
 	int result=0;
 	int exp=0;
+
+	mb_slaveAddress = 1;
 
 	// normal request : read holding register
 	uint8_t read_holding_reg[] = {0x1, 0x3, 0x0, 0x0, 0x0, 0xA, 0xC5, 0xCD}; // normal register
@@ -728,8 +732,8 @@ void test_readCommand(uint8_t func_code)
 	exp = MOD_EX_NO_ERR;
 	index = MB_handleReadRegister(func_code, test_addr, count);
 	TEST_ASSERT_EQUAL_INT(exp, index);
-	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x2);
-	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x58); // 600
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x7);
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0xD0); // 2000
 
 	test_addr = MB_EXT_IO_END_ADDR; // baudrate
 	exp = MOD_EX_NO_ERR;
@@ -760,13 +764,13 @@ void test_readCommand(uint8_t func_code)
 	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x0);
 	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x0); // 0
 
-	table_setStatusValue(run_status1_type, (int32_t)0x0101);
+	table_setStatusValue(run_status1_type, (int32_t)0x0104);
 	test_addr = MB_STATUS_START_ADDR; // run_status1_type
 	exp = MOD_EX_NO_ERR;
 	index = MB_handleReadRegister(func_code, test_addr, count);
 	TEST_ASSERT_EQUAL_INT(exp, index);
 	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[3], 0x01);
-	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x01); // 0
+	TEST_ASSERT_EQUAL_INT8(modbusTx.buf[4], 0x04); // 0
 
 	table_setStatusValue(I_rms_type, (int32_t)25);
 	test_addr = 40162; // I_rms_type

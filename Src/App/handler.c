@@ -24,7 +24,7 @@
 
 
 int8_t err_read_flag=0;
-
+int8_t err_state_f=0;
 
 extern int16_t state_run_stop;
 
@@ -43,18 +43,29 @@ int8_t HDLR_handleDspError(void)
 {
 	uint16_t dummy[] = {0,0,0};
 	int8_t status;
-	int32_t err_code;
+	int32_t err_code=0;
 
-	if(UTIL_isDspError() || ERR_isErrorState())
+	if((UTIL_isDspError() || ERR_isErrorState()) && err_state_f == 0)
 	{
-		// request DSP error info
-		kputs(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR\r\n");
-		status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
-		if(status == COMM_SUCCESS)
+		if(ERR_isCommError()) // Comm error cannot get response from DSP
 		{
-			err_code = table_getValue(err_code_0_type);
-			ERR_setErrorState(err_code);
+			kputs(PORT_DEBUG, "HDLR_handleDspError get COMM Error\r\n");
+			table_updateCommError(TRIP_REASON_MCU_COMM_FAIL);
 		}
+		else
+		{
+			// request DSP error info
+
+			status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
+			if(status == COMM_SUCCESS)
+			{
+				err_code = table_getValue(err_code_0_type);
+				ERR_setErrorState(err_code);
+			}
+			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
+		}
+		UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
+		err_state_f = 1;
 	}
 
 	return 1;

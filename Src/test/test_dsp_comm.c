@@ -312,7 +312,7 @@ void test_parseMessage(void)
 #endif
 
 	for(i=0; i<16; i++) recvMsg[i] = rcvMsg_ST[i];
-	recvMsg[5] = 1; //status1=1
+	recvMsg[5] = STATE_RUN; //status1=1
 	recvMsg[6] = (uint16_t)0x100; //status2
 	memcpy(&recvMsg[5+2], &test_i_rms, sizeof(float));
 	memcpy(&recvMsg[5+4], &test_freq, sizeof(float));
@@ -321,7 +321,7 @@ void test_parseMessage(void)
 	memcpy(&recvMsg[5+10], &test_mtr_temp, sizeof(float));
 	exp_result = COMM_SUCCESS;
 #ifdef SUPPORT_NFC_OLD
-	exp_status1 = 1;
+	exp_status1 = STATE_RUN;
 	exp_status2 = 0x100;
 #else
 	exp_run_st = (int32_t)1;
@@ -354,7 +354,7 @@ void test_parseMessage(void)
 	test_mtr_temp=2;
 	test_i_rms=3.8, test_freq=83.2, test_dc_volt=659.4, test_ipm_temp=88.7;
 	for(i=0; i<16; i++) recvMsg[i] = rcvMsg_ST[i];
-	recvMsg[5] = 0x100; //status1=1
+	recvMsg[5] = 0x101; // status1 : reverse, stop
 	recvMsg[6] = 1; //status2
 	memcpy(&recvMsg[5+2], &test_i_rms, sizeof(float));
 	memcpy(&recvMsg[5+4], &test_freq, sizeof(float));
@@ -363,7 +363,7 @@ void test_parseMessage(void)
 	memcpy(&recvMsg[5+10], &test_mtr_temp, sizeof(float));
 	exp_result = COMM_SUCCESS;
 #ifdef SUPPORT_NFC_OLD
-	exp_status1 = 0x100;
+	exp_status1 = 0x101; // status1 reverse, stop
 	exp_status2 = 1;
 #else
 	exp_run_st = (int32_t)0;

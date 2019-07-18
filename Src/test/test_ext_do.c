@@ -25,7 +25,7 @@ extern uint8_t err_state;
 extern uint8_t mdout_value[];
 
 extern void test_clear(void);
-extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value);
+extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 //extern int32_t table_getStatusValue(int16_t index);
 extern void table_setStatusValue(int16_t index, int32_t value, int16_t option);
 
@@ -41,19 +41,25 @@ void test_handleDout(void)
 {
 	PARAM_IDX_t index0=multi_Dout_0_type, index1=multi_Dout_1_type;
 	int8_t exp_result0, exp_result1;
+	int8_t status;
 
-	test_clear();
+	mdout_value[0] = 0;
+	mdout_value[1] = 0;
+//	table_setValue(index0, DOUT_unuse, REQ_FROM_TEST);
+//	table_setValue(index1, DOUT_unuse, REQ_FROM_TEST);
 
 	// run/stop status out
 	exp_result0 = 0;
 	exp_result1 = 1;
 #ifdef SUPPORT_NFC_OLD
-	table_setStatusValue(run_status1_type, 0, REQ_FROM_TEST); // STOP
+	table_setStatusValue(run_status1_type, STATE_STOP, REQ_FROM_TEST); // STOP
 #else
-	table_setStatusValue(run_status_type, 0, REQ_FROM_TEST); // STOP
+	table_setStatusValue(run_status_type, 1, REQ_FROM_TEST); // STOP
 #endif
-	table_setValue(index0, DOUT_running);
-	table_setValue(index1, DOUT_stop);
+	status = table_setValue(index0, DOUT_running, REQ_FROM_TEST);
+	//kprintf("set index=%d, DOUT status=%d \r\n", index0, status);
+	status = table_setValue(index1, DOUT_stop, REQ_FROM_TEST);
+	//kprintf("set index=%d, DOUT status=%d \r\n", index1, status);
 
 	EXT_DO_handleDout();
 	TEST_ASSERT_EQUAL_INT(exp_result0, mdout_value[0]);
@@ -62,7 +68,7 @@ void test_handleDout(void)
 	exp_result0 = 1;
 	exp_result1 = 0;
 #ifdef SUPPORT_NFC_OLD
-	table_setStatusValue(run_status1_type, 1, REQ_FROM_TEST);
+	table_setStatusValue(run_status1_type, STATE_RUN, REQ_FROM_TEST);
 #else
 	table_setStatusValue(run_status_type, 1, REQ_FROM_TEST); // running
 #endif
@@ -79,8 +85,8 @@ void test_handleDout(void)
 	table_setStatusValue(overload_alarm_type, 0, REQ_FROM_TEST);
 	table_setStatusValue(shaftbrake_status_type, 1, REQ_FROM_TEST);
 #endif
-	table_setValue(index0, DOUT_overload);
-	table_setValue(index1, DOUT_shaftbrake_on);
+	table_setValue(index0, DOUT_overload, REQ_FROM_TEST);
+	table_setValue(index1, DOUT_shaftbrake_on, REQ_FROM_TEST);
 	EXT_DO_handleDout();
 	TEST_ASSERT_EQUAL_INT(exp_result0, mdout_value[0]);
 	TEST_ASSERT_EQUAL_INT(exp_result1, mdout_value[1]);
@@ -93,8 +99,8 @@ void test_handleDout(void)
 	table_setStatusValue(overload_alarm_type, 1, REQ_FROM_TEST);
 	table_setStatusValue(shaftbrake_status_type, 0, REQ_FROM_TEST);
 #endif
-	table_setValue(index0, DOUT_overload);
-	table_setValue(index1, DOUT_shaftbrake_on);
+	table_setValue(index0, DOUT_overload, REQ_FROM_TEST);
+	table_setValue(index1, DOUT_shaftbrake_on, REQ_FROM_TEST);
 	EXT_DO_handleDout();
 	TEST_ASSERT_EQUAL_INT(exp_result0, mdout_value[0]);
 	TEST_ASSERT_EQUAL_INT(exp_result1, mdout_value[1]);
@@ -102,7 +108,7 @@ void test_handleDout(void)
 	// trip at 1
 	err_state = 0; // no error
 	exp_result1 = 0;
-	table_setValue(index1, DOUT_trip_notify);
+	table_setValue(index1, DOUT_trip_notify, REQ_FROM_TEST);
 	EXT_DO_handleDout();
 	TEST_ASSERT_EQUAL_INT(exp_result0, mdout_value[0]); //
 	TEST_ASSERT_EQUAL_INT(exp_result1, mdout_value[1]);

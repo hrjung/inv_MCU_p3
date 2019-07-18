@@ -271,3 +271,10 @@ void UTIL_stopADC(void)
 {
 	HAL_ADC_Stop_DMA(&hadc1);
 }
+
+
+void UTIL_setAOUT(uint16_t volt)
+{
+	// set Voltage output
+}
+

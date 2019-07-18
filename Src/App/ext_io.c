@@ -42,10 +42,11 @@ uint8_t isConfigured=0; // flag for AIN parameter configured
 
 extern int16_t state_run_stop; // global run/stop status
 extern int16_t state_direction; // global forward/reverse direction status
+extern int16_t st_overload;
+extern int16_t st_brake;
 
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
-extern int32_t table_getStatusValue(int16_t index);
 
 extern int8_t COMM_setMultiStepFreq(PARAM_IDX_t table_idx, uint16_t *buf);
 extern int8_t COMM_setAnalogFreq(int32_t freq, uint16_t *buf);
@@ -161,7 +162,6 @@ int8_t EXI_DI_handleDin(void)
 	uint8_t step=0;
 	int8_t result=0, status;
 	uint16_t dummy[3] = {0,0,0};
-	uint16_t buf[3] = {0,0,0};
 
 	if(m_din.emergency_pin != EXT_DIN_COUNT)
 	{
@@ -329,52 +329,28 @@ void EXT_DO_setDoutPin(int do_idx, int32_t DO_config)
 	switch(DO_config)
 	{
 	case DOUT_running:
-#ifdef SUPPORT_NFC_OLD
-		value = table_getStatusValue(run_status1_type);
-		value = value&0x01;
-#else
-		value = table_getStatusValue(run_status_type);
-#endif
-		if(value)
+		if(state_run_stop)
 			mdout_value[do_idx] = 1;
 		else
 			mdout_value[do_idx] = 0;
 		break;
 
 	case DOUT_stop:
-#ifdef SUPPORT_NFC_OLD
-		value = table_getStatusValue(run_status1_type);
-		value = value&0x01;
-#else
-		value = table_getStatusValue(run_status_type);
-#endif
-		if(value == 0)
+		if(state_run_stop == 0)
 			mdout_value[do_idx] = 1;
 		else
 			mdout_value[do_idx] = 0;
 		break;
 
 	case DOUT_overload:
-#ifdef SUPPORT_NFC_OLD
-		value = table_getStatusValue(run_status2_type);
-		value = value&0x01;
-#else
-		value = table_getStatusValue(overload_alarm_type);
-#endif
-		if(value)
+		if(st_overload)
 			mdout_value[do_idx] = 1;
 		else
 			mdout_value[do_idx] = 0;
 		break;
 
 	case DOUT_shaftbrake_on:
-#ifdef SUPPORT_NFC_OLD
-		value = table_getStatusValue(run_status2_type);
-		value = (value&0x0100) ? 1 : 0;
-#else
-		value = table_getStatusValue(shaftbrake_status_type);
-#endif
-		if(value)
+		if(st_brake)
 			mdout_value[do_idx] = 1;
 		else
 			mdout_value[do_idx] = 0;
@@ -403,14 +379,14 @@ int8_t EXT_DO_handleDout(void)
 		EXT_DO_setDoutPin(0, do0_config);
 		UTIL_writeDout(0, mdout_value[0]);
 	}
-
+	//kprintf(PORT_DEBUG, "DO index=%d, config=%d, mout_val=%d\r\n", 0, do0_config, mdout_value[0]);
 	do1_config = table_getValue(multi_Dout_1_type);
 	if(do1_config != DOUT_unuse)
 	{
 		EXT_DO_setDoutPin(1, do1_config);
 		UTIL_writeDout(1, mdout_value[1]);
 	}
-
+	//kprintf(PORT_DEBUG, "DO index=%d, config=%d, mout_val=%d\r\n", 1, do1_config, mdout_value[1]);
 	return 1;
 }
 

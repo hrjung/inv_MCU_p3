@@ -19,7 +19,8 @@
 
 
 extern uint16_t adc_value;
-
+extern float freq_min, freq_max, V_ai_min, V_ai_max;
+extern uint8_t isConfigured;
 
 extern void test_clear(void);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
@@ -35,6 +36,17 @@ extern int32_t EXT_AI_getFreq(uint16_t adc_val);
 extern int8_t EXT_AI_handleAin(void);
 
 
+
+void test_ai_clear(void)
+{
+	freq_min=0.0;
+	freq_max=0.0;
+
+	V_ai_min=0.0;
+	V_ai_max=0.0;
+
+	isConfigured=0;
+}
 /*
  * 		test item : EXT_AI_getFreq
  *
@@ -53,6 +65,7 @@ void test_getFreq(void)
 	uint16_t value;
 	int32_t exp_freq, freq_l;
 
+	test_ai_clear();
 
 	//config :  0 ~ 10V, 0 ~ 60Hz
 	table_setAinValue(v_in_min_type, 0, REQ_FROM_TEST);  // 0V
@@ -73,7 +86,7 @@ void test_getFreq(void)
 	freq_l = EXT_AI_getFreq(value);
 	TEST_ASSERT_EQUAL_INT(exp_freq, freq_l);
 
-	adc_value = 2048; // half value
+	adc_value = (EXT_AIN_ADC_MAX-EXT_AIN_ADC_MIN)/2 + EXT_AIN_ADC_MIN; // half value
 	exp_freq = 300;
 	value = adc_value;
 	freq_l = EXT_AI_getFreq(value);
@@ -102,13 +115,13 @@ void test_getFreq(void)
 	freq_l = EXT_AI_getFreq(value);
 	TEST_ASSERT_EQUAL_INT(exp_freq, freq_l);
 
-	adc_value = 800; // under 2V
+	adc_value = 690; // under 2V ~= 695.xx
 	exp_freq = 0;
 	value = adc_value;
 	freq_l = EXT_AI_getFreq(value);
 	TEST_ASSERT_EQUAL_INT(exp_freq, freq_l);
 
-	adc_value = 2047; // half value
+	adc_value = 1663; // half value 5V ~= 1663
 	exp_freq = 300;
 	value = adc_value;
 	freq_l = EXT_AI_getFreq(value);
@@ -137,13 +150,13 @@ void test_getFreq(void)
 	freq_l = EXT_AI_getFreq(value);
 	TEST_ASSERT_EQUAL_INT(exp_freq, freq_l);
 
-	adc_value = 800; // under 2V
+	adc_value = 690; // under 2V
 	exp_freq = 200;
 	value = adc_value;
 	freq_l = EXT_AI_getFreq(value);
 	TEST_ASSERT_EQUAL_INT(exp_freq, freq_l);
 
-	adc_value = 2048; // half value
+	adc_value = 1663; // half value
 	exp_freq = 350;
 	value = adc_value;
 	freq_l = EXT_AI_getFreq(value);
@@ -164,7 +177,7 @@ void test_handleAin(void)
 
 	int8_t exp_result0, exp_result1;
 
-	test_clear();
+	test_ai_clear();
 
 	//config :  0 ~ 10V, 0 ~ 60Hz
 	table_setAinValue(v_in_min_type, 0, REQ_FROM_TEST);  // 0V
@@ -174,7 +187,7 @@ void test_handleAin(void)
 
 	// set CTRL_in as Analog_V
 	//table_setValue(ctrl_in_type, CTRL_IN_Analog_V);
-	table_setStatusValue(run_status1_type, 0x0, REQ_FROM_TEST); // fwd, stop
+	table_setStatusValue(run_status1_type, STATE_STOP, REQ_FROM_TEST); // fwd, stop
 
 
 
