@@ -101,13 +101,15 @@ uint8_t EXT_DI_convertMultiStep(void)
 }
 
 // same setting for 2 or more pin is not allowed, last one is only set
-void EXT_DI_clearDinSameFunc(DIN_config_t func_set, int16_t option)
+void EXT_DI_clearDinSameFunc(int index, DIN_config_t func_set, int16_t option)
 {
 	int i;
 	DIN_config_t func;
 
 	for(i=0; i<EXT_DIN_COUNT; i++)
 	{
+		if(index == i) continue;
+
 		func = (DIN_config_t)table_getValue(multi_Din_0_type+i);
 		if(func_set == func) table_setValue(multi_Din_0_type+i, DIN_unuse, option);
 	}
@@ -146,7 +148,7 @@ int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option
 
 	if(func_set >= DIN_config_max) return 0;
 
-	EXT_DI_clearDinSameFunc(func_set, option);
+	EXT_DI_clearDinSameFunc(index, func_set, option);
 
 	EXT_DI_updateMultiDinPinIndex(index, func_set); // update m_din.pin_num
 
