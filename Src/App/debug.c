@@ -909,7 +909,7 @@ STATIC int utest_ser(uint8_t dport)
 
 	UNITY_BEGIN();
 
-#if 1
+#if 0
 	// add nvm_queue test
 	RUN_TEST(test_nfc_q_basic);
 	RUN_TEST(test_nfc_q_muliple);
@@ -929,7 +929,7 @@ STATIC int utest_ser(uint8_t dport)
 
 #endif
 
-#if 1
+#if 0
 	// ext_di_
 	RUN_TEST(test_setupMultiFuncDin);
 	RUN_TEST(test_convertMultiStep);
@@ -937,15 +937,16 @@ STATIC int utest_ser(uint8_t dport)
 
 	//ext_do
 	RUN_TEST(test_handleDout);
+#endif
 	//ext_ai
 	RUN_TEST(test_getFreq);
 	RUN_TEST(test_handleAin);
 
 	// table
 	RUN_TEST(test_setValue);
-#endif
 
-#if 1
+
+#if 0
 	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);

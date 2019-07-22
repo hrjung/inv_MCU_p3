@@ -151,6 +151,7 @@ void OperationTimerCallback(void const * argument);
 
 uint32_t default_cnt=0, main_cnt=0, nfc_cnt=0, mbus_cnt=0, rs485_cnt=0, user_io_cnt=0;
 
+uint8_t main_handler_f=0;
 
 uint8_t NFC_Access_flag=0;
 uint8_t DSP_status_read_flag=0;
@@ -1248,7 +1249,10 @@ void NfcNvmTaskFunc(void const * argument)
 void userIoTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN userIoTaskFunc */
-  osDelay(1000);
+
+  while(main_handler_f == 0) osDelay(5);
+
+  osDelay(300);
   kputs(PORT_DEBUG, "start userIoTask\r\n");
   /* Infinite loop */
   for(;;)
@@ -1294,6 +1298,8 @@ void mainHandlerTaskFunc(void const * argument)
   // init queue
   MBQ_init();
   NVMQ_init();
+
+  main_handler_f = 1;
 
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
 
@@ -1377,7 +1383,9 @@ void mbus485TaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mbus485TaskFunc */
 
-	osDelay(700);
+	while(main_handler_f == 0) osDelay(5);
+
+	osDelay(100);
 
 	MB_init();
 
@@ -1414,6 +1422,10 @@ void mbus485TaskFunc(void const * argument)
 void opt485TaskFunc(void const * argument)
 {
   /* USER CODE BEGIN opt485TaskFunc */
+  while(main_handler_f == 0) osDelay(5);
+
+  osDelay(300);
+  kputs(PORT_DEBUG, "opt485Task started\r\n");
   /* Infinite loop */
   for(;;)
   {

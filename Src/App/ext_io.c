@@ -435,7 +435,7 @@ uint16_t EXT_AI_readADC(void)
 int32_t EXT_AI_getFreq(uint16_t adc_val)
 {
 	//float V_val = (EXT_AIN_ADC_MIN/EXT_AIN_ADC_MAX)*(float)adc_val;
-	float V_val = 0.0031*(float)adc_val - 0.1553;
+	float V_val = 0.0031*(float)adc_val - 0.1548;
 	float freq_calc;
 	int32_t freq_l;
 
@@ -444,7 +444,7 @@ int32_t EXT_AI_getFreq(uint16_t adc_val)
 
 	if(V_val <= V_ai_min) { freq_l = (int32_t)(freq_min*10.0 + 0.05); return freq_l; }
 
-	freq_calc = (V_val - V_ai_min)*(freq_max - freq_min)/(V_ai_max - V_ai_min) + freq_min + 0.05; // add round up
+	freq_calc = (V_val - V_ai_min)*(freq_max - freq_min)/(V_ai_max - V_ai_min) + freq_min; // add round up
 
 	freq_l = (int32_t)(freq_calc*10.0);
 
@@ -474,6 +474,7 @@ int8_t EXT_AI_handleAin(void)
 	{
 		if(freq <= 10)
 		{
+			freq = 0; //for stop
 			test_cmd = SPICMD_CTRL_STOP;
 			kprintf(PORT_DEBUG, "send SPICMD_CTRL_STOP\r\n");
 #ifndef SUPPORT_UNIT_TEST
@@ -503,9 +504,7 @@ int8_t EXT_AI_handleAin(void)
 				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); return 0;}
 #endif
 			}
-
 		}
-
 		prev_adc_cmd = freq;
 	}
 
