@@ -17,7 +17,7 @@
 
 #define SUPPORT_NFC_OLD
 
-#define SUPPORT_UNIT_TEST
+//#define SUPPORT_UNIT_TEST
 
 #ifdef SUPPORT_UNIT_TEST
 	#define STATIC

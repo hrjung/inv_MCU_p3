@@ -22,6 +22,7 @@
 #define RUN_STOP_FLAG_RUN		1
 #define RUN_STOP_FLAG_STOP		2
 
+int8_t mb_run_stop_f=0;
 
 int8_t err_read_flag=0;
 int8_t err_state_f=0;
@@ -38,6 +39,23 @@ extern uint32_t device_10min_cnt;
 extern void TM_setStartRunTime(void);
 extern int8_t NVM_setMotorRunTime(uint32_t run_time);
 extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
+
+
+
+void HDLR_setRunStopFlagModBus(int8_t flag)
+{
+	mb_run_stop_f = flag;
+}
+
+void HDLR_clearRunStopFlagModbus(void)
+{
+	mb_run_stop_f = 0;
+}
+
+int8_t HDLR_readRunStopFlag(void)
+{
+	return mb_run_stop_f;
+}
 
 int8_t HDLR_handleDspError(void)
 {
@@ -88,7 +106,7 @@ int8_t HDLR_readDspStatus(void)
 	 return 1;
 }
 
-int8_t HDLR_handleRunStopFlag(void)
+int8_t HDLR_handleRunStopFlagNFC(void)
 {
 	int8_t status;
 	int32_t run_stop=0;
@@ -118,6 +136,46 @@ int8_t HDLR_handleRunStopFlag(void)
 		if(status != COMM_FAILED)
 		{
 			status = NVM_clearRunStopFlag();
+		}
+		kprintf(PORT_DEBUG, "STOP Flag, send to DSP status=%d\r\n", status);
+		break;
+
+	case RUN_STOP_FLAG_IDLE:
+	default:
+		break;
+	}
+
+	return status;
+}
+
+int8_t HDLR_handleRunStopFlagModbus(void)
+{
+	int8_t status;
+	int32_t run_stop=0;
+	uint16_t dummy[3] = {0,0,0};
+
+	run_stop = HDLR_readRunStopFlag();
+	switch(run_stop)
+	{
+	case RUN_STOP_FLAG_RUN:
+		// send run to DSP
+		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
+		// clear flag to idle
+		if(status != COMM_FAILED)
+		{
+			HDLR_clearRunStopFlagModbus();
+			TM_setStartRunTime(); // set Run start time
+		}
+		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
+		break;
+
+	case RUN_STOP_FLAG_STOP:
+		// send stop to DSP
+		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
+		// clear flag to idle
+		if(status != COMM_FAILED)
+		{
+			HDLR_clearRunStopFlagModbus();
 		}
 		kprintf(PORT_DEBUG, "STOP Flag, send to DSP status=%d\r\n", status);
 		break;

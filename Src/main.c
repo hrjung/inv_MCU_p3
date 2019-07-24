@@ -157,9 +157,6 @@ uint8_t NFC_Access_flag=0;
 uint8_t DSP_status_read_flag=0;
 uint8_t EEPROM_initialized_f=0;
 
-extern LED_status_t LED_state[]; // 3 color LED state
-extern uint16_t adc_value;
-
 volatile int8_t ADC_ConvCpltFlag=0, ADC_error=0;
 uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
 uint32_t ain_sum=0;
@@ -180,6 +177,10 @@ uint32_t device_10min_cnt=0;
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
 #endif
+
+extern int16_t state_run_stop;
+extern LED_status_t LED_state[]; // 3 color LED state
+extern uint16_t adc_value;
 
 extern void gen_crc_table(void);
 extern void MB_init(void);
@@ -236,6 +237,8 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
 void TM_setStartRunTime(void)
 {
 	int8_t status;
+
+	if(state_run_stop == CMD_RUN) return; // already run state
 
 	motor_run_start_time = device_10min_cnt;
 
@@ -1330,7 +1333,7 @@ void mainHandlerTaskFunc(void const * argument)
 	  switch(ctrl_in)
 	  {
 	  case CTRL_IN_NFC:
-		  status = HDLR_handleRunStopFlag();
+		  status = HDLR_handleRunStopFlagNFC();
 		  break;
 
 	  case CTRL_IN_Digital:

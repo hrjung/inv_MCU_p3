@@ -68,6 +68,7 @@ MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
 
 
+extern void HDLR_setRunStopFlagModBus(int8_t flag);
 /* Private function prototypes -----------------------------------------------*/
 
 
@@ -430,6 +431,30 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	 * - data count error : MOD_EX_DataVAL
 	 * - function cannot be processed : MOD_EX_SLAVE_FAIL
 	 */
+
+	if(addr == MB_CTRL_RUN_STOP_ADDR)
+	{
+		if(value == 1 || value == 2)
+		{
+			// TODO : set run_stop_f flag for main handler
+			HDLR_setRunStopFlagModBus((int8_t)value);
+
+			modbusTx.wp = 0;
+			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+			modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+			result = MOD_EX_NO_ERR;
+			kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+		}
+		else
+			result = MOD_EX_DataVAL;
+
+		goto FC06_ERR;
+	}
 
 	// valid address range ?
 	index = MB_convModbusAddr(addr, 1, &type);
