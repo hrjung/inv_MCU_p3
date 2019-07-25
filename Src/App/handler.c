@@ -323,7 +323,7 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 		if(status == 0) {kprintf(PORT_DEBUG, "ERROR update On time \r\n"); errflag++;}
 	}
 
-	if(state_run_stop) // run status
+	if(state_run_stop) // run status, update run time during run_state, lost all under 1 hour
 	{
 		if(device_10min_cnt - motor_run_start_time >= 6) // over 1 hour
 		{

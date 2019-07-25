@@ -31,8 +31,8 @@ extern DIN_PIN_NUM_t m_din;
 extern COMM_CMD_t test_cmd;
 extern uint8_t step_cmd;
 
-extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value);
-extern void table_setStatusValue(int16_t index, int32_t value);
+extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option);
 
 
 void test_clear(void)
@@ -539,8 +539,8 @@ void test_handleDin(void)
 	uint8_t exp_step;
 
 
-	table_setValue(ctrl_in_type, CTRL_IN_NFC); // not in CTRL_IN_Digital, but work
-	table_setStatusValue(run_status1_type, 1); // stop, forward
+	table_setValue(ctrl_in_type, CTRL_IN_NFC, REQ_FROM_TEST); // not in CTRL_IN_Digital, but work
+	table_setStatusValue(run_status1_type, 1, REQ_FROM_TEST); // stop, forward
 	state_run_stop = 0;
 	state_direction = 0;
 
@@ -628,7 +628,7 @@ void test_handleDin(void)
 	mdin_value[m_din.dir_pin] = 0;
 	mdin_value[m_din.run_pin] = 0;
 	// set ctrl_in = DIN, STOP, FORWARD
-	table_setValue(ctrl_in_type, CTRL_IN_Digital);
+	table_setValue(ctrl_in_type, CTRL_IN_Digital, REQ_FROM_TEST);
 
 	// DIN config : emerg= 0, dir=1, run=2
 	exp_result = 0; // not send command, no change
@@ -643,7 +643,7 @@ void test_handleDin(void)
 	TEST_ASSERT_NOT_EQUAL(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
-	table_setStatusValue(run_status1_type, 4); // run
+	table_setStatusValue(run_status1_type, 4, REQ_FROM_TEST); // run
 	state_run_stop = CMD_RUN;
 	exp_result = 0; // not send command, no change
 	result = EXI_DI_handleDin();
@@ -658,7 +658,7 @@ void test_handleDin(void)
 	TEST_ASSERT_NOT_EQUAL(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
-	table_setStatusValue(run_status1_type, 0x104); // run + R
+	table_setStatusValue(run_status1_type, 0x104, REQ_FROM_TEST); // run + R
 	state_direction = CMD_DIR_R;
 	exp_result = 0; // not send command, no change
 	result = EXI_DI_handleDin();
@@ -673,7 +673,7 @@ void test_handleDin(void)
 	TEST_ASSERT_NOT_EQUAL(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
-	table_setStatusValue(run_status1_type, 0x101); // stop + R
+	table_setStatusValue(run_status1_type, 0x101, REQ_FROM_TEST); // stop + R
 	state_run_stop = CMD_STOP;
 
 	// set bit_H = 0, bit_L=1, run=2,
@@ -693,7 +693,7 @@ void test_handleDin(void)
 	TEST_ASSERT_NOT_EQUAL(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
-	table_setStatusValue(run_status1_type, 0x104); // run + R
+	table_setStatusValue(run_status1_type, 0x104, REQ_FROM_TEST); // run + R
 	state_run_stop = CMD_RUN;
 
 	mdin_value[m_din.bit_H] = 1;
@@ -732,7 +732,7 @@ void test_handleDin(void)
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
-	table_setStatusValue(run_status1_type, 0x101); // stop + R
+	table_setStatusValue(run_status1_type, 0x101, REQ_FROM_TEST); // stop + R
 	state_run_stop = CMD_STOP;
 
 }

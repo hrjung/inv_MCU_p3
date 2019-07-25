@@ -40,22 +40,24 @@ extern int16_t st_brake;
 
 extern int32_t err_cnt;
 
+extern COMM_CMD_t test_cmd;
+
 TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 
 STATIC int8_t table_doNothing(PARAM_IDX_t idx, int32_t value, int16_t option);
-int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
-int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
-static int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
-static int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
-static int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
-static int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
+STATIC int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
+STATIC int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+STATIC int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
+STATIC int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
+STATIC int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
+STATIC int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setDinValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setAinValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option);
-int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+STATIC int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_setSlaveAddress(uint8_t addr);
@@ -93,14 +95,14 @@ STATIC Param_t param_table[] =
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
 	{ ctrl_in_type,			0x200,	40200,	0,		0,		4,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
-	{ energy_save_type,		0x204,	40202,	0,		0,		1,		1, 	1, 		0, 	energy_save_dsp,	table_setValue	},
-	{ pwm_freq_type,		0x208,	40203,	0,		0,		3,		1, 	1, 		0, 	pwm_freq_dsp,		table_setValue	},
-	{ brake_type_type,		0x20C,	40206,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
-	{ brake_freq_type,		0x210,	40207,	10,		1,		600,	1, 	10, 	0, 	brake_freq_dsp,		table_setFreqValue	},
-	{ dci_brk_freq_type,	0x214,	40208,	30,		1,		600,	1, 	10, 	0, 	dci_brk_freq_dsp,	table_setFreqValue	},
-	{ dci_brk_hold_type,	0x218,	40209,	10,		0,		600,	1,	10, 	0, 	dci_brk_hold_dsp,	table_setValue	},
-	{ dci_brk_time_type,	0x21C,	40210,	50,		0,		600,	1, 	10, 	0, 	dci_brk_time_dsp,	table_setValue	},
-	{ dci_brk_rate_type,	0x220,	40211,	500,	0,		2000,	1, 	10, 	0, 	dci_brk_rate_dsp,	table_setValue	},
+	{ energy_save_type,		0x204,	40201,	0,		0,		1,		1, 	1, 		0, 	energy_save_dsp,	table_setValue	},
+	{ pwm_freq_type,		0x208,	40202,	0,		0,		3,		1, 	1, 		0, 	pwm_freq_dsp,		table_setValue	},
+	{ brake_type_type,		0x20C,	40203,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
+	{ brake_freq_type,		0x210,	40204,	10,		1,		600,	1, 	10, 	0, 	brake_freq_dsp,		table_setFreqValue	},
+	{ dci_brk_freq_type,	0x214,	40205,	30,		1,		600,	1, 	10, 	0, 	dci_brk_freq_dsp,	table_setFreqValue	},
+	{ dci_brk_hold_type,	0x218,	40206,	10,		0,		600,	1,	10, 	0, 	dci_brk_hold_dsp,	table_setValue	},
+	{ dci_brk_time_type,	0x21C,	40207,	50,		0,		600,	1, 	10, 	0, 	dci_brk_time_dsp,	table_setValue	},
+	{ dci_brk_rate_type,	0x220,	40208,	500,	0,		2000,	1, 	10, 	0, 	dci_brk_rate_dsp,	table_setValue	},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
 	{ ovl_warn_limit_type,	0x280,	40280,	150,	100,	200,	1,	1, 		1, 	ovl_warn_limit_dsp,	table_setValue	},
@@ -125,8 +127,8 @@ STATIC Param_t param_table[] =
 	{ v_in_max_freq_type,	0x324,	40309,	2000,	10,		2000,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
 	{ aout_type_type,		0x328,	40310,	0,		0,		3,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ aout_rate_type,		0x32C,	40311,	100,	10,		200,	1,	1, 		1, 	none_dsp,		table_setValue	},
-	{ mb_address_type,		0x330,	40312,	1,		1,		254,	1,	1, 		1, 	none_dsp,		table_setBaudValue	},
-	{ baudrate_type,		0x334,	40313,	2,		0,		5,		1,	1, 		1, 	none_dsp,		table_setCommValue	},
+	{ mb_address_type,		0x330,	40312,	1,		1,		254,	1,	1, 		1, 	none_dsp,		table_setCommValue	},
+	{ baudrate_type,		0x334,	40313,	2,		0,		5,		1,	1, 		1, 	none_dsp,		table_setBaudValue	},
 
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm		do nothing for read only
@@ -198,7 +200,7 @@ static int table_checkValidity(PARAM_IDX_t idx, int32_t value)
 {
 	if(value < param_table[idx].minValue || value > param_table[idx].maxValue)
 	{
-		kprintf(PORT_DEBUG,"idx=%d value=%d is not valid\n", idx, value);
+		kprintf(PORT_DEBUG,"idx=%d value=%d is not valid\r\n", idx, value);
 		return 0;
 	}
 
@@ -210,7 +212,7 @@ static int table_checkFreqValidity(PARAM_IDX_t idx, int32_t value)
 	if( (value < param_table[idx].minValue && value != 0) // allow set freq value 0
 		|| value > param_table[idx].maxValue)
 	{
-		kprintf(PORT_DEBUG,"idx=%d value=%d is not valid\n", idx, value);
+		kprintf(PORT_DEBUG,"idx=%d value=%d is not valid\r\n", idx, value);
 		return 0;
 	}
 
@@ -227,7 +229,7 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 	// check status= RUN, writeOnRunning = 0
 	if(table_getWriteOnRunning(idx) == 0 && state_run_stop == CMD_RUN)
 	{
-		kprintf(PORT_DEBUG,"idx=%d cannot write on running\n", idx);
+		kprintf(PORT_DEBUG,"idx=%d cannot write on running\r\n", idx);
 		return 0;
 	}
 
@@ -241,16 +243,18 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 	table_data[idx] = value;
 	table_nvm[idx] = value;
-	//printf("idx=%d set value=%d\n", idx, value);
+	//printf("idx=%d set value=%d\r\n", idx, value);
 
 	if(option > REQ_FROM_DSP) // need DSP comm
 	{
 		if(table_getDspAddr(idx) != none_dsp)
 		{
+			test_cmd = SPICMD_PARAM_W;
 			COMM_convertValue(idx, buf);
-
+#ifndef SUPPORT_UNIT_TEST
 			status = COMM_sendMessage(SPICMD_PARAM_W, buf);
 			if(status == 0) { kprintf(PORT_DEBUG, "set idx=%d value to DSP error! \r\n", idx); return 0;}
+#endif
 		}
 	}
 
@@ -266,6 +270,9 @@ int8_t table_doNothing(PARAM_IDX_t idx, int32_t value, int16_t option)
 int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t status;
+
+	// writable ?
+	if(param_table[idx].isRW == 0) return 0; // read only
 
 	// check validity
 	if(table_checkValidity(idx, value) == 0) return 0;
@@ -358,7 +365,6 @@ int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t option)
 	{
 		for(i=0; i<range_size; i++)
 		{
-
 			param_table[r_idx[i]].maxValue = value;
 		}
 	}
@@ -641,7 +647,7 @@ int8_t table_updateRange(void)
 		param_table[index].minValue = min_value;
 		param_table[index].maxValue = max_value;
 
-#if 0
+#if 0 // dont need to re-set min, max value
 		value = table_data[index];
 		if(value < param_table[index].minValue && value != 0 )
 		{

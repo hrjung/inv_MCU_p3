@@ -253,8 +253,11 @@ extern void test_handleDout(void);
 extern void test_getFreq(void);
 extern void test_handleAin(void);
 // table
+extern void test_setFreqValue(void);
+extern void test_setFreqRange(void);
 extern void test_setValue(void);
-
+extern void test_NvmAddr(void);
+extern void test_ModbusAddr(void);
 
 // modbus
 extern void test_modbusBasic(void);
@@ -909,7 +912,7 @@ STATIC int utest_ser(uint8_t dport)
 
 	UNITY_BEGIN();
 
-#if 0
+#if 1
 	// add nvm_queue test
 	RUN_TEST(test_nfc_q_basic);
 	RUN_TEST(test_nfc_q_muliple);
@@ -929,7 +932,7 @@ STATIC int utest_ser(uint8_t dport)
 
 #endif
 
-#if 0
+#if 1
 	// ext_di_
 	RUN_TEST(test_setupMultiFuncDin);
 	RUN_TEST(test_convertMultiStep);
@@ -937,16 +940,20 @@ STATIC int utest_ser(uint8_t dport)
 
 	//ext_do
 	RUN_TEST(test_handleDout);
-#endif
+
 	//ext_ai
 	RUN_TEST(test_getFreq);
 	RUN_TEST(test_handleAin);
-
+#endif
 	// table
+	RUN_TEST(test_NvmAddr);
+	RUN_TEST(test_ModbusAddr);
+	RUN_TEST(test_setFreqRange);
+	RUN_TEST(test_setFreqValue);
 	RUN_TEST(test_setValue);
 
 
-#if 0
+#if 1
 	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);
