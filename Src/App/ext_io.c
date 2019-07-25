@@ -28,8 +28,8 @@ STATIC DIN_PIN_NUM_t m_din = {
 };
 
 uint8_t mdin_value[EXT_DIN_COUNT]; // actual DI pin value
+COMM_CMD_t test_cmd=0;
 STATIC uint8_t prev_emergency=0, prev_trip=0, prev_run=0, prev_dir=0, prev_step=0;
-STATIC COMM_CMD_t test_cmd=0;
 STATIC uint8_t step_cmd=0;
 
 uint8_t mdout_value[EXT_DOUT_COUNT];

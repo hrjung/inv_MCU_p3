@@ -46,8 +46,8 @@ TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 
 STATIC int8_t table_doNothing(PARAM_IDX_t idx, int32_t value, int16_t option);
-STATIC int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
-STATIC int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
+int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
@@ -57,7 +57,7 @@ STATIC int8_t table_setAinValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option);
-STATIC int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_setSlaveAddress(uint8_t addr);
