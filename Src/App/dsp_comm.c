@@ -78,6 +78,7 @@ const static PARAM_IDX_t DSP_TO_TABLE_IDX[] =
 		regen_band_type,
 
 		fan_onoff_type,
+		motor_type_type,
 };
 
 const static char* STR_SPICMD_CTRL_RUN  = "CTRL_RUN";
@@ -281,10 +282,10 @@ int8_t COMM_convertValue(PARAM_IDX_t table_idx, uint16_t *buf)
 
 	if(table_idx < value_type || table_idx >= PARAM_TABLE_SIZE) { return 0; }
 
+	ratio = table_getRatio(table_idx);
 	t_value = table_getValue(table_idx);
 
-	ratio = table_getRatio(table_idx);
-	buf[0] = (uint16_t)table_getDspAddr(table_idx);
+	buf[0] = (uint16_t)table_getDspAddr((PARAM_IDX_t)table_idx);
 	if(ratio == 1)
 	{
 		memcpy(&buf[1], &t_value, sizeof(int32_t));
@@ -313,6 +314,7 @@ int32_t COMM_parseValue(int16_t dsp_index, uint16_t *data, int8_t *err)
 	*err=0;
 	if(dsp_index < value_dsp || dsp_index >= DSP_PARAM_SIZE) { *err=1; return 0; }
 
+	//kprintf(PORT_DEBUG, "COMM_parseValue dsp_index=%d \r\n", dsp_index);
 	ratio = table_getRatio(DSP_TO_TABLE_IDX[dsp_index]);
 	if(ratio == 1)
 	{
@@ -599,4 +601,22 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 		result = COMM_sendCommand(cmd, data);
 
 	return (result == COMM_SUCCESS);
+}
+
+// only used at inverter initialize to sync motor parameter
+int8_t COMM_sendMotorType(void)
+{
+	PARAM_IDX_t table_idx;
+	int8_t status;
+	uint16_t buf[3]={0,0,0};
+
+	// send motor type
+	table_idx = motor_type_type;
+	COMM_convertValue(table_idx, buf);
+
+	status = COMM_sendMessage(SPICMD_PARAM_W, buf);
+	kprintf(PORT_DEBUG, "COMM motor type: status=%d, idx=%d, value=%d\r\n", \
+			status, (int)table_idx, (int)table_getValue(table_idx));
+
+	return status;
 }

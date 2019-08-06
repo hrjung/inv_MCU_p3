@@ -13,7 +13,7 @@
 #include    <stdarg.h>
 
 
-//#define SUPPORT_TASK_WATCHDOG
+#define SUPPORT_TASK_WATCHDOG
 
 #define SUPPORT_NFC_OLD
 

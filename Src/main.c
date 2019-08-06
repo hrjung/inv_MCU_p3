@@ -49,6 +49,15 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+typedef enum {
+	MAIN_IDLE_STATE = 0,
+	MAIN_DSP_STATE,
+	MAIN_EXTIO_STATE,
+	MAIN_MODBUS_STATE,
+	MAIN_TABLE_STATE,
+	MAIN_ERROR_STATE,
+} MAIN_state_st;
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -188,6 +197,7 @@ extern void MB_TaskFunction(void);
 extern int8_t MB_handlePacket(void);
 
 extern int8_t NVM_setMotorRunCount(uint32_t run_count);
+extern int8_t COMM_sendMotorType(void);
 
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
@@ -368,7 +378,7 @@ int main(void)
   /* start timers, add new ones, ... */
   osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
   osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1 sec to read Accelerometer
-  osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 10 min to read Accelerometer
+  osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 10 min to inverter operation time
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
@@ -1270,6 +1280,152 @@ void userIoTaskFunc(void const * argument)
 }
 
 /* USER CODE BEGIN Header_mainHandlerTaskFunc */
+
+int8_t mainHandlerState(void)
+{
+#if 1
+	static MAIN_state_st sct_state = MAIN_IDLE_STATE; // initial state
+	int8_t status;
+	int32_t ctrl_in;
+	static uint16_t event_cnt=0;
+
+	switch(sct_state)
+	{
+	case MAIN_IDLE_STATE:
+		if(ERR_isErrorState()) sct_state = MAIN_ERROR_STATE;
+		else if(DSP_status_read_flag) sct_state = MAIN_DSP_STATE;
+		else if(user_io_handle_f) sct_state = MAIN_EXTIO_STATE;
+		else
+		{
+			event_cnt++;
+			if(event_cnt%2 == 0) sct_state = MAIN_MODBUS_STATE;
+			else sct_state = MAIN_TABLE_STATE;
+		}
+		break;
+
+	case MAIN_DSP_STATE:
+		  HDLR_handleDspError();
+
+		  HDLR_readDspStatus();
+
+		  DSP_status_read_flag = 0; // clear flag
+
+		  if(ERR_isErrorState())
+			  sct_state = MAIN_ERROR_STATE;
+		  else
+			  sct_state = MAIN_IDLE_STATE;
+		break;
+
+	case MAIN_EXTIO_STATE:
+		ctrl_in = table_getCtrllIn();
+		switch(ctrl_in)
+		{
+		case CTRL_IN_NFC:
+		  status = HDLR_handleRunStopFlagNFC();
+		  break;
+
+		case CTRL_IN_Digital:
+		  status = EXI_DI_handleDin();
+		  break;
+
+		case CTRL_IN_Analog_V:
+		  status = EXT_AI_handleAin();
+		  break;
+
+		case CTRL_IN_Modbus: // only run/stop command
+
+		  break;
+		}
+		user_io_handle_f = 0;
+		if(ERR_isErrorState())
+			 sct_state = MAIN_ERROR_STATE;
+		else
+			 sct_state = MAIN_IDLE_STATE;
+		break;
+
+	case MAIN_MODBUS_STATE:
+		MB_handlePacket();
+		sct_state = MAIN_IDLE_STATE;
+		break;
+
+	case MAIN_TABLE_STATE:
+		if(!NVMQ_isEmptyTableQ())
+		{
+		  status = table_updatebyTableQ();
+		  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
+		}
+		sct_state = MAIN_IDLE_STATE;
+		break;
+
+	case MAIN_ERROR_STATE:
+
+		break;
+	}
+
+
+#else
+	int8_t status;
+	int32_t ctrl_in;
+	static int8_t prev_status;
+
+	// read DSP error flag, MCU error state, read DSP status
+	if(DSP_status_read_flag) // every DSP_STATUS_TIME_INTERVAL
+	{
+	  HDLR_handleDspError();
+
+	  HDLR_readDspStatus();
+
+	  DSP_status_read_flag = 0;
+	  //HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
+	}
+
+	// read run/stop flag in EEPROM
+	ctrl_in = table_getCtrllIn();
+	switch(ctrl_in)
+	{
+	case CTRL_IN_NFC:
+	  status = HDLR_handleRunStopFlagNFC();
+	  break;
+
+	case CTRL_IN_Digital:
+	  if(user_io_handle_f)
+	  {
+		  status = EXI_DI_handleDin();
+
+		  user_io_handle_f = 0;
+	  }
+	  break;
+
+	case CTRL_IN_Analog_V:
+	  if(user_io_handle_f)
+	  {
+		  status = EXT_AI_handleAin();
+
+		  user_io_handle_f = 0;
+	  }
+	  break;
+
+	case CTRL_IN_Modbus: // only run/stop command
+
+	  break;
+	}
+
+	// read modbus packet
+	MB_handlePacket();
+
+
+	// read nvm_q
+	if(!NVMQ_isEmptyTableQ())
+	{
+	  status = table_updatebyTableQ();
+	  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
+	}
+#endif
+
+	return 1;
+}
+
+
 /**
 * @brief Function implementing the mainHandlerTask thread.
 * @param argument: Not used
@@ -1280,7 +1436,6 @@ void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
   int8_t status;
-  int32_t ctrl_in;
 
   osDelay(10);
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
@@ -1293,7 +1448,10 @@ void mainHandlerTaskFunc(void const * argument)
   else
 	  EEPROM_initialized_f = 1; // EEPROM initialized
 
-  kprintf(PORT_DEBUG, "EEPROM_initialized_f = %d\r\n", EEPROM_initialized_f);
+  // TODO : notify DSP to set motor parameter
+  status = COMM_sendMotorType();
+
+  kprintf(PORT_DEBUG, "EEPROM_initialized_f = %d, comm status=%d\r\n", EEPROM_initialized_f, status);
 #else
   EEPROM_initialized_f=1;
 #endif
@@ -1317,58 +1475,7 @@ void mainHandlerTaskFunc(void const * argument)
 	osDelay(5);
 
 #ifndef SUPPORT_UNIT_TEST
-	  // read DSP error flag, MCU error state, read DSP status
-	  if(DSP_status_read_flag) // every DSP_STATUS_TIME_INTERVAL
-	  {
-		  HDLR_handleDspError();
-
-		  HDLR_readDspStatus();
-
-		  DSP_status_read_flag = 0;
-		  //HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
-	  }
-
-	  // read run/stop flag in EEPROM
-	  ctrl_in = table_getCtrllIn();
-	  switch(ctrl_in)
-	  {
-	  case CTRL_IN_NFC:
-		  status = HDLR_handleRunStopFlagNFC();
-		  break;
-
-	  case CTRL_IN_Digital:
-		  if(user_io_handle_f)
-		  {
-			  status = EXI_DI_handleDin();
-
-			  user_io_handle_f = 0;
-		  }
-		  break;
-
-	  case CTRL_IN_Analog_V:
-		  if(user_io_handle_f)
-		  {
-			  status = EXT_AI_handleAin();
-
-			  user_io_handle_f = 0;
-		  }
-		  break;
-
-	  case CTRL_IN_Modbus: // only run/stop command
-
-		  break;
-	  }
-
-	  // read modbus packet
-	  MB_handlePacket();
-
-
-	  // read nvm_q
-	  if(!NVMQ_isEmptyTableQ())
-	  {
-		  status = table_updatebyTableQ();
-		  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
-	  }
+	mainHandlerState();
 #endif
 
   }

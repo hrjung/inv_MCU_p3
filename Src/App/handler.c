@@ -67,8 +67,9 @@ int8_t HDLR_handleDspError(void)
 	{
 		if(ERR_isCommError()) // Comm error cannot get response from DSP
 		{
+			err_code = TRIP_REASON_MCU_COMM_FAIL;
 			kputs(PORT_DEBUG, "HDLR_handleDspError get COMM Error\r\n");
-			table_updateCommError(TRIP_REASON_MCU_COMM_FAIL);
+			table_updateCommError(err_code);
 		}
 		else
 		{
@@ -82,6 +83,7 @@ int8_t HDLR_handleDspError(void)
 			}
 			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 		}
+		ERR_setErrorState(err_code);
 		UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
 		err_state_f = 1;
 	}

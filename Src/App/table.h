@@ -173,6 +173,8 @@ typedef enum{
 
 	fan_onoff_dsp,
 
+	motor_type_dsp,
+
 	DSP_PARAM_SIZE,
 }TABLE_DSP_PARAM_t;//new
 

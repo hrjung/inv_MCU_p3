@@ -143,7 +143,7 @@ STATIC Param_t param_table[] =
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm
 	{ model_type,			0x60,	40080,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
-	{ motor_type_type,		0x64,	40081,	0,		0,		0,		0,	1,		0, 	none_dsp,		table_doNothing},
+	{ motor_type_type,		0x64,	40081,	1,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_doNothing},
 	{ gear_ratio_type,		0x68,	40082,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
 	{ motor_on_cnt_type,	0x6C,	40083,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
 	{ elapsed_hour_type,	0x70,	40084,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
@@ -250,7 +250,7 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 		if(table_getDspAddr(idx) != none_dsp)
 		{
 			test_cmd = SPICMD_PARAM_W;
-			COMM_convertValue(idx, buf);
+			COMM_convertValue((uint16_t)idx, buf);
 #ifndef SUPPORT_UNIT_TEST
 			status = COMM_sendMessage(SPICMD_PARAM_W, buf);
 			if(status == 0) { kprintf(PORT_DEBUG, "set idx=%d value to DSP error! \r\n", idx); return 0;}
@@ -696,7 +696,7 @@ int8_t table_init(void)
 		{
 			if(table_getDspAddr(i) == none_dsp) continue;
 
-			COMM_convertValue((PARAM_IDX_t)i, buf);
+			COMM_convertValue((uint16_t)i, buf);
 
 			status = COMM_sendMessage(SPICMD_PARAM_W, buf);
 			kprintf(PORT_DEBUG, "DSP COMM : status=%d, idx=%d, value=%d, param=%d\r\n", \
@@ -749,11 +749,11 @@ int8_t table_initNVM(void)
 // return 0 for error
 // return 1 for int value
 //        10 for float value
-uint16_t table_getRatio(PARAM_IDX_t index)
+uint16_t table_getRatio(PARAM_IDX_t tbl_index)
 {
-	if(index < 0 || index >= PARAM_TABLE_SIZE) { kprintf(PORT_DEBUG, "parameter index error %d\r\n", index); return 1; }
+	if(tbl_index < 0 || tbl_index >= PARAM_TABLE_SIZE) { kprintf(PORT_DEBUG, "parameter index error %d\r\n", tbl_index); return 0; }
 
-	return param_table[index].ratio;
+	return param_table[tbl_index].ratio;
 }
 
 uint8_t table_getRW(PARAM_IDX_t index)
@@ -978,6 +978,7 @@ int8_t table_updatebyTableQ(void)
 		}
 
 		empty = NVMQ_isEmptyTableQ();
+		osDelay(5);
 	} while(empty == 0); // not empty
 
 	if(errflag) return 0;
