@@ -31,6 +31,8 @@ int16_t state_direction = 0;
 int16_t st_overload = 0;
 int16_t st_brake = 0;
 
+int16_t comm_err_cnt=0;
+
 //extern int16_t test_run_stop_f;
 
 extern int8_t NVM_isNfcMonitoring(void);
@@ -559,7 +561,7 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 	if(repeat_err)
 	{
 		kputs(PORT_DEBUG, "ERR: COMM_sendCommand repeat error!!\r\n");
-		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		//ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
 		return COMM_FAILED;
 	}
 
@@ -588,6 +590,20 @@ int8_t COMM_sendParamWrite(const uint16_t* data)
 	return COMM_SUCCESS;
 }
 
+void COMM_handleError(int8_t result)
+{
+	if(result == COMM_SUCCESS)
+	{
+		if(comm_err_cnt > 0) comm_err_cnt--;
+	}
+	else if(result == COMM_FAILED)
+	{
+		comm_err_cnt++;
+		if(comm_err_cnt > COMM_ERR_COUNT_LIMIT)
+			ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+	}
+}
+
 // TODO: MUST check validity of cmd and data before call function, data should be converted to int32 or float
 // data[0] : dsp_index
 // data[1],[2] : data value
@@ -599,6 +615,8 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 		result = COMM_sendParamWrite(data);
 	else
 		result = COMM_sendCommand(cmd, data);
+
+
 
 	return (result == COMM_SUCCESS);
 }

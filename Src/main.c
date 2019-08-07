@@ -1326,6 +1326,7 @@ int8_t mainHandlerState(void)
 
 		case CTRL_IN_Digital:
 		  status = EXI_DI_handleDin();
+		  if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INPUT);
 		  break;
 
 		case CTRL_IN_Analog_V:
@@ -1436,9 +1437,15 @@ void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
   int8_t status;
+//	uint16_t addr=408;
+//	int32_t i2c_rvalue=0;
+//	uint8_t i2c_status;
 
   osDelay(10);
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
+
+//	i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
+//	kprintf(PORT_DEBUG, "read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);
 
   UTIL_setLED(LED_COLOR_G, 1);
 #ifndef SUPPORT_UNIT_TEST
@@ -1448,8 +1455,11 @@ void mainHandlerTaskFunc(void const * argument)
   else
 	  EEPROM_initialized_f = 1; // EEPROM initialized
 
-  // TODO : notify DSP to set motor parameter
   status = COMM_sendMotorType();
+  if(status == 0 || EEPROM_initialized_f == 0)
+  {
+	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
+  }
 
   kprintf(PORT_DEBUG, "EEPROM_initialized_f = %d, comm status=%d\r\n", EEPROM_initialized_f, status);
 #else
@@ -1483,6 +1493,13 @@ void mainHandlerTaskFunc(void const * argument)
 }
 
 /* USER CODE BEGIN Header_mbus485TaskFunc */
+
+void main_SwReset(void)
+{
+	//NVIC_GenerateSystemReset();
+	NVIC_SystemReset();
+}
+
 /**
 * @brief Function implementing the mbus485Task thread.
 * @param argument: Not used

@@ -79,7 +79,6 @@ int8_t HDLR_handleDspError(void)
 			if(status == COMM_SUCCESS)
 			{
 				err_code = table_getValue(err_code_0_type);
-				ERR_setErrorState(err_code);
 			}
 			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 		}
@@ -145,6 +144,11 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 	case RUN_STOP_FLAG_IDLE:
 	default:
 		break;
+	}
+
+	if(status == 0)
+	{
+		ERR_setErrorState(TRIP_REASON_MCU_INPUT);
 	}
 
 	return status;

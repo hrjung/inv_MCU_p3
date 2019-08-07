@@ -162,7 +162,7 @@ int8_t EXI_DI_handleDin(void)
 	int32_t dir_ctrl;
 	int32_t freq_step;
 	uint8_t step=0;
-	int8_t result=0, status;
+	int8_t status;
 	uint16_t dummy[3] = {0,0,0};
 
 	if(m_din.emergency_pin != EXT_DIN_COUNT)
@@ -174,9 +174,11 @@ int8_t EXI_DI_handleDin(void)
 #ifndef SUPPORT_UNIT_TEST
 			// send STOP cmd
 			status = COMM_sendMessage(test_cmd, dummy);
-			if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
+			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); return 0;}
+			else
 #endif
-			prev_emergency = mdin_value[m_din.emergency_pin];
+				prev_emergency = mdin_value[m_din.emergency_pin];
+
 			return 1;
 		}
 		prev_emergency = mdin_value[m_din.emergency_pin];
@@ -191,9 +193,11 @@ int8_t EXI_DI_handleDin(void)
 #ifndef SUPPORT_UNIT_TEST
 			// send STOP cmd
 			status = COMM_sendMessage(test_cmd, dummy);
-			if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
+			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); return 0;}
+			else
 #endif
-			prev_trip = mdin_value[m_din.trip_pin];
+				prev_trip = mdin_value[m_din.trip_pin];
+
 			return 1;
 		}
 		prev_trip = mdin_value[m_din.trip_pin];
@@ -210,37 +214,32 @@ int8_t EXI_DI_handleDin(void)
 				// send STOP cmd
 				test_cmd = SPICMD_CTRL_STOP;
 				kprintf(PORT_DEBUG, "send SPICMD_CTRL_STOP\r\n");
-				result++;
 #ifndef SUPPORT_UNIT_TEST
 				// send stop to DSP
 				status = COMM_sendMessage(test_cmd, dummy);
-				if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
+				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
+				else
 #endif
-				prev_run = 0;
+					prev_run = 0;
 			}
 			else if(mdin_value[m_din.run_pin] == 1 && prev_run == 0 && state_run_stop == CMD_STOP)
 			{
 				// send run cmd
 				test_cmd = SPICMD_CTRL_RUN;
 				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN\r\n");
-				result++;
 #ifndef SUPPORT_UNIT_TEST
 				// send run to DSP
 				status = COMM_sendMessage(test_cmd, dummy);
-				if(status != COMM_FAILED)
+				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+				else
+#endif
 				{
 					TM_setStartRunTime(); // set Run start time, count
+					prev_run = 1;
 				}
-				else { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
-#endif
-				prev_run = 1;
 			}
-			else
-				result = 0;
 
 			prev_run = mdin_value[m_din.run_pin];
-			//if(result) return 1; // send only one command at 1 time
-
 		}
 
 		// handle direction
@@ -255,12 +254,13 @@ int8_t EXI_DI_handleDin(void)
 					// send forward cmd
 					test_cmd = SPICMD_CTRL_DIR_F;
 					kprintf(PORT_DEBUG, "send SPICMD_CTRL_DIR_F\r\n");
-					result++;
 #ifndef SUPPORT_UNIT_TEST
 					// send run to DSP
 					status = COMM_sendMessage(test_cmd, dummy);
-					if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR F error! \r\n"); }
+					if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR F error! \r\n"); }
+					else
 #endif
+						prev_dir = mdin_value[m_din.dir_pin];
 				}
 
 			}
@@ -272,20 +272,15 @@ int8_t EXI_DI_handleDin(void)
 					// send reverse cmd
 					test_cmd = SPICMD_CTRL_DIR_R;
 					kprintf(PORT_DEBUG, "send SPICMD_CTRL_DIR_R\r\n");
-					result++;
 #ifndef SUPPORT_UNIT_TEST
 					// send run to DSP
 					status = COMM_sendMessage(test_cmd, dummy);
-					if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR R error! \r\n"); }
+					if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR R error! \r\n"); }
+					else
 #endif
+						prev_dir = mdin_value[m_din.dir_pin];
 				}
 			}
-//			else
-//				result = 0;
-
-			prev_dir = mdin_value[m_din.dir_pin];
-			//if(result) return 1;
-
 		}
 
 		// handle multi-step freq
@@ -299,18 +294,17 @@ int8_t EXI_DI_handleDin(void)
 				freq_step = table_getValue(multi_Din_0_type+step);
 				status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
 				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
+				else
 #endif
-				prev_step = step;
+					prev_step = step;
+
 				step_cmd = step; // for test
-				result++;
 			}
-//			else
-//				result = 0;
 		}
 
 	}
 
-	return result;
+	return 1;
 }
 
 int EXT_DO_isValid(void)
@@ -480,7 +474,7 @@ int8_t EXT_AI_handleAin(void)
 #ifndef SUPPORT_UNIT_TEST
 			// send stop cmd
 			status = COMM_sendMessage(test_cmd, dummy);
-			if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
+			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
 #endif
 		}
 		else
@@ -492,7 +486,7 @@ int8_t EXT_AI_handleAin(void)
 #ifndef SUPPORT_UNIT_TEST
 				// send run to DSP
 				status = COMM_sendMessage(test_cmd, dummy);
-				if(status == COMM_FAILED) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
 #endif
 			}
 			else
@@ -501,11 +495,13 @@ int8_t EXT_AI_handleAin(void)
 				kprintf(PORT_DEBUG, "send SPICMD_PARAM_W  freq=%d\r\n", freq);
 #ifndef SUPPORT_UNIT_TEST
 				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); return 0;}
+				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
 #endif
 			}
 		}
-		prev_adc_cmd = freq;
+
+		if(status != 0) // if error, not update
+			prev_adc_cmd = freq;
 	}
 
 	return 1;

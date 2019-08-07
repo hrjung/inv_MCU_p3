@@ -20,6 +20,8 @@
 
 #define SPI_REPEAT_CNT		5
 
+#define COMM_ERR_COUNT_LIMIT	5
+
 typedef enum
 {
 	SPICMD_CTRL_RUN		=0x0001,

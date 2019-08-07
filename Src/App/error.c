@@ -36,9 +36,9 @@ uint8_t ERR_getErrorState(void)
 void ERR_setErrorState(TRIP_REASON_t err_code)
 {
 	err_state = err_code;
-	if(ERR_isErrorState())
+	if(ERR_getErrorState() > TRIP_REASON_MAX)
 	{
-		UTIL_setMTDpin(1); // set error
+		UTIL_setMTDpin(1); // notify to DSP
 	}
 
 
