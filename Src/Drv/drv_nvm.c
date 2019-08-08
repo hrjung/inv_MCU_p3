@@ -69,6 +69,8 @@ uint8_t NVM_read(uint16_t addr, int32_t *value)
 #else
 	*value = nvm_table[addr];
 #endif
+
+	//kprintf(PORT_DEBUG, "NVM_read addr=%d, value=%d, status=%d \r\n", (int)addr, (int)*value, status);
 	return status;
 }
 
@@ -81,7 +83,7 @@ uint8_t NVM_write(int32_t addr, int32_t value)
 #else
 	nvm_table[addr] = value;
 #endif
-
+	//kprintf(PORT_DEBUG, "NVM_write addr=%d, value=%d, status=%d \r\n", (int)addr, (int)value, status);
 	return status;
 }
 
@@ -117,6 +119,7 @@ uint8_t NVM_writeParam(PARAM_IDX_t index, int32_t value)
 {
 	uint8_t status;
 	uint16_t nvm_addr;
+	//int32_t r_value;
 
 	nvm_addr = table_getAddr(index);
 	status = NVM_write(nvm_addr, value);
@@ -125,6 +128,9 @@ uint8_t NVM_writeParam(PARAM_IDX_t index, int32_t value)
 	else
 		kprintf(PORT_DEBUG, "NVM_writeParam ERR idx=%d\r\n", index);
 
+	//status = NVM_read(nvm_addr, &r_value);
+	//if(r_value != value || status == 0)
+	//kprintf(PORT_DEBUG, "NVM_writeParam idx=%d, addr=%d, value=%d, r_value=%d, status=%d\r\n", index, nvm_addr, value, r_value, status);
 	return status;
 }
 
@@ -190,6 +196,7 @@ int8_t NVM_initTime(void)
 	int8_t status=NVM_OK;
 
 	motor_run_cnt=0;
+	status = NVM_setMotorRunCount(motor_run_cnt);
 	if(status==NVM_NOK) errflag++;
 
 	device_on_hour=0;
@@ -350,7 +357,7 @@ int8_t NVM_verifyCRC(uint32_t crc32_calc)
 
 	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_CRC_VALUE], (int32_t *)&crc32_rd);
 
-	kprintf(PORT_DEBUG, "calc=0x%x, read_crc=0x%x\r\n", crc32_calc, crc32_rd);
+	//kprintf(PORT_DEBUG, "calc=0x%x, read_crc=0x%x\r\n", crc32_calc, crc32_rd);
 	if(status != NVM_OK) return NVM_NOK;
 
 	if(crc32_calc != crc32_rd) return NVM_NOK;
@@ -364,10 +371,14 @@ int8_t NVM_setCRC(void)
 	uint8_t status;
 
 	crc32_calc = table_calcCRC();
-	status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_CRC_VALUE], crc32_calc);
-	//kprintf(PORT_DEBUG, "NVM_setCRC calc=0x%x, status=%d\r\n", crc32_calc, status);
 
-	if(status != NVM_OK) return NVM_NOK;
+	if(NVM_verifyCRC(crc32_calc) == NVM_NOK) // updated
+	{
+		status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_CRC_VALUE], crc32_calc);
+		//kprintf(PORT_DEBUG, "NVM_setCRC calc=0x%x, status=%d\r\n", crc32_calc, status);
+
+		if(status != NVM_OK) return NVM_NOK;
+	}
 
 	return NVM_OK;
 }

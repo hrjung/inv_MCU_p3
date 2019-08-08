@@ -22,6 +22,9 @@
 
 #define COMM_ERR_COUNT_LIMIT	5
 
+#define SPI_TEST_CMD_TEST_MODE  0
+#define SPI_TEST_CMD_RESET      1
+
 typedef enum
 {
 	SPICMD_CTRL_RUN		=0x0001,
@@ -37,6 +40,8 @@ typedef enum
 	SPICMD_RESP_ST		=0x0200,
 	SPICMD_RESP_ERR		=0x0400,
 	SPICMD_RESP_PARAM	=0x0800,
+
+	SPICMD_TEST_CMD		=0x1000,
 
 } COMM_CMD_t;
 
@@ -67,5 +72,7 @@ typedef struct {
 
 extern int8_t COMM_convertValue(PARAM_IDX_t table_idx, uint16_t *buf);
 extern int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data);
+
+extern int8_t COMM_sendTestCmd(uint16_t cmd);
 
 #endif /* SRC_DSP_COMM_H_ */

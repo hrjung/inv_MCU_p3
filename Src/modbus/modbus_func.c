@@ -63,6 +63,7 @@ const unsigned char ModbusCRCLo[256] = {
 MODBUS_SLAVE_QUEUE modbusRx, modbusTx;
 
 uint8_t	mb_slaveAddress = 1;
+uint8_t reset_requested_f=0;
 
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
@@ -432,12 +433,34 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	 * - function cannot be processed : MOD_EX_SLAVE_FAIL
 	 */
 
-	if(addr == MB_CTRL_RUN_STOP_ADDR)
+	if(addr == MB_CTRL_RUN_STOP_ADDR || addr == MB_CTRL_RESET_ADDR)
 	{
-		if(value == 1 || value == 2)
+		switch(addr)
 		{
-			// TODO : set run_stop_f flag for main handler
-			HDLR_setRunStopFlagModBus((int8_t)value);
+		case MB_CTRL_RUN_STOP_ADDR:
+			if(value == 1 || value == 2)
+			{
+				HDLR_setRunStopFlagModbus((int8_t)value);
+				modbusTx.wp = 0;
+				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+				result = MOD_EX_NO_ERR;
+				kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			}
+			else
+				result = MOD_EX_DataVAL;
+
+			break;
+
+		case MB_CTRL_RESET_ADDR:
+
+			//TODO: add handler for SW_reset after send response
+			reset_requested_f = 1;
 
 			modbusTx.wp = 0;
 			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
@@ -449,9 +472,10 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 
 			result = MOD_EX_NO_ERR;
 			kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			break;
 		}
-		else
-			result = MOD_EX_DataVAL;
+
+
 
 		goto FC06_ERR;
 	}

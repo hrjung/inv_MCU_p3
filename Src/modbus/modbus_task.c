@@ -17,6 +17,7 @@
 #include "modbus_queue.h"
 #include "table.h"
 
+
 // in case of baudrate > 19200, inter-frame delay is 1.75ms
 // baudrate < 19200, need to calculate as 3.5 character
 #define MODBUS_INTER_FRAME_DELAY		35
@@ -33,6 +34,8 @@ uint8_t mb_start_flag = 0;
 uint8_t mb_frame_received = 0;
 uint16_t mb_err_code = 0;
 
+uint8_t reset_enabled_f=0;
+
 uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400, 115200};
 
 MODBUS_SLAVE_QUEUE mbBufRx, mbBufTx;
@@ -43,6 +46,8 @@ extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim7;
 extern osSemaphoreId mbus485SemaphoreIdHandle;
 
+extern uint8_t reset_requested_f;
+extern uint8_t reset_cmd_send_f;
 extern uint8_t	mb_slaveAddress;
 
 extern int MB_isCRC_OK(uint8_t *buf, uint32_t len);
@@ -193,6 +198,12 @@ void MB_TaskFunction(void)
 		mbBufTx.wp = MBQ_getRespQ(mbBufTx.buf);
 
 		MB_writeRespPacket(mbBufTx.wp);
+
+		if(reset_requested_f)
+		{
+			osDelay(500); // delay till sending response
+			reset_enabled_f=1;
+		}
 
 		kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
 				mbBufTx.buf[0], mbBufTx.buf[1], mbBufTx.buf[2], mbBufTx.buf[3], mbBufTx.buf[4]);

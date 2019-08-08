@@ -95,6 +95,7 @@ const static char* STR_SPICMD_RESP_ACK = "RESP_ACK";
 const static char* STR_SPICMD_RESP_ST = "RESP_ST";
 const static char* STR_SPICMD_RESP_ERR = "RESP_ERR";
 const static char* STR_SPICMD_RESP_PARAM = "RESP_PARAM";
+const static char* STR_SPICMD_TEST_CMD = "TEST_CMD";
 const static char* STR_UNKNOWN_CODE_ERROR = "UNKNOWN_CODE_ERROR";
 
 const char* COMM_getCMDString(COMM_CMD_t cmdCode)
@@ -113,6 +114,7 @@ const char* COMM_getCMDString(COMM_CMD_t cmdCode)
 	case SPICMD_RESP_ST:		return STR_SPICMD_RESP_ST;
 	case SPICMD_RESP_ERR:		return STR_SPICMD_RESP_ERR;
 	case SPICMD_RESP_PARAM:		return STR_SPICMD_RESP_PARAM;
+	case SPICMD_TEST_CMD:		return STR_SPICMD_TEST_CMD;
 	default :					return STR_UNKNOWN_CODE_ERROR;
 
 	}
@@ -143,6 +145,7 @@ int16_t COMM_getRecvLength(COMM_CMD_t cmd)
 	case SPICMD_CTRL_STOP:
 	case SPICMD_CTRL_DIR_F:
 	case SPICMD_CTRL_DIR_R:
+	case SPICMD_TEST_CMD:
 	case SPICMD_PARAM_W:	return 7;
 	case SPICMD_PARAM_R:	return 9;
 	case SPICMD_REQ_ERR:	return 12;
@@ -188,6 +191,21 @@ int8_t COMM_generateMessage(COMM_CMD_t cmd, const uint16_t* data)
 		sendMsg[5] = data[0];
 		sendMsg[6] = data[1];
 		sendMsg[7] = data[2];
+
+#ifdef DEBUG_DSP
+		//int* valueInt = (int*)&data[1];
+		//float* valueFloat = (float*)&data[1];
+		kprintf(PORT_DEBUG, "[COMM_DSP] COMM_generateMessage : WRITE idx = %d, data[0] = %d, data[1] = %d, data[2] = %d\r\n",
+				sendMsg[2], sendMsg[5], sendMsg[6], sendMsg[7]);
+#endif
+		comm_state = COMM_SUCCESS;
+		break;
+
+	case SPICMD_TEST_CMD:
+		sendMsg[2] = 7;
+		sendMsg[5] = data[0]; // test cmd
+//		sendMsg[6] = data[1];
+//		sendMsg[7] = data[2];
 
 #ifdef DEBUG_DSP
 		//int* valueInt = (int*)&data[1];
@@ -261,7 +279,6 @@ int8_t COMM_setMultiStepFreq(PARAM_IDX_t table_idx, uint16_t *buf)
 
 int8_t COMM_setAnalogFreq(int32_t freq, uint16_t *buf)
 {
-	int32_t t_value;
 	float value_f;
 
 	buf[0] = value_dsp;
@@ -365,7 +382,7 @@ int8_t COMM_parseMessage(void)
 //	int16_t length = recvMsg[2];
 //	int16_t recv_seqNO = recvMsg[3];
 	int16_t cmd = recvMsg[4];
-
+	//kprintf(PORT_DEBUG, "COMM_parseMessage cmd=0x%x \r\n", cmd);
 	switch(cmd)
 	{
 	case SPICMD_RESP_ACK:
@@ -536,15 +553,16 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 
 	for(i=0; i<rep_cnt; i++)
 	{
-		result = COMM_sendtoDSP();
+		result = COMM_sendtoDSP(); repeat_err=2;
 		if(result == COMM_FAILED) continue;
 
-		result = COMM_recvfromDSP(recv_len);
+		result = COMM_recvfromDSP(recv_len); repeat_err=3;
 		if(result == COMM_FAILED) continue;
 
+		repeat_err=4;
 		if(recvMsg[3] != seq_cnt) continue;
 
-		result = COMM_parseMessage();
+		result = COMM_parseMessage(); repeat_err=5;
 		if(result == COMM_FAILED) continue;
 
 		if(NAK_flag == 1) // DSP did not recognize cmd
@@ -560,7 +578,7 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 
 	if(repeat_err)
 	{
-		kputs(PORT_DEBUG, "ERR: COMM_sendCommand repeat error!!\r\n");
+		kprintf(PORT_DEBUG, "ERR: COMM_sendCommand repeat error %d !!\r\n", repeat_err);
 		//ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
 		return COMM_FAILED;
 	}
@@ -616,7 +634,7 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 	else
 		result = COMM_sendCommand(cmd, data);
 
-
+	COMM_handleError(result);
 
 	return (result == COMM_SUCCESS);
 }
@@ -635,6 +653,19 @@ int8_t COMM_sendMotorType(void)
 	status = COMM_sendMessage(SPICMD_PARAM_W, buf);
 	kprintf(PORT_DEBUG, "COMM motor type: status=%d, idx=%d, value=%d\r\n", \
 			status, (int)table_idx, (int)table_getValue(table_idx));
+
+	return status;
+}
+
+int8_t COMM_sendTestCmd(uint16_t cmd)
+{
+	int8_t status;
+	uint16_t buf[3]={0,0,0};
+
+	buf[0] = cmd;
+	buf[1] = 0, buf[2] = 0;
+	status = COMM_sendMessage(SPICMD_TEST_CMD, buf);
+	kprintf(PORT_DEBUG, "SPICMD_TEST_CMD: status=%d, cmd=%d \r\n", status, cmd);
 
 	return status;
 }

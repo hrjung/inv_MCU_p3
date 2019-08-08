@@ -18,6 +18,7 @@
 #include "proc_uart.h"
 #include "table.h"
 #include "error.h"
+#include "dsp_comm.h"
 //#include "task.h"
 
 #include "drv_nvm.h"
@@ -197,6 +198,8 @@ extern volatile int8_t ADC_error;
 extern int32_t table_nvm[];
 extern int32_t table_data[];
 
+extern uint8_t reset_cmd_send_f;
+
 //extern osThreadId defaultTaskHandle;
 //extern osThreadId YstcNfcTaskHandle;
 //extern osThreadId userIoTaskHandle;
@@ -223,6 +226,8 @@ extern void MB_UART_init(uint32_t baudrate);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
+
+extern int8_t main_SwReset(void);
 
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
@@ -418,8 +423,13 @@ STATIC int help_ser(uint8_t dport)
 
 STATIC int reset_ser(uint8_t dport)
 {
+	int8_t status;
+
 	kputs(dport, "\r\n\r\n---Reset---\r\n\r\n");
-	HAL_NVIC_SystemReset();
+
+	status = main_SwReset();
+	if(status==0)
+		kputs(dport, "\r\n\r\n---Reset Error---\r\n\r\n");
 	return 0;
 }
 

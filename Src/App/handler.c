@@ -42,7 +42,7 @@ extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
 
 
 
-void HDLR_setRunStopFlagModBus(int8_t flag)
+void HDLR_setRunStopFlagModbus(int8_t flag)
 {
 	mb_run_stop_f = flag;
 }

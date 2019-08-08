@@ -31,6 +31,7 @@
 #include "table.h"
 #include "ext_io.h"
 #include "error.h"
+#include "dsp_comm.h"
 #include "modbus_func.h"
 #include "modbus_queue.h"
 #include "nvm_queue.h"
@@ -165,6 +166,7 @@ uint8_t main_handler_f=0;
 uint8_t NFC_Access_flag=0;
 uint8_t DSP_status_read_flag=0;
 uint8_t EEPROM_initialized_f=0;
+uint8_t reset_cmd_send_f = 0;
 
 volatile int8_t ADC_ConvCpltFlag=0, ADC_error=0;
 uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
@@ -190,6 +192,7 @@ uint8_t watchdog_f = 0;
 extern int16_t state_run_stop;
 extern LED_status_t LED_state[]; // 3 color LED state
 extern uint16_t adc_value;
+extern uint8_t reset_enabled_f;
 
 extern void gen_crc_table(void);
 extern void MB_init(void);
@@ -1281,6 +1284,23 @@ void userIoTaskFunc(void const * argument)
 
 /* USER CODE BEGIN Header_mainHandlerTaskFunc */
 
+int8_t main_SwReset(void)
+{
+	int8_t status;
+	reset_cmd_send_f = 1;
+
+	status = COMM_sendTestCmd(SPI_TEST_CMD_RESET);
+
+	if(status)
+	{
+		osDelay(1000);
+		HAL_NVIC_SystemReset();
+	}
+
+	return status;
+}
+
+
 int8_t mainHandlerState(void)
 {
 #if 1
@@ -1293,7 +1313,7 @@ int8_t mainHandlerState(void)
 	{
 	case MAIN_IDLE_STATE:
 		if(ERR_isErrorState()) sct_state = MAIN_ERROR_STATE;
-		else if(DSP_status_read_flag) sct_state = MAIN_DSP_STATE;
+		else if(DSP_status_read_flag && reset_cmd_send_f==0) sct_state = MAIN_DSP_STATE;
 		else if(user_io_handle_f) sct_state = MAIN_EXTIO_STATE;
 		else
 		{
@@ -1321,21 +1341,21 @@ int8_t mainHandlerState(void)
 		switch(ctrl_in)
 		{
 		case CTRL_IN_NFC:
-		  status = HDLR_handleRunStopFlagNFC();
-		  break;
+			status = HDLR_handleRunStopFlagNFC();
+			break;
 
 		case CTRL_IN_Digital:
-		  status = EXI_DI_handleDin();
-		  if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INPUT);
-		  break;
+			status = EXI_DI_handleDin();
+			if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INPUT);
+			break;
 
 		case CTRL_IN_Analog_V:
-		  status = EXT_AI_handleAin();
-		  break;
+			status = EXT_AI_handleAin();
+			break;
 
 		case CTRL_IN_Modbus: // only run/stop command
-
-		  break;
+			status = HDLR_handleRunStopFlagModbus();
+			break;
 		}
 		user_io_handle_f = 0;
 		if(ERR_isErrorState())
@@ -1355,6 +1375,9 @@ int8_t mainHandlerState(void)
 		  status = table_updatebyTableQ();
 		  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
 		}
+
+		if(reset_enabled_f) main_SwReset(); // SW reset
+
 		sct_state = MAIN_IDLE_STATE;
 		break;
 
@@ -1493,12 +1516,6 @@ void mainHandlerTaskFunc(void const * argument)
 }
 
 /* USER CODE BEGIN Header_mbus485TaskFunc */
-
-void main_SwReset(void)
-{
-	//NVIC_GenerateSystemReset();
-	NVIC_SystemReset();
-}
 
 /**
 * @brief Function implementing the mbus485Task thread.
