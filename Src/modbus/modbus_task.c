@@ -50,6 +50,10 @@ extern uint8_t reset_requested_f;
 extern uint8_t reset_cmd_send_f;
 extern uint8_t	mb_slaveAddress;
 
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+extern uint8_t p_test_enabled;
+#endif
+
 extern int MB_isCRC_OK(uint8_t *buf, uint32_t len);
 /* Private function prototypes -----------------------------------------------*/
 
@@ -187,6 +191,20 @@ void MB_TaskFunction(void)
 		kprintf(PORT_DEBUG, "RX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
 			mbBufRx.buf[0], mbBufRx.buf[1], mbBufRx.buf[2], mbBufRx.buf[3], mbBufRx.buf[4]);
 
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+		if(p_test_enabled)
+		{
+			int i;
+
+			osDelay(100);
+			for(i=0; i<mbBufRx.wp; i++)  mbBufTx.buf[i] = mbBufRx.buf[i];
+
+			mbBufTx.wp = mbBufRx.wp;
+			MB_writeRespPacket(mbBufTx.wp);
+
+		}
+		else
+#endif
 		// put packet to req_q
 		result = MBQ_putReqQ(mbBufRx.wp, mbBufRx.buf);
 

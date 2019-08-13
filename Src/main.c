@@ -202,6 +202,10 @@ extern int8_t MB_handlePacket(void);
 extern int8_t NVM_setMotorRunCount(uint32_t run_count);
 extern int8_t COMM_sendMotorType(void);
 
+// opt485_task.c
+extern void OPT_init(void);
+extern void OPT_TaskFunction(void);
+
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
 //extern void kputs2(const char *pStr);
@@ -961,7 +965,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -1312,9 +1316,10 @@ int8_t mainHandlerState(void)
 	switch(sct_state)
 	{
 	case MAIN_IDLE_STATE:
-		if(ERR_isErrorState()) sct_state = MAIN_ERROR_STATE;
-		else if(DSP_status_read_flag && reset_cmd_send_f==0) sct_state = MAIN_DSP_STATE;
-		else if(user_io_handle_f) sct_state = MAIN_EXTIO_STATE;
+		//if(ERR_isErrorState()) sct_state = MAIN_ERROR_STATE;
+		//else
+		if(DSP_status_read_flag && reset_cmd_send_f==0) sct_state = MAIN_DSP_STATE;
+		else if(user_io_handle_f && ERR_isErrorState()==0) sct_state = MAIN_EXTIO_STATE;
 		else
 		{
 			event_cnt++;
@@ -1324,19 +1329,22 @@ int8_t mainHandlerState(void)
 		break;
 
 	case MAIN_DSP_STATE:
-		  HDLR_handleDspError();
+		// read DSP error flag and status info
+		HDLR_handleDspError();
 
-		  HDLR_readDspStatus();
+		HDLR_readDspStatus();
 
-		  DSP_status_read_flag = 0; // clear flag
+		DSP_status_read_flag = 0; // clear flag
 
-		  if(ERR_isErrorState())
-			  sct_state = MAIN_ERROR_STATE;
-		  else
-			  sct_state = MAIN_IDLE_STATE;
+//		if(ERR_isErrorState())
+//		  sct_state = MAIN_ERROR_STATE;
+//		else
+		  sct_state = MAIN_IDLE_STATE;
 		break;
 
 	case MAIN_EXTIO_STATE:
+		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; break;}
+
 		ctrl_in = table_getCtrllIn();
 		switch(ctrl_in)
 		{
@@ -1358,9 +1366,9 @@ int8_t mainHandlerState(void)
 			break;
 		}
 		user_io_handle_f = 0;
-		if(ERR_isErrorState())
-			 sct_state = MAIN_ERROR_STATE;
-		else
+//		if(ERR_isErrorState())
+//			 sct_state = MAIN_ERROR_STATE;
+//		else
 			 sct_state = MAIN_IDLE_STATE;
 		break;
 
@@ -1569,11 +1577,14 @@ void opt485TaskFunc(void const * argument)
   while(main_handler_f == 0) osDelay(5);
 
   osDelay(300);
+
+  OPT_init();
+
   kputs(PORT_DEBUG, "opt485Task started\r\n");
   /* Infinite loop */
   for(;;)
   {
-	  //rs485TaskFunction();
+	  OPT_TaskFunction();
 
 	  rs485_cnt++;
 

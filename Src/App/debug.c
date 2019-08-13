@@ -235,6 +235,10 @@ extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 extern uint32_t table_calcCRC(void);
 
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+extern uint8_t p_test_enabled;
+#endif
+
 #ifdef SUPPORT_UNIT_TEST
 // Unit test function
 //nvm_queue test
@@ -863,7 +867,17 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_verifyCRC(crc32_calc);
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
     }
-    else if(test_case == 'E') // show table_data and table_nvm to compare
+    else if(test_case == 'E') // show error data
+    {
+    	int i, idx[5] = {err_date_0_type, err_date_1_type, err_date_2_type, err_date_3_type, err_date_4_type};
+
+    	for(i=0; i<5; i++)
+    	{
+    		kprintf(dport, "\r\n err=%d, date=%d, code=%d, status=%d current=%d, freq=%d", \
+    				i, table_data[idx[i]], table_data[idx[i]+1], table_data[idx[i]+2], table_data[idx[i]+3], table_data[idx[i]+4]);
+    	}
+    }
+    else if(test_case == 'F') // show table_data and table_nvm to compare
     {
     	int i;
 
@@ -872,13 +886,13 @@ STATIC int test_ser(uint8_t dport)
     		kprintf(dport, "\r\n %d, table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
     	}
     }
-    else if(test_case == 'F') // show status info
+    else if(test_case == 'S') // show status info
     {
     	int i;
 
     	for(i=run_status1_type; i<PARAM_TABLE_SIZE; i++)
     	{
-    		kprintf(dport, "\r\n %d, status value table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
+    		kprintf(dport, "\r\n %d, status value table_data=%d", i, table_data[i]);
     	}
     }
     else if(test_case == 'G') // test DOUT
@@ -891,6 +905,14 @@ STATIC int test_ser(uint8_t dport)
     	mdout_value[index] = onoff;
     	kprintf(dport, "\r\n set Dout index=%d, value=%d", index, onoff);
     }
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+    else if(test_case == 'P') // Production test start
+    {
+    	p_test_enabled=1;
+
+    	kprintf(dport, "\r\n production test start");
+    }
+#endif
 #if 0
     else if(test_case == 'C')
     {

@@ -33,9 +33,12 @@
 #define MODBUS_ADDR_MAP_ERR		0xFFFF
 #define MODBUS_COUNT_ERR		0xFFFF
 
+// special purpose parameter for PC application
 #define MB_CTRL_RESET_ADDR			(40090)
+#define MB_CTRL_WR_FLAG_ADDR		(40092)
 #define MB_CTRL_RUN_STOP_ADDR		(40095)
 
+// normal parameter
 #define MB_DRIVER_START_ADDR		(40100)
 #define MB_DRIVER_END_ADDR			(40124)
 

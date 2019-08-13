@@ -63,6 +63,10 @@ extern osTimerId NfcAppTimerHandle;
 extern uint16_t mb_downcounter;
 extern void MB_processTimerExpired(void);
 extern void MB_readByte(uint8_t rcv_char);
+
+extern uint16_t opt_downcounter;
+extern void OPT_processTimerExpired(void);
+extern void OPT_readByte(uint8_t rcv_char);
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -70,6 +74,7 @@ extern DMA_HandleTypeDef hdma_adc1;
 extern RTC_HandleTypeDef hrtc;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim7;
+extern TIM_HandleTypeDef htim10;
 extern DMA_HandleTypeDef hdma_usart1_tx;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
@@ -235,6 +240,25 @@ void EXTI9_5_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM1 update interrupt and TIM10 global interrupt.
+  */
+void TIM1_UP_TIM10_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 0 */
+  if(__HAL_TIM_GET_FLAG(&htim10, TIM_FLAG_UPDATE) != RESET && __HAL_TIM_GET_IT_SOURCE(&htim10, TIM_IT_UPDATE) !=RESET)
+  {
+	  __HAL_TIM_CLEAR_IT(&htim10, TIM_IT_UPDATE);
+	  if (!--opt_downcounter)
+		  OPT_processTimerExpired();
+  }
+  /* USER CODE END TIM1_UP_TIM10_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim10);
+  /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 1 */
+
+  /* USER CODE END TIM1_UP_TIM10_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
@@ -272,7 +296,13 @@ void USART1_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
-
+	if ((__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE) != RESET) && (__HAL_UART_GET_IT_SOURCE(&huart2, UART_IT_RXNE) != RESET))
+	{
+		OPT_readByte((uint8_t)(huart2.Instance->DR));
+		__HAL_UART_CLEAR_PEFLAG(&huart2);
+		//InputQueue(&comm485_in_q, (uint8_t)(huart3.Instance->DR));
+		return;
+	}
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */

@@ -74,7 +74,6 @@ int8_t HDLR_handleDspError(void)
 		else
 		{
 			// request DSP error info
-
 			status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
 			if(status == COMM_SUCCESS)
 			{
