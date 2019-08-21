@@ -29,8 +29,8 @@ STATIC DIN_PIN_NUM_t m_din = {
 
 uint8_t mdin_value[EXT_DIN_COUNT]; // actual DI pin value
 COMM_CMD_t test_cmd=0;
-STATIC uint8_t prev_emergency=0, prev_trip=0, prev_run=0, prev_dir=0, prev_step=0;
-STATIC uint8_t step_cmd=0;
+uint8_t prev_emergency=0, prev_trip=0, prev_run=0, prev_dir=0, prev_step=0;
+uint8_t step_cmd=0;
 
 uint8_t mdout_value[EXT_DOUT_COUNT];
 
@@ -52,6 +52,12 @@ extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 //extern int8_t COMM_setAnalogFreq(int32_t freq, uint16_t *buf);
 
 extern void TM_setStartRunTime(void);
+
+void EXT_printDIConfig(void)
+{
+	kprintf(PORT_DEBUG, "Din config run=%d, dir=%d, trip=%d, emerg=%d\r\n", m_din.run_pin, m_din.dir_pin, m_din.trip_pin, m_din.emergency_pin);
+	kprintf(PORT_DEBUG, "Din config bit_L=%d, bit_M=%d, bit_H=%d\r\n", m_din.bit_L, m_din.bit_M, m_din.bit_H);
+}
 
 int EXT_DI_isMultiStepValid(void)
 {
@@ -213,20 +219,20 @@ int8_t EXI_DI_handleDin(void)
 			{
 				// send STOP cmd
 				test_cmd = SPICMD_CTRL_STOP;
-				kprintf(PORT_DEBUG, "send SPICMD_CTRL_STOP\r\n");
+				kprintf(PORT_DEBUG, "send SPICMD_CTRL_STOP run_stop=%d\r\n", state_run_stop);
 #ifndef SUPPORT_UNIT_TEST
 				// send stop to DSP
 				status = COMM_sendMessage(test_cmd, dummy);
 				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
 				else
 #endif
-					prev_run = 0;
+					prev_run = mdin_value[m_din.run_pin];
 			}
 			else if(mdin_value[m_din.run_pin] == 1 && prev_run == 0 && state_run_stop == CMD_STOP)
 			{
 				// send run cmd
 				test_cmd = SPICMD_CTRL_RUN;
-				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN\r\n");
+				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN run_stop=%d\r\n", state_run_stop);
 #ifndef SUPPORT_UNIT_TEST
 				// send run to DSP
 				status = COMM_sendMessage(test_cmd, dummy);
@@ -235,11 +241,11 @@ int8_t EXI_DI_handleDin(void)
 #endif
 				{
 					TM_setStartRunTime(); // set Run start time, count
-					prev_run = 1;
+					prev_run = mdin_value[m_din.run_pin];
 				}
 			}
 
-			prev_run = mdin_value[m_din.run_pin];
+			//prev_run = mdin_value[m_din.run_pin];
 		}
 
 		// handle direction
@@ -291,8 +297,9 @@ int8_t EXI_DI_handleDin(void)
 			{
 				test_cmd = SPICMD_PARAM_W;
 #ifndef SUPPORT_UNIT_TEST
-				freq_step = table_getValue(multi_Din_0_type+step);
+				freq_step = table_getValue(multi_val_0_type+step);
 				status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
+				kprintf(PORT_DEBUG, "send multistep=%d, freq=%d  \r\n", step, freq_step);
 				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
 				else
 #endif

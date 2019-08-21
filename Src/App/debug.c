@@ -183,6 +183,11 @@ extern int32_t i2c_wr_error;
 
 extern int32_t isMonitoring;
 extern int16_t state_run_stop;
+extern int16_t state_direction;
+extern int16_t st_overload;
+extern int16_t st_brake;
+extern uint8_t prev_run;
+extern uint8_t step_cmd;
 
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
@@ -221,6 +226,7 @@ extern uint8_t watchdog_f;
 
 //extern void set_AO_duty(uint8_t bool_use, uint32_t in);
 //extern void set_DO_duty(uint8_t bool_use, uint8_t in);
+extern void EXT_printDIConfig(void);
 extern uint16_t EXT_AI_readADC(void);
 extern void MB_UART_init(uint32_t baudrate);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
@@ -550,13 +556,16 @@ STATIC int write_nv_ser(uint8_t dport)
 
 STATIC int din_ser(uint8_t dport)
 {
+	int i;
+
 	if(arg_c != 1)
 	{
 		kprintf(dport, "\r\nInvalid number of parameters");
 		return -1;
 	}
 
-	UTIL_readDin();
+	for(i=0; i<20; i++) {UTIL_readDin(); osDelay(10);}
+
 	kprintf(dport, "\r\n set Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
 
 	return 0;
@@ -594,9 +603,6 @@ dout_err:
 
 STATIC int ain_ser(uint8_t dport)
 {
-	int i;
-	//uint16_t ain_val[EXT_AIN_SAMPLE_CNT], ain_sum;
-
 	if(arg_c != 1)
 	{
 		kprintf(dport, "\r\nInvalid number of parameters");
@@ -777,7 +783,7 @@ STATIC int test_ser(uint8_t dport)
     else if(test_case == 7)
     {
 #if 1
-    	// for test motor run time
+    	// for test motor run time, set dummy status value from DSP status
     	test_run_stop_f = (int16_t)atoi(arg_v[2]);
     	kprintf(dport, "\r\n set test run_state_f = %d", test_run_stop_f);
 #else
@@ -850,22 +856,50 @@ STATIC int test_ser(uint8_t dport)
 
 		kprintf(dport, "\r\n set LED %d", arg1);
     }
-    else if(test_case == 'C') // temp test only
-    {
-//    	idx = 0;
-//    	value = 300;
-//    	status = NVM_writeParam((PARAM_IDX_t)idx, (int32_t)300);
-//    	kprintf(dport, "\r\n NVM_writeParam idx=%d, value=%d status=%d", idx, value, status);
-//    	status = NVM_setCRC();
-//    	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
-    }
-    else if(test_case == 'D')
+    else if(test_case == 'C')
     {
     	uint32_t crc32_calc;
 
     	crc32_calc = table_calcCRC();
     	status = NVM_verifyCRC(crc32_calc);
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
+    }
+    else if(test_case == 'D')
+    {
+    	uint8_t t_status;
+    	uint8_t err_flag=0;
+    	// setup DI test,
+    	// DI0 : run/stop
+		t_status = table_runFunc(multi_Din_0_type, (int32_t)DIN_run, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+    	// DI1 : Freq_low
+    	t_status = table_runFunc(multi_Din_1_type, (int32_t)DIN_freq_low, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+
+    	// DI2 : Freq_mid
+    	t_status = table_runFunc(multi_Din_2_type, (int32_t)DIN_freq_mid, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+
+    	// multi freq value setting: 20, 30, 40, 60Hz
+    	t_status = table_runFunc(multi_val_0_type, (int32_t)200, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+
+    	t_status = table_runFunc(multi_val_1_type, (int32_t)300, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+
+    	t_status = table_runFunc(multi_val_2_type, (int32_t)400, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+
+    	t_status = table_runFunc(multi_val_3_type, (int32_t)600, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+
+    	// set ctrl_in as DI control
+    	status = table_runFunc(ctrl_in_type, (int32_t)CTRL_IN_Digital, REQ_FROM_MODBUS);
+    	if(t_status == 0) err_flag++;
+
+
+    	kprintf(dport, "\r\n setup DIN control  err=%d\r\n", err_flag);
+    	EXT_printDIConfig();
     }
     else if(test_case == 'E') // show error data
     {
@@ -886,6 +920,13 @@ STATIC int test_ser(uint8_t dport)
     		kprintf(dport, "\r\n %d, table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
     	}
     }
+    else if(test_case == 'G')
+    {
+
+    	kprintf(dport, "\r\n Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
+    	kprintf(dport, "\r\n prev_run=%d, run_stop=%d, step=%d", prev_run, state_run_stop, step_cmd);
+
+    }
     else if(test_case == 'S') // show status info
     {
     	int i;
@@ -894,6 +935,9 @@ STATIC int test_ser(uint8_t dport)
     	{
     		kprintf(dport, "\r\n %d, status value table_data=%d", i, table_data[i]);
     	}
+
+		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
+    	kprintf(dport, "\r\n status oveload=%d, brake=%d", st_overload, st_brake);
     }
     else if(test_case == 'G') // test DOUT
     {
