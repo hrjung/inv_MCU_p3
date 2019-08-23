@@ -687,6 +687,43 @@ STATIC int uio_enable_ser(uint8_t dport)
 }
 #endif
 
+void test_DinConfig(void)
+{
+	int8_t t_status;
+	uint8_t err_flag=0;
+
+	// setup DI test,
+	// DI0 : run/stop
+	t_status = table_runFunc(multi_Din_0_type, (int32_t)DIN_run, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+	// DI1 : Freq_low
+	t_status = table_runFunc(multi_Din_1_type, (int32_t)DIN_freq_low, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+
+	// DI2 : Freq_mid
+	t_status = table_runFunc(multi_Din_2_type, (int32_t)DIN_freq_mid, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+
+	// multi freq value setting: 20, 30, 40, 60Hz
+	t_status = table_runFunc(multi_val_0_type, (int32_t)200, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+
+	t_status = table_runFunc(multi_val_1_type, (int32_t)300, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+
+	t_status = table_runFunc(multi_val_2_type, (int32_t)400, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+
+	t_status = table_runFunc(multi_val_3_type, (int32_t)600, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+
+	// set ctrl_in as DI control
+	t_status = table_runFunc(ctrl_in_type, (int32_t)CTRL_IN_Digital, REQ_FROM_MODBUS);
+	if(t_status == 0) err_flag++;
+
+	kprintf(PORT_DEBUG, "\r\n setup DIN control  err=%d\r\n", err_flag);
+}
+
 STATIC int test_ser(uint8_t dport)
 {
 	int idx;
@@ -866,39 +903,7 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 'D')
     {
-    	uint8_t t_status;
-    	uint8_t err_flag=0;
-    	// setup DI test,
-    	// DI0 : run/stop
-		t_status = table_runFunc(multi_Din_0_type, (int32_t)DIN_run, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-    	// DI1 : Freq_low
-    	t_status = table_runFunc(multi_Din_1_type, (int32_t)DIN_freq_low, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-
-    	// DI2 : Freq_mid
-    	t_status = table_runFunc(multi_Din_2_type, (int32_t)DIN_freq_mid, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-
-    	// multi freq value setting: 20, 30, 40, 60Hz
-    	t_status = table_runFunc(multi_val_0_type, (int32_t)200, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-
-    	t_status = table_runFunc(multi_val_1_type, (int32_t)300, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-
-    	t_status = table_runFunc(multi_val_2_type, (int32_t)400, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-
-    	t_status = table_runFunc(multi_val_3_type, (int32_t)600, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-
-    	// set ctrl_in as DI control
-    	status = table_runFunc(ctrl_in_type, (int32_t)CTRL_IN_Digital, REQ_FROM_MODBUS);
-    	if(t_status == 0) err_flag++;
-
-
-    	kprintf(dport, "\r\n setup DIN control  err=%d\r\n", err_flag);
+    	test_DinConfig();
     	EXT_printDIConfig();
     }
     else if(test_case == 'E') // show error data

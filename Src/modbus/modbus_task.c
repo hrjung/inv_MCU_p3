@@ -122,10 +122,11 @@ void MB_init(void)
 	RS485_TX_DISABLE();
 }
 
+// read byte from UART
 void MB_readByte(uint8_t rcv_char)
 {
 
-	if(mb_start_flag == 0)
+	if(mb_start_flag == 0) // first byte
 	{
 		mbBufRx.wp = 0;
 		mbBufRx.buf[mbBufRx.wp++] = rcv_char;
@@ -162,17 +163,17 @@ void MB_processTimerExpired(void)
 	if(mb_start_flag == 1)
 	{
 		mb_start_flag = 0;
-		mb_frame_received = 1;
+		mb_frame_received = 1; // modbus frame completed
 	}
 	MB_disableTimer();
 }
 
 int MB_isValidRecvPacket(void)
 {
-	if(mbBufRx.buf[0] != mb_slaveAddress) return 0;
+	if(mbBufRx.buf[0] != mb_slaveAddress) return 0; // slave address check
 
 	// CRC error
-	if(!MB_isCRC_OK(mbBufRx.buf, mbBufRx.wp)) return 0;
+	if(!MB_isCRC_OK(mbBufRx.buf, mbBufRx.wp)) return 0; // CRC check
 
 	return 1;
 }
@@ -197,7 +198,7 @@ void MB_TaskFunction(void)
 			int i;
 
 			osDelay(100);
-			for(i=0; i<mbBufRx.wp; i++)  mbBufTx.buf[i] = mbBufRx.buf[i];
+			for(i=0; i<mbBufRx.wp; i++)  mbBufTx.buf[i] = mbBufRx.buf[i]; // copy Rx data to Tx
 
 			mbBufTx.wp = mbBufRx.wp;
 			MB_writeRespPacket(mbBufTx.wp);
@@ -211,7 +212,8 @@ void MB_TaskFunction(void)
 		mb_frame_received=0;
 	}
 
-	if(MBQ_isEmptyRespQ() == 0) // not empty
+	// response packet ready
+	if(MBQ_isEmptyRespQ() == 0)
 	{
 		mbBufTx.wp = MBQ_getRespQ(mbBufTx.buf);
 

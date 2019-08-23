@@ -323,7 +323,7 @@ int8_t COMM_convertValue(PARAM_IDX_t table_idx, uint16_t *buf)
 	return ret_value;
 }
 
-// return receive value
+// return receive value as int32
 int32_t COMM_parseValue(int16_t dsp_index, uint16_t *data, int8_t *err)
 {
 	uint16_t ratio;
@@ -429,7 +429,7 @@ int8_t COMM_parseMessage(void)
 //		status1 = (int32_t)((state_direction<<8) | state_run_stop); // only use lower 16 bit for modbus
 //		status2 = (int32_t)((st_brake<<8) | st_overload);
 #if 0
-		if(test_run_stop_f)
+		if(test_run_stop_f) // set dummy status value for test
 		{
 			status1 = 1;//set run state for test
 			table_setStatusValue(run_status1_type, (int32_t)status1, REQ_FROM_DSP);

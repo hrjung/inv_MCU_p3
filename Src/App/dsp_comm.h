@@ -45,31 +45,6 @@ typedef enum
 
 } COMM_CMD_t;
 
-#if 0
-typedef enum {
-	CTRL_RUN_INDEX =0,
-	CTRL_STOP_INDEX,
-	CTRL_DIR_F_INDEX,
-	CTRL_DIR_R_INDEX,
-	PARAM_W_INDEX,
-	PARAM_R_INDEX,
-	REQ_ST_INDEX,
-	REQ_ERR_INDEX,
-
-	RESP_ACK_INDEX,
-	RESP_ST_INDEX,
-	RESP_ERR_INDEX,
-	RESP_PARAM_INDEX,
-
-} COMM_CMD_INDEX_t;
-
-typedef struct {
-	int16_t		index;
-	uint16_t	cmd;
-	uint16_t	len;
-} DSP_COMM_t ;
-#endif
-
 extern int8_t COMM_convertValue(PARAM_IDX_t table_idx, uint16_t *buf);
 extern int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data);
 

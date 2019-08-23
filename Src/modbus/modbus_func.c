@@ -644,8 +644,10 @@ int8_t MB_handlePacket(void)
 //	kprintf(PORT_DEBUG, "main TX: 0x%x 0x%x 0x%x 0x%x 0x%x \r\n",
 //		modbusTx.buf[0], modbusTx.buf[1], modbusTx.buf[2], modbusTx.buf[3], modbusTx.buf[4]);
 
+	// wait response Q empty
 	while(MBQ_isEmptyRespQ()==0) osDelay(1);
 
+	//send response to modbus task
 	MBQ_putRespQ(modbusTx.wp, modbusTx.buf);
 
 

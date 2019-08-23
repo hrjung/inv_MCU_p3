@@ -194,6 +194,8 @@ extern LED_status_t LED_state[]; // 3 color LED state
 extern uint16_t adc_value;
 extern uint8_t reset_enabled_f;
 
+extern uint16_t jig_test_enabled_f;
+
 extern void gen_crc_table(void);
 extern void MB_init(void);
 extern void MB_TaskFunction(void);
@@ -205,6 +207,11 @@ extern int8_t COMM_sendMotorType(void);
 // opt485_task.c
 extern void OPT_init(void);
 extern void OPT_TaskFunction(void);
+
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+extern int JIG_isTestEnabled(void);
+extern void JIG_test_state(void);
+#endif
 
 extern void debugTaskFunc(void const * argument);
 //extern void rs485TaskFunction(void);
@@ -1297,7 +1304,7 @@ int8_t main_SwReset(void)
 
 	if(status)
 	{
-		osDelay(1000);
+		osDelay(1000); // wait DSP reset
 		HAL_NVIC_SystemReset();
 	}
 
@@ -1474,6 +1481,19 @@ void mainHandlerTaskFunc(void const * argument)
 
   osDelay(10);
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
+
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+  jig_test_enabled_f = JIG_isTestEnabled();
+  if(jig_test_enabled_f)
+  {
+	  while(1)
+	  {
+		  JIG_test_state();
+		  HAL_IWDG_Refresh(&hiwdg);
+		  osDelay(10);
+	  }
+  }
+#endif
 
 //	i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
 //	kprintf(PORT_DEBUG, "read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);

@@ -489,8 +489,8 @@ int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 
 	if(index == run_status1_type)
 	{
-		if((value&0x0F) <= STATE_STOP)	state_run_stop = 0;	// stop
-		else	state_run_stop = 1;		// RUN
+		if((value&0x0F) <= STATE_STOP)	state_run_stop = CMD_STOP;	// stop
+		else	state_run_stop = CMD_RUN;		// RUN
 		//state_run_stop = (value>>8)&0x01;
 
 		state_direction = (value>>8)&0x01; 	// forward/backward

@@ -40,8 +40,6 @@ void ERR_setErrorState(TRIP_REASON_t err_code)
 	{
 		UTIL_setMTDpin(1); // notify to DSP
 	}
-
-
 	//kprintf(PORT_DEBUG, "MCU Error=%d\r\n", err_state);
 }
 

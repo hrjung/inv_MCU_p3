@@ -53,9 +53,12 @@ const uint8_t mbus_packet[5][18] = {
 };
 
 uint16_t mbus_packet_len[5] = {8, 8, 8, 8, 15};
-uint8_t t_result[5] = {0,};
+uint8_t t_result[5] = {0,}; // 485 loopback test result
 
-uint8_t p_test_enabled=0;
+uint8_t p_test_enabled=0; // flag for start 485 loopback test in JIG test
+uint8_t p_test_ended=0; // flag for finish 485 loopback test in JIG test
+
+extern uint8_t jig_test_result[];
 #endif
 
 MODBUS_SLAVE_QUEUE optBufRx, optBufTx;
@@ -108,7 +111,7 @@ void OPT_init(void)
 
 	__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE); // rs485
 
-	// enable RX
+	// default enable RX
 	OPT485_TX_DISABLE();
 }
 
@@ -142,7 +145,6 @@ void OPT_writeRespPacket(int len)
 
 	OPT485_TX_ENABLE(); osDelay(1);
 	osSemaphoreWait(rs485SemaphoreIdHandle, osWaitForever);
-//	memcpy(testMsgBuf, pStr, num);
 	HAL_UART_Transmit(&huart2, (uint8_t *)optBufTx.buf, len, 1000);
 	osSemaphoreRelease(rs485SemaphoreIdHandle);
 	OPT485_TX_DISABLE();
@@ -156,7 +158,7 @@ void OPT_processTimerExpired(void)
 		opt_start_flag = 0;
 		opt_frame_received = 1;
 
-		HAL_GPIO_TogglePin(TH_MCU_1_GPIO_Port, TH_MCU_1_Pin);
+		//HAL_GPIO_TogglePin(TH_MCU_1_GPIO_Port, TH_MCU_1_Pin); // toggle test bit
 	}
 	OPT_disableTimer();
 }
@@ -198,6 +200,21 @@ uint8_t OPT_verifyPacket(int pk_index)
 	return 1;
 }
 
+uint8_t OPT_is485TestStarted(void)
+{
+	return p_test_enabled;
+}
+
+uint8_t OPT_is485TestEnded(void)
+{
+	return p_test_ended;
+}
+
+void OPT_start485Test(void)
+{
+	p_test_enabled = 1;
+}
+
 #endif
 
 
@@ -206,8 +223,9 @@ void OPT_TaskFunction(void)
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 	static p_test_state_p p_state=P_TEST_SEND_PACKET;
 	static int pkt_idx=0;
+	int res=0;
 
-	if(p_test_enabled)
+	if(p_test_enabled && p_test_ended == 0) // test in progress
 	{
 		switch(p_state)
 		{
@@ -246,15 +264,18 @@ void OPT_TaskFunction(void)
 			kprintf(PORT_DEBUG, " test result %d, %d, %d, %d, %d \r\n", \
 					t_result[0], t_result[1], t_result[2], t_result[3], t_result[4]);
 
+			res = t_result[0]+t_result[1]+t_result[2]+t_result[3]+t_result[4];
+			if(res != 5) jig_test_result[3] = 1; // set error
 			// move to next test
 			p_state = P_TEST_NEXT;
 			break;
 
 		case P_TEST_NEXT:
+			p_test_ended = 1;
+			p_test_enabled = 0;
 			osDelay(100);
 			break;
 		}
-
 	}
 	else
 #endif
