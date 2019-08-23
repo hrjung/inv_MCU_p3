@@ -24,6 +24,10 @@
 
 #define SPI_TEST_CMD_TEST_MODE  0
 #define SPI_TEST_CMD_RESET      1
+#define SPI_TEST_CMD_SPI_TEST	2
+#define SPI_TEST_CMD_DTM_READ	3
+#define SPI_TEST_CMD_MTD_READ	4
+
 
 typedef enum
 {

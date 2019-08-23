@@ -404,7 +404,6 @@ int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t option)
 int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t status=1;
-	int index;
 
 	status = table_setValue(idx, value, option);
 	if(status == 0) return 0;
