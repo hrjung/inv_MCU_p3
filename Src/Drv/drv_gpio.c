@@ -165,6 +165,11 @@ void UTIL_handleLED(void)
 		HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
 }
 
+uint8_t UTIL_readDTMpin(void)
+{
+	return (dtm_value[1] << 1) | dtm_value[0];
+}
+
 uint8_t UTIL_isDspError(void)
 {
 	uint8_t value=0;

@@ -1232,7 +1232,7 @@ void NfcNvmTaskFunc(void const * argument)
 				  UTIL_setLED(LED_COLOR_B, 1);
 			  }
 			  else
-				  UTIL_setLED(LED_COLOR_G, 1);
+				  UTIL_setLED(LED_COLOR_G, 0);
 
 		  }
 	  }
@@ -1498,7 +1498,7 @@ void mainHandlerTaskFunc(void const * argument)
 //	i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
 //	kprintf(PORT_DEBUG, "read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);
 
-  UTIL_setLED(LED_COLOR_G, 1);
+  UTIL_setLED(LED_COLOR_G, 0);
 #ifndef SUPPORT_UNIT_TEST
   status = table_initNVM();
   if(status == 0)

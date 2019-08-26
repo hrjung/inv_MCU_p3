@@ -354,6 +354,16 @@ int32_t COMM_parseValue(int16_t dsp_index, uint16_t *data, int8_t *err)
 }
 
 
+int8_t COMM_getNakFlag(void)
+{
+	return NAK_flag;
+}
+
+uint32_t COMM_getReadValue(void)
+{
+	return read_value;
+}
+
 int8_t COMM_parseMessage(void)
 {
 #ifdef SUPPORT_NFC_OLD
@@ -387,7 +397,7 @@ int8_t COMM_parseMessage(void)
 	{
 	case SPICMD_RESP_ACK:
 	{
-		if(recvMsg[5+0]!=SPI_ACK) NAK_flag = 1;
+		if(recvMsg[5+0] != SPI_ACK) NAK_flag = 1;
 		comm_state = COMM_SUCCESS;
 
 		//kprintf(PORT_DEBUG, "SPICMD_RESP_ACK NAK_flag=%d\r\n", NAK_flag);
@@ -576,9 +586,9 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 		break;
 	}
 
-	if(repeat_err)
+	if(repeat_err || NAK_flag)
 	{
-		kprintf(PORT_DEBUG, "ERR: COMM_sendCommand repeat error %d !!\r\n", repeat_err);
+		kprintf(PORT_DEBUG, "ERR: COMM_sendCommand repeat error %d or NAK=%d !!\r\n", repeat_err, NAK_flag);
 		//ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
 		return COMM_FAILED;
 	}

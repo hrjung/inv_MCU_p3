@@ -75,8 +75,12 @@ enum
 enum
 {
 	JIG_TEST_SUB_MTD_INIT,
-	JIG_TEST_SUB_DTM_TEST, // send start command, read DTM pin
-	JIG_TEST_SUB_MTD_TEST,  // set MTD pin
+	JIG_TEST_SUB_DTM0_TEST, // read DTM pin
+	JIG_TEST_SUB_DTM1_TEST,
+	JIG_TEST_SUB_DTM2_TEST,
+	JIG_TEST_SUB_DTM3_TEST,
+	JIG_TEST_SUB_MTD0_TEST,  // set MTD pin
+	JIG_TEST_SUB_MTD1_TEST,
 	JIG_TEST_SUB_MTD_END,
 };
 
@@ -120,6 +124,8 @@ extern void OPT_start485Test(void);
 
 extern uint16_t EXT_AI_readADC(void);
 
+extern uint32_t COM_getReadValue(void);
+extern uint8_t UTIL_readDTMpin(void);
 extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern uint8_t NVM_clearInit(void);
 
@@ -313,6 +319,10 @@ int JIG_SPI_state(void)
 {
 	int j_state = JIG_TEST_SPI_STATE;
 	static int sub_state = JIG_TEST_SUB_SPI_INIT;
+	uint16_t dsp_idx = value_dsp;
+	uint16_t test_cmd[3] = {0,0,0};
+	int32_t r_value=0;
+	int8_t status;
 
 	switch(sub_state)
 	{
@@ -324,21 +334,26 @@ int JIG_SPI_state(void)
 	case JIG_TEST_SUB_SPI_READ:
 		osDelay(300);
 		// parameter parameter command
-
-
-		// verify read data
-
+		test_cmd[0] = dsp_idx; // read command freq = 200
+		status = COMM_sendMessage(SPICMD_PARAM_R, test_cmd);
+		if(status)
+		{
+			// verify read data
+			r_value = COM_getReadValue();
+			if(r_value != (int32_t)200) jig_err = 1;
+		}
+		else
+			jig_err = 1;
 
 		sub_state = JIG_TEST_SUB_SPI_TEST;
 		break;
 
 	case JIG_TEST_SUB_SPI_TEST:
 		osDelay(300);
-
-		// send test command
-
+		// send test command : SPI_TEST_CMD_SPI_TEST, get ACK
+		status = COMM_sendTestCmd(SPI_TEST_CMD_SPI_TEST);
 		// if ack, pass
-
+		if(status == 0) jig_err = 1;
 
 		sub_state = JIG_TEST_SUB_SPI_END;
 		break;
@@ -357,32 +372,100 @@ int JIG_MTD_state(void)
 {
 	int j_state = JIG_TEST_MTD_DTM_STATE;
 	static int sub_state = JIG_TEST_SUB_MTD_INIT;
+	uint8_t dtm_val=0;
+	int8_t status;
 
 	switch(sub_state)
 	{
 	case JIG_TEST_SUB_MTD_INIT:
 		jig_err = 0;
-		sub_state = JIG_TEST_SUB_DTM_TEST;
+		sub_state = JIG_TEST_SUB_DTM0_TEST;
 		break;
 
-	case JIG_TEST_SUB_DTM_TEST:
+	case JIG_TEST_SUB_DTM0_TEST:
 		osDelay(300);
-		// parameter parameter command
-
+		// ask set DTM pin 0
+		status = COMM_sendTestCmd(SPI_TEST_CMD_DTM0_READ);
+		// if ack, pass
+		if(status == 0) jig_err = 1;
 
 		// verify read data
+		dtm_val = UTIL_readDTMpin();
+		if(dtm_val != 0) jig_err = 1;
 
-
-		sub_state = JIG_TEST_SUB_MTD_TEST;
+		sub_state = JIG_TEST_SUB_DTM1_TEST;
 		break;
 
-	case JIG_TEST_SUB_MTD_TEST:
+	case JIG_TEST_SUB_DTM1_TEST:
+		osDelay(300);
+		// ask set DTM pin 0
+		status = COMM_sendTestCmd(SPI_TEST_CMD_DTM1_READ);
+		// if ack, pass
+		if(status == 0) jig_err = 1;
+
+		// verify read data
+		dtm_val = UTIL_readDTMpin();
+		if(dtm_val != 1) jig_err = 1;
+
+		sub_state = JIG_TEST_SUB_DTM2_TEST;
+		break;
+
+	case JIG_TEST_SUB_DTM2_TEST:
+		osDelay(300);
+		// ask set DTM pin 0
+		status = COMM_sendTestCmd(SPI_TEST_CMD_DTM2_READ);
+		// if ack, pass
+		if(status == 0) jig_err = 1;
+
+		// verify read data
+		dtm_val = UTIL_readDTMpin();
+		if(dtm_val != 2) jig_err = 1;
+
+		sub_state = JIG_TEST_SUB_DTM3_TEST;
+		break;
+
+	case JIG_TEST_SUB_DTM3_TEST:
+		osDelay(300);
+		// ask set DTM pin 0
+		status = COMM_sendTestCmd(SPI_TEST_CMD_DTM3_READ);
+		// if ack, pass
+		if(status == 0) jig_err = 1;
+
+		// verify read data
+		dtm_val = UTIL_readDTMpin();
+		if(dtm_val != 3) jig_err = 1;
+
+		sub_state = JIG_TEST_SUB_MTD0_TEST;
+		break;
+
+	case JIG_TEST_SUB_MTD0_TEST:
 		osDelay(300);
 
+		// set MTD pin 0
+		UTIL_setMTDpin(0);
 		// send test command
+		status = COMM_sendTestCmd(SPI_TEST_CMD_MTD_READ);
+		if(status == 0) jig_err = 1;
 
-		// if ack, pass
+		// verify read data as 00
+		dtm_val = UTIL_readDTMpin();
+		if(dtm_val != 0) jig_err = 1;
 
+		sub_state = JIG_TEST_SUB_MTD1_TEST;
+		break;
+
+	case JIG_TEST_SUB_MTD1_TEST:
+		osDelay(300);
+
+		// set MTD pin 1
+		UTIL_setMTDpin(1);
+		// send test command
+		status = COMM_sendTestCmd(SPI_TEST_CMD_MTD_READ);
+		if(status == 0) jig_err = 1;
+
+		// verify read data as 01
+		dtm_val = UTIL_readDTMpin();
+		if(dtm_val != 1) jig_err = 1;
 
 		sub_state = JIG_TEST_SUB_MTD_END;
 		break;
