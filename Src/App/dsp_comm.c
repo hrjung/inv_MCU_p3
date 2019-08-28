@@ -4,6 +4,8 @@
  *  Created on: 2019. 6. 11.
  *      Author: hrjung
  */
+#include "main.h"
+
 #include "includes.h"
 
 #include "proc_uart.h"
@@ -33,7 +35,11 @@ int16_t st_brake = 0;
 
 int16_t comm_err_cnt=0;
 
+RTC_TimeTypeDef sTime;
+extern RTC_HandleTypeDef hrtc;
+
 //extern int16_t test_run_stop_f;
+uint8_t time_cnt=0;
 
 extern int8_t NVM_isNfcMonitoring(void);
 
@@ -471,7 +477,11 @@ int8_t COMM_parseMessage(void)
 			NVM_clearNfcMonitoring();
 			UTIL_setLED(LED_COLOR_G, 1);
 		}
-		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST dc=%d, \r\n",(int32_t)(10.0*dc_voltage_index));
+#if 0 // for status log
+		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+		time_cnt = sTime.Seconds;
+		kprintf(PORT_DEBUG, "cnt=%d : SPICMD_RESP_ST freq=%d \r\n",time_cnt, (int32_t)(10.0*run_freq_index + 0.05));
+#endif
 
 #else
 		// TODO: update mailbox

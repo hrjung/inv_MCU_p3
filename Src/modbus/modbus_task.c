@@ -41,7 +41,7 @@ uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400, 115200};
 MODBUS_SLAVE_QUEUE mbBufRx, mbBufTx;
 
 /* Global variables ---------------------------------------------------------*/
-
+extern RTC_HandleTypeDef hrtc;
 extern UART_HandleTypeDef huart3;
 extern TIM_HandleTypeDef htim7;
 extern osSemaphoreId mbus485SemaphoreIdHandle;
@@ -49,6 +49,8 @@ extern osSemaphoreId mbus485SemaphoreIdHandle;
 extern uint8_t reset_requested_f;
 extern uint8_t reset_cmd_send_f;
 extern uint8_t	mb_slaveAddress;
+
+extern uint32_t time_cnt;
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 extern uint8_t p_test_enabled;
@@ -181,6 +183,8 @@ int MB_isValidRecvPacket(void)
 void MB_TaskFunction(void)
 {
 	int8_t result=0;
+	RTC_TimeTypeDef sTime;
+	uint8_t time_val;
 
 	// get data from 485
 	if(mb_frame_received)
@@ -189,8 +193,10 @@ void MB_TaskFunction(void)
 		// wrong slave address
 		if(MB_isValidRecvPacket() == 0) {mb_frame_received=0; return;}
 
-		kprintf(PORT_DEBUG, "RX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-			mbBufRx.buf[0], mbBufRx.buf[1], mbBufRx.buf[2], mbBufRx.buf[3], mbBufRx.buf[4]);
+		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+		time_val = sTime.Seconds;
+		kprintf(PORT_DEBUG, "cnt=%d RX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+			time_val, mbBufRx.buf[0], mbBufRx.buf[1], mbBufRx.buf[2], mbBufRx.buf[3], mbBufRx.buf[4]);
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 		if(p_test_enabled)
@@ -225,8 +231,8 @@ void MB_TaskFunction(void)
 			reset_enabled_f=1;
 		}
 
-		kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-				mbBufTx.buf[0], mbBufTx.buf[1], mbBufTx.buf[2], mbBufTx.buf[3], mbBufTx.buf[4]);
+//		kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+//				mbBufTx.buf[0], mbBufTx.buf[1], mbBufTx.buf[2], mbBufTx.buf[3], mbBufTx.buf[4]);
 	}
 
 }

@@ -411,6 +411,7 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0x0000FF00) >> 8);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x000000FF);
 		}
+		//kprintf(PORT_DEBUG, "s_read index=%d, value=%d, wp=%d \r\n", index, (uint16_t)value, modbusTx.wp);
 	}
 
 
