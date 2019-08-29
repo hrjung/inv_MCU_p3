@@ -932,6 +932,22 @@ STATIC int test_ser(uint8_t dport)
     	kprintf(dport, "\r\n prev_run=%d, run_stop=%d, step=%d", prev_run, state_run_stop, step_cmd);
 
     }
+    else if(test_case == 'R')
+    {
+    	int8_t status;
+    	uint16_t dummy[3] = {0,0,0};
+
+    	if(state_run_stop == CMD_RUN)
+    	{
+    		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
+    		kprintf(dport, "\r\n send SPICMD_CTRL_STOP");
+    	}
+    	else
+    	{
+    		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
+    		kprintf(dport, "\r\n send SPICMD_CTRL_RUN");
+    	}
+    }
     else if(test_case == 'S') // show status info
     {
     	int i;
