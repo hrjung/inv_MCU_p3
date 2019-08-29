@@ -1221,7 +1221,7 @@ void NfcNvmTaskFunc(void const * argument)
 		  osDelay(5);
 		  if(NVM_isNfcMonitoring())
 		  {
-
+			  UTIL_setLED(LED_COLOR_B, 0);
 		  }
 		  else
 		  {
@@ -1242,7 +1242,11 @@ void NfcNvmTaskFunc(void const * argument)
 		  osDelay(5);
 		  status = HDLR_restoreNVM();
 		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
+
+		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
+	  else
+		  UTIL_setLED(LED_COLOR_G, 0);
 
 	  // no tag state,
 	  //	handle NVM update request
@@ -1250,6 +1254,8 @@ void NfcNvmTaskFunc(void const * argument)
 	  {
 		  status = HDLR_updateParamNVM();
 		  if(status == 0) kputs(PORT_DEBUG, "HDLR_updateParamNVM ERROR\r\n");
+
+		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
 
 	  // time info update

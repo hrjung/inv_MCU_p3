@@ -475,7 +475,7 @@ int8_t COMM_parseMessage(void)
 				kprintf(PORT_DEBUG, "ERROR in update Status to EEPROM\r\n");
 
 			NVM_clearNfcMonitoring();
-			UTIL_setLED(LED_COLOR_G, 1);
+			UTIL_setLED(LED_COLOR_G, 0);
 		}
 #if 0 // for status log
 		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
