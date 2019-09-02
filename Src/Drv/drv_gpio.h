@@ -11,8 +11,8 @@
 
 #define DTM_DSP_TRIP_ERROR		3
 
-#define EXT_DIN_SAMPLE_CNT			16
-#define EXT_AIN_SAMPLE_CNT			16
+#define EXT_DIN_SAMPLE_CNT			10
+#define EXT_AIN_SAMPLE_CNT			10
 
 #define LED_COLOR_OFF	0
 #define LED_COLOR_R		1
