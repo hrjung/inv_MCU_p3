@@ -111,6 +111,13 @@ const char	*test_msg[] = {
 	0
 };
 
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+const char	*ptest_msg[] = {
+	"PTEST",
+	"Usage: PTEST ",
+	0
+};
+#endif
 
 #ifdef SUPPORT_UNIT_TEST
 const char	*utest_msg[] = {
@@ -134,6 +141,9 @@ STATIC int ain_ser(uint8_t dport);
 //STATIC int aout_ser(uint8_t dport);
 //STATIC int uio_enable_ser(uint8_t dport);
 STATIC int test_ser(uint8_t dport);
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+STATIC int ptest_ser(uint8_t dport);
+#endif
 #ifdef SUPPORT_UNIT_TEST
 STATIC int utest_ser(uint8_t dport);
 #endif
@@ -152,6 +162,9 @@ const COMMAND	Cmd_List[] =
 //	{ 1,  	"AOUT",			2,		aout_ser,			aout_msg	},
 //	{ 1,  	"UIOT",			2,		uio_enable_ser,		uio_test_msg},
 	{ 1,  	"TEST",			2,		test_ser,			test_msg	},
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+	{ 1,  	"PTEST",		2,		ptest_ser,			ptest_msg	},
+#endif
 #ifdef SUPPORT_UNIT_TEST	
 	{ 1,  	"UTEST",		1,		utest_ser,			utest_msg	},
 #endif	
@@ -1001,6 +1014,52 @@ STATIC int test_ser(uint8_t dport)
 
 	return 0;
 }
+
+#ifdef SUPPORT_PRODUCTION_TEST_MODE
+STATIC int ptest_ser(uint8_t dport)
+{
+	uint16_t test_cmd=0;
+	int8_t status;
+
+	if(arg_c > 3)
+	{
+		kprintf(dport, "\r\nInvalid number of parameters");
+		goto ptest_err;
+	}
+
+	test_cmd = atoi(arg_v[1]);
+
+	switch(test_cmd)
+	{
+	case 0:
+		status = COMM_sendTestCmd(SPI_TEST_DSP_TEST_START);
+		kprintf(dport, "\r\n send SPI_TEST_DSP_TEST_START");
+		break;
+
+	case 1:
+		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_OK);
+		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_OK");
+		break;
+
+	case 2:
+		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_NOK);
+		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_NOK");
+		break;
+
+	case 3:
+		status = COMM_sendTestCmd(SPI_TEST_DSP_MOTOR_RUN);
+		kprintf(dport, "\r\n send SPI_TEST_DSP_MOTOR_RUN");
+		break;
+	}
+
+	return 0;
+
+ptest_err:
+	kprintf(dport, "\r\n P_TEST error");
+
+	return 1;
+}
+#endif
 
 #ifdef SUPPORT_UNIT_TEST
 STATIC int utest_ser(uint8_t dport)

@@ -1529,6 +1529,9 @@ void mainHandlerTaskFunc(void const * argument)
 
   main_handler_f = 1;
 
+  //TODO : hrjung init modbus
+  //table_runFunc(ctrl_in_type, CTRL_IN_Modbus, REQ_FROM_NFC);
+
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
 
   /* Infinite loop */

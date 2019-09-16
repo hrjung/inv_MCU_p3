@@ -213,8 +213,8 @@ typedef enum{
 	CTRL_IN_NFC = 0,
 	CTRL_IN_Digital,
 	CTRL_IN_Analog_V,
+	CTRL_IN_keypad, // TODO : need to remove
 	CTRL_IN_Modbus,
-	CTRL_IN_keypad,
 	CTRL_IN_MAX
 } CTRL_IN_t;
 

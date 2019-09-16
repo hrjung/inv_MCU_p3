@@ -403,7 +403,7 @@ int8_t COMM_parseMessage(void)
 	{
 	case SPICMD_RESP_ACK:
 	{
-		if(recvMsg[5+0] != SPI_ACK) NAK_flag = 1;
+		if(recvMsg[5] != SPI_ACK) NAK_flag = 1;
 		comm_state = COMM_SUCCESS;
 
 		//kprintf(PORT_DEBUG, "SPICMD_RESP_ACK NAK_flag=%d\r\n", NAK_flag);
@@ -677,15 +677,15 @@ int8_t COMM_sendMotorType(void)
 	return status;
 }
 
-int8_t COMM_sendTestCmd(uint16_t cmd)
+int8_t COMM_sendTestCmd(uint16_t test_cmd)
 {
 	int8_t status;
 	uint16_t buf[3]={0,0,0};
 
-	buf[0] = cmd;
+	buf[0] = test_cmd;
 	buf[1] = 0, buf[2] = 0;
 	status = COMM_sendMessage(SPICMD_TEST_CMD, buf);
-	kprintf(PORT_DEBUG, "SPICMD_TEST_CMD: status=%d, cmd=%d \r\n", status, cmd);
+	kprintf(PORT_DEBUG, "SPICMD_TEST_CMD: status=%d, test_cmd=%d \r\n", status, test_cmd);
 
 	return status;
 }

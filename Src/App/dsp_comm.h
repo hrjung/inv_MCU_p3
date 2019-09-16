@@ -31,6 +31,14 @@
 #define SPI_TEST_CMD_DTM3_READ	6	// set DTM pin as 11
 #define SPI_TEST_CMD_MTD_READ	7
 
+// DSP test start cmd
+#define SPI_TEST_DSP_TEST_START	16
+// DSP duty test result notify
+#define SPI_TEST_DSP_RELAY_OK	17
+#define SPI_TEST_DSP_RELAY_NOK	18
+
+// DSP motor test start cmd
+#define SPI_TEST_DSP_MOTOR_RUN	32
 
 typedef enum
 {
