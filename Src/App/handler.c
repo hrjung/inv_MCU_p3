@@ -23,6 +23,7 @@
 #define RUN_STOP_FLAG_STOP		2
 
 int8_t mb_run_stop_f=0;
+int8_t mb_factory_mode_f=0; // flag for factory mode enabled/disabled
 
 int8_t err_read_flag=0;
 int8_t err_state_f=0;
@@ -55,6 +56,21 @@ void HDLR_clearRunStopFlagModbus(void)
 int8_t HDLR_readRunStopFlag(void)
 {
 	return mb_run_stop_f;
+}
+
+void HDLR_setFactoryModeFlagModbus(int8_t flag)
+{
+	mb_factory_mode_f = flag;
+}
+
+void HDLR_clearFactoryModeFlagModbus(void)
+{
+	mb_factory_mode_f = 0;
+}
+
+int8_t HDLR_isFactoryModeEnabled(void)
+{
+	return (mb_factory_mode_f == 1);
 }
 
 int8_t HDLR_handleDspError(void)

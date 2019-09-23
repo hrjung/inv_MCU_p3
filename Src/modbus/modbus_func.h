@@ -35,7 +35,7 @@
 
 // special purpose parameter for PC application
 #define MB_CTRL_RESET_ADDR			(40090)
-#define MB_CTRL_WR_FLAG_ADDR		(40092)
+#define MB_CTRL_FACTORY_MODE_ADDR	(40092)
 #define MB_CTRL_RUN_STOP_ADDR		(40095)
 
 // normal parameter
@@ -51,11 +51,11 @@
 #define MB_EXT_IO_START_ADDR		(40300)
 #define MB_EXT_IO_END_ADDR			(40313)
 
-#define MB_MOTOR_START_ADDR			(40020)
-#define MB_MOTOR_END_ADDR			(40027)
+#define MB_MOTOR_START_ADDR			(40040)
+#define MB_MOTOR_END_ADDR			(40047)
 
-#define MB_DEVICE_START_ADDR		(40060)
-#define MB_DEVICE_END_ADDR			(40065)
+#define MB_DEVICE_START_ADDR		(40080)
+#define MB_DEVICE_END_ADDR			(40085)
 
 #define MB_ERROR_START_ADDR			(40400)
 #define MB_ERROR_END_ADDR			(40424)

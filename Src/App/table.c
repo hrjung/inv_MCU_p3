@@ -57,6 +57,7 @@ STATIC int8_t table_setAinValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+STATIC int8_t table_setFactoryValue(PARAM_IDX_t index, int32_t value, int16_t option);
 int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 extern void MB_UART_init(uint32_t baudrate_index);
@@ -132,19 +133,19 @@ STATIC Param_t param_table[] =
 
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm		do nothing for read only
-	{ Rs_type,				0x20,	40040,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_doNothing},
-	{ Rr_type,				0x24,	40041,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_doNothing},
-	{ Ls_type,				0x28,	40042,	0,		0,		0,		0, 	10, 	0,	none_dsp,		table_doNothing},
-	{ noload_current_type,	0x2C,	40043,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_doNothing},
-	{ rated_current_type,	0x30,	40044,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_doNothing},
-	{ poles_type,			0x34,	40045,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_doNothing},
-	{ input_voltage_type,	0x38,	40046,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_doNothing},
-	{ rated_freq_type,		0x3C,	40047,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_doNothing},
+	{ Rs_type,				0x20,	40040,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ Rr_type,				0x24,	40041,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ Ls_type,				0x28,	40042,	0,		0,		0,		0, 	10, 	0,	none_dsp,		table_setFactoryValue},
+	{ noload_current_type,	0x2C,	40043,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ rated_current_type,	0x30,	40044,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ poles_type,			0x34,	40045,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ input_voltage_type,	0x38,	40046,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ rated_freq_type,		0x3C,	40047,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm
-	{ model_type,			0x60,	40080,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
-	{ motor_type_type,		0x64,	40081,	1,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_doNothing},
-	{ gear_ratio_type,		0x68,	40082,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
+	{ model_type,			0x60,	40080,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ motor_type_type,		0x64,	40081,	1,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
+	{ gear_ratio_type,		0x68,	40082,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
 	{ motor_on_cnt_type,	0x6C,	40083,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
 	{ elapsed_hour_type,	0x70,	40084,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
 	{ operating_hour_type,	0x74,	40085,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
@@ -481,6 +482,27 @@ int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 	return status;
 }
 
+int8_t table_setFactoryValue(PARAM_IDX_t index, int32_t value, int16_t option)
+{
+	int8_t status;
+
+	if(!HDLR_isFactoryModeEnabled()) return 0;  // read only in non-factory mode
+
+	if(table_data[index] == value) return 1; // ignore
+
+	if(option != REQ_FROM_TEST)
+	{
+		// request to update EEPROM
+		status = NVMQ_enqueueNfcQ(index, value);
+		if(status == 0) return 0;
+	}
+
+	table_data[index] = value;
+	table_nvm[index] = value;
+	//printf("idx=%d set value=%d\r\n", idx, value);
+
+}
+
 int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 {
 	table_data[index] = value;
@@ -586,7 +608,7 @@ int8_t table_loadEEPROM(void)
 		status = NVM_readParam((PARAM_IDX_t)i, &value);
 		if(status == NVM_NOK)
 		{
-			//kprintf(PORT_DEBUG, " table_loadEEPROM idx=%d read error, value=%d\r\n", i, (int)value);
+			kprintf(PORT_DEBUG, " table_loadEEPROM idx=%d read error, value=%d\r\n", i, (int)value);
 			return 0;
 		}
 		else
