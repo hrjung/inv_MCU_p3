@@ -16,6 +16,8 @@ extern int8_t HDLR_readDspStatus(void);
 extern int8_t HDLR_handleRunStopFlagNFC(void);
 extern int8_t HDLR_handleRunStopFlagModbus(void);
 
+extern int8_t HDLR_isFactoryModeEnabled(void);
+
 // NFC task function
 extern int8_t HDLR_updatebyNfc(void);
 extern int8_t HDLR_restoreNVM(void);

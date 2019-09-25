@@ -98,7 +98,7 @@ int8_t HDLR_handleDspError(void)
 			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 		}
 		ERR_setErrorState(err_code);
-		UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
+		//UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
 		err_state_f = 1;
 	}
 
@@ -171,7 +171,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 
 int8_t HDLR_handleRunStopFlagModbus(void)
 {
-	int8_t status;
+	int8_t status=0;
 	int32_t run_stop=0;
 	uint16_t dummy[3] = {0,0,0};
 

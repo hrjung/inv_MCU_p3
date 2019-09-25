@@ -505,8 +505,6 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 			break;
 		}
 
-
-
 		goto FC06_ERR;
 	}
 

@@ -134,6 +134,11 @@ void UTIL_setLED(uint8_t color, uint8_t blink_on)
 
 void UTIL_handleLED(void)
 {
+	if(ERR_isErrorState())
+	{
+		UTIL_setLED(LED_COLOR_R, 1);
+	}
+
 	if(LED_state[0].onoff == GPIO_PIN_SET)
 	{
 		if(LED_state[0].blink)

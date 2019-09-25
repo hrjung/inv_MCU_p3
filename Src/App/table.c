@@ -460,12 +460,11 @@ int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t status=1;
-	uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400};
 
 	status = table_setValue(idx, value, option);
 
 	if(status)
-		MB_UART_init(mb_baudrate[value]);
+		MB_UART_init(value);
 
 	return status;
 }
@@ -703,6 +702,7 @@ int8_t table_init(void)
 
 	for(i=0; i<=baudrate_type; i++)
 	{
+		// if value is not initial value than send DSP to sync
 		if(table_data[i] != param_table[i].initValue)
 		{
 			if(table_getDspAddr(i) == none_dsp) continue;

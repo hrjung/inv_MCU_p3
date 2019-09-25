@@ -880,10 +880,10 @@ STATIC int test_ser(uint8_t dport)
     else if(test_case == 9)
     {
     	uint16_t b_index;
-    	//uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400};
+    	//uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400, 115200};
 
     	b_index = (int)atoi(arg_v[2]);
-    	MB_UART_init(mb_baudrate[b_index]);
+   		MB_UART_init((uint32_t)b_index);
 		kprintf(dport, "\r\n MB_address=%d, baudrate=%d", mb_slaveAddress, mb_baudrate[b_index]);
     }
     else if(test_case == 'A')
@@ -923,6 +923,7 @@ STATIC int test_ser(uint8_t dport)
     {
     	int i, idx[5] = {err_date_0_type, err_date_1_type, err_date_2_type, err_date_3_type, err_date_4_type};
 
+    	kprintf(dport, " error code = %d", (int)ERR_getErrorState());
     	for(i=0; i<5; i++)
     	{
     		kprintf(dport, "\r\n err=%d, date=%d, code=%d, status=%d current=%d, freq=%d", \
@@ -972,6 +973,7 @@ STATIC int test_ser(uint8_t dport)
 
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
     	kprintf(dport, "\r\n status oveload=%d, brake=%d", st_overload, st_brake);
+    	kprintf(dport, "\r\n run_count=%d on_hour=%d, run_hour=%d", motor_run_cnt, device_on_hour, motor_run_hour);
     }
     else if(test_case == 'G') // test DOUT
     {

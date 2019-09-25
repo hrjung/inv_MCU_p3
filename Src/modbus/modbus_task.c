@@ -36,7 +36,7 @@ uint16_t mb_err_code = 0;
 
 uint8_t reset_enabled_f=0;
 
-uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400, 115200};
+uint32_t mb_baudrate[6] = {2400, 4800, 9600, 19200, 38400, 115200};
 
 MODBUS_SLAVE_QUEUE mbBufRx, mbBufTx;
 
