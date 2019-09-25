@@ -165,7 +165,6 @@ uint8_t main_handler_f=0;
 
 uint8_t NFC_Access_flag=0;
 uint8_t DSP_status_read_flag=0;
-uint8_t EEPROM_initialized_f=0;
 uint8_t reset_cmd_send_f = 0;
 
 volatile int8_t ADC_ConvCpltFlag=0, ADC_error=0;
@@ -1180,12 +1179,12 @@ void StartDefaultTask(void const * argument)
 void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
-	int32_t tag_tryed=0, tag_end=0;
-	int8_t status;
-	static uint32_t prev_time_tick;
+  int32_t tag_tryed=0, tag_end=0;
+  int8_t status;
+  static uint32_t prev_time_tick;
 
-	// wait until EEPROM initialized
-  while(EEPROM_initialized_f==0) osDelay(1);
+  // wait until mainHandler initialized
+  while(main_handler_f==0) osDelay(1);
 
   osDelay(10);
   kputs(PORT_DEBUG, "start NfcNvmTask\r\n");
@@ -1480,7 +1479,7 @@ int8_t mainHandlerState(void)
 void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
-  int8_t status;
+  int8_t com_status, nv_status;
 //	uint16_t addr=408;
 //	int32_t i2c_rvalue=0;
 //	uint8_t i2c_status;
@@ -1506,21 +1505,15 @@ void mainHandlerTaskFunc(void const * argument)
 
   UTIL_setLED(LED_COLOR_G, 0);
 #ifndef SUPPORT_UNIT_TEST
-  status = table_initNVM();
-  if(status == 0)
+  nv_status = table_initNVM();
+  if(nv_status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
-  else
-	  EEPROM_initialized_f = 1; // EEPROM initialized
 
-  status = COMM_sendMotorType();
-  if(status == 0 || EEPROM_initialized_f == 0)
-  {
-	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
-  }
+  com_status = COMM_sendMotorType();
+  if(com_status == 0)
+	  ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
 
-  kprintf(PORT_DEBUG, "EEPROM_initialized_f = %d, comm status=%d\r\n", EEPROM_initialized_f, status);
-#else
-  EEPROM_initialized_f=1;
+  kprintf(PORT_DEBUG, "nv_status = %d, com_status=%d\r\n", nv_status, com_status);
 #endif
 
   // init queue
