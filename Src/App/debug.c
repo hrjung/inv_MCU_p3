@@ -210,6 +210,7 @@ extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
 extern uint16_t ain_val[];
 extern uint32_t ain_sum;
+extern uint16_t adc_sample;
 extern uint16_t adc_value;
 extern volatile int8_t ADC_error;
 
@@ -241,6 +242,8 @@ extern uint8_t watchdog_f;
 //extern void set_DO_duty(uint8_t bool_use, uint8_t in);
 extern void EXT_printDIConfig(void);
 extern uint16_t EXT_AI_readADC(void);
+extern int32_t EXT_AI_getFreq(uint16_t adc_val);
+
 extern void MB_UART_init(uint32_t baudrate);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
@@ -626,11 +629,12 @@ STATIC int ain_ser(uint8_t dport)
 		kprintf(dport, "\r\n ADC error");
 	else
 	{
+
 		kprintf(dport, "\r\n ADC val = %d %d %d %d  %d %d %d %d", \
 				ain_val[0],ain_val[1],ain_val[2],ain_val[3], ain_val[4],ain_val[5],ain_val[6],ain_val[7]);
 		kprintf(dport, "\r\n ADC val = %d %d %d %d  %d %d %d %d", \
 						ain_val[8],ain_val[9],ain_val[10],ain_val[11], ain_val[12],ain_val[13],ain_val[14],ain_val[15]);
-		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d", ain_sum, (int)adc_value, (int)EXT_AI_readADC());
+		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d, freq=%d", ain_sum, (int)adc_value, (int)adc_sample, EXT_AI_getFreq(adc_value));
 		//kprintf(dport, "\r\n read Ain value=%d", (int)EXT_AI_readADC());
 	}
 	return 0;
@@ -1018,6 +1022,7 @@ STATIC int test_ser(uint8_t dport)
 }
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
+int8_t relay_test_state=0;
 STATIC int ptest_ser(uint8_t dport)
 {
 	uint16_t test_cmd=0;
@@ -1035,16 +1040,19 @@ STATIC int ptest_ser(uint8_t dport)
 	{
 	case 0:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_TEST_START);
+		relay_test_state=1;
 		kprintf(dport, "\r\n send SPI_TEST_DSP_TEST_START");
 		break;
 
 	case 1:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_OK);
+		relay_test_state=2;
 		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_OK");
 		break;
 
 	case 2:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_NOK);
+		relay_test_state=3;
 		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_NOK");
 		break;
 

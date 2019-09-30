@@ -88,7 +88,8 @@ enum
 enum
 {
 	JIG_TEST_SUB_DSP_INIT,
-	JIG_TEST_SUB_DSP_WAIT,
+	JIG_TEST_SUB_DSP_RELAY_WAIT,
+	JIG_TEST_SUB_DSP_MOTOR_WAIT,
 	JIG_TEST_SUB_DSP_GET_RESULT,
 	JIG_TEST_SUB_DSP_END,
 };
@@ -113,6 +114,7 @@ uint8_t jig_err=0;
 
 uint8_t jig_test_result[JIG_TEST_CNT]={0};
 
+extern int8_t relay_test_state; // DSP test state flag
 
 extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
@@ -124,7 +126,7 @@ extern void OPT_start485Test(void);
 
 extern uint16_t EXT_AI_readADC(void);
 
-extern uint32_t COM_getReadValue(void);
+extern int32_t COM_getReadValue(void);
 extern uint8_t UTIL_readDTMpin(void);
 extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern uint8_t NVM_clearInit(void);
@@ -139,8 +141,6 @@ int JIG_isTestEnabled(void)
 int JIG_init_state(void)
 {
 	int j_state = JIG_TEST_NFC_STATE;
-
-
 
 
 	return j_state;
@@ -160,7 +160,7 @@ int JIG_Nfc_state(void)
 	int j_state = JIG_TEST_NFC_STATE;
 	static int sub_state = JIG_TEST_SUB_NFC_INIT;
 	uint8_t status;
-	uint16_t test_addr[4] = {0, 512, 1024, 1536};
+	uint16_t test_addr[4] = {4, 504, 1024, 1536}; // not in table range
 	int32_t value = 0xAAAA5555, r_val[4]={0};
 
 	switch(sub_state)
@@ -195,14 +195,17 @@ int JIG_Nfc_state(void)
 		if(status == 0) jig_err = 2;
 		else if(r_val[0] != value) jig_err = 3;
 
+		memset(r_val, 0x0, sizeof(int32_t));
 		status = NVM_read(test_addr[1], &r_val[1]);
 		if(status == 0) jig_err = 2;
 		else if(r_val[0] != value) jig_err = 3;
 
+		memset(r_val, 0x0, sizeof(int32_t));
 		status = NVM_read(test_addr[2], &r_val[2]);
 		if(status == 0) jig_err = 2;
 		else if(r_val[0] != value) jig_err = 3;
 
+		memset(r_val, 0x0, sizeof(int32_t));
 		status = NVM_read(test_addr[3], &r_val[3]);
 		if(status == 0) jig_err = 2;
 		else if(r_val[0] != value) jig_err = 3;
@@ -211,10 +214,24 @@ int JIG_Nfc_state(void)
 		break;
 
 	case JIG_TEST_SUB_NFC_END:
+		// clear test Nfc
+		status = NVM_write(test_addr[0], 0x0);
+		if(status == 0) jig_err = 1;
+
+		status = NVM_write(test_addr[1], 0x0);
+		if(status == 0) jig_err = 1;
+
+		status = NVM_write(test_addr[2], 0x0);
+		if(status == 0) jig_err = 1;
+
+		status = NVM_write(test_addr[3], 0x0);
+		if(status == 0) jig_err = 1;
 
 		if(jig_err) jig_test_result[JIG_TEST_NFC_STATE-1] = 1; // set error
 
 		j_state = JIG_TEST_DI_DO_STATE; // next test state
+
+		kprintf(PORT_DEBUG, "\r\n NFC test result=%d", jig_test_result[JIG_TEST_NFC_STATE-1]);
 		break;
 	}
 
@@ -273,6 +290,8 @@ int JIG_Dio_state(void)
 		if(jig_err) jig_test_result[JIG_TEST_DI_DO_STATE-1] = 1; // set error
 
 		j_state = JIG_TEST_AIN_STATE; // next test state
+
+		kprintf(PORT_DEBUG, "\r\n DI, DO test result=%d", jig_test_result[JIG_TEST_DI_DO_STATE-1]);
 		break;
 	}
 
@@ -309,6 +328,8 @@ int JIG_Ain_state(void)
 		if(jig_err) jig_test_result[JIG_TEST_AIN_STATE-1] = 1; // set error
 
 		j_state = JIG_TEST_485_STATE; // next test state
+
+		kprintf(PORT_DEBUG, "\r\n A-IN test result=%d", jig_test_result[JIG_TEST_AIN_STATE-1]);
 		break;
 	}
 
@@ -362,6 +383,8 @@ int JIG_SPI_state(void)
 		if(jig_err) jig_test_result[JIG_TEST_SPI_STATE-1] = 1; // set error
 
 		j_state = JIG_TEST_MTD_DTM_STATE; // next test state
+
+		kprintf(PORT_DEBUG, "\r\n SPI test result=%d", jig_test_result[JIG_TEST_SPI_STATE-1]);
 		break;
 	}
 
@@ -474,11 +497,15 @@ int JIG_MTD_state(void)
 		if(jig_err) jig_test_result[JIG_TEST_MTD_DTM_STATE-1] = 1; // set error
 
 		j_state = JIG_TEST_WAIT_DSP_STATE; // next test state
+
+		kprintf(PORT_DEBUG, "\r\n DTM, MTD test result=%d", jig_test_result[JIG_TEST_MTD_DTM_STATE-1]);
 		break;
 	}
 
 	return j_state;
 }
+
+
 
 int JIG_DSP_state(void)
 {
@@ -489,22 +516,42 @@ int JIG_DSP_state(void)
 	{
 	case JIG_TEST_SUB_DSP_INIT: // set DSP to start JIG test
 
-		sub_state = JIG_TEST_SUB_DSP_WAIT;
+		if(relay_test_state > 0)
+		{
+			sub_state = JIG_TEST_SUB_DSP_RELAY_WAIT;
+		}
 		break;
 
-	case JIG_TEST_SUB_DSP_WAIT: // wait test finished
+	case JIG_TEST_SUB_DSP_RELAY_WAIT: // wait relay test result provided
 
-		sub_state = JIG_TEST_SUB_DSP_GET_RESULT;
+		if(relay_test_state > 1)
+		{
+			sub_state = JIG_TEST_SUB_DSP_MOTOR_WAIT;
+		}
+
+		break;
+
+	case JIG_TEST_SUB_DSP_MOTOR_WAIT: // wait motor run input
+
+		// TODO : read test pin to get motor test start signal
+		// if( motor_run_test_ready() )
+		{
+			COMM_sendTestCmd(SPI_TEST_DSP_MOTOR_RUN);
+			sub_state = JIG_TEST_SUB_DSP_GET_RESULT;
+			kprintf(PORT_DEBUG, "\r\n send SPI_TEST_DSP_MOTOR_RUN");
+		}
+
 		break;
 
 	case JIG_TEST_SUB_DSP_GET_RESULT: // if finished, request result
 
+		//TODO : send test result request
 		sub_state = JIG_TEST_SUB_DSP_END;
 		break;
 
 	case JIG_TEST_SUB_DSP_END: // check result and end
 
-		if(jig_err) jig_test_result[JIG_TEST_WAIT_DSP_STATE-1] = 1; // set error
+		kprintf(PORT_DEBUG, "\r\n DSP test result=%d", jig_test_result[JIG_TEST_MTD_DTM_STATE-1]);
 
 		j_state = JIG_TEST_END;
 		break;
@@ -543,20 +590,18 @@ void JIG_test_state(void)
 	case JIG_TEST_485_STATE:
 		if(OPT_is485TestStarted() == 0)	OPT_start485Test();
 
-
 		if(OPT_is485TestEnded())
 			jig_state = JIG_TEST_SPI_STATE;
 		break;
 
 	case JIG_TEST_SPI_STATE:
 
-
-		jig_state = JIG_TEST_MTD_DTM_STATE;
+		jig_state = JIG_SPI_state();
 		break;
 
 	case JIG_TEST_MTD_DTM_STATE:
 
-		jig_state = JIG_TEST_WAIT_DSP_STATE;
+		jig_state = JIG_MTD_state();
 		break;
 
 	case JIG_TEST_WAIT_DSP_STATE: // wait DSP test finished

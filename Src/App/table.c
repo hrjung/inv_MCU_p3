@@ -997,4 +997,30 @@ int8_t table_updatebyTableQ(void)
 	return 1;
 }
 
+void table_initParam(void)
+{
+	PARAM_IDX_t idx;
+	int index;
 
+	switch(table_data[ctrl_in_type])
+	{
+	case CTRL_IN_Digital:
+		// initialize DIN
+		for(idx=multi_Din_0_type; idx<=multi_Din_3_type; idx++)
+		{
+			index = (int)(idx - multi_Din_0_type);
+			EXT_DI_setupMultiFuncDin(index, (DIN_config_t)table_data[idx], REQ_FROM_TEST);
+		}
+		break;
+
+	case CTRL_IN_Analog_V:
+		// initialize AIN
+		EXT_AI_needReconfig();
+		UTIL_startADC(); // start ADC
+
+		break;
+	}
+
+	// set dir_domain_type
+	param_table[dir_domain_type].param_func(dir_domain_type, table_data[dir_domain_type], REQ_FROM_TEST);
+}

@@ -168,8 +168,9 @@ uint8_t DSP_status_read_flag=0;
 uint8_t reset_cmd_send_f = 0;
 
 volatile int8_t ADC_ConvCpltFlag=0, ADC_error=0;
-uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
-uint32_t ain_sum=0;
+uint16_t ain_sample_val[EXT_AIN_SAMPLE_CNT];
+uint32_t ain_sample_sum=0;
+uint16_t adc_sample;
 uint16_t exec_do_cnt=0;
 
 uint16_t user_io_handle_cnt=0;
@@ -190,7 +191,7 @@ uint8_t watchdog_f = 0;
 
 extern int16_t state_run_stop;
 extern LED_status_t LED_state[]; // 3 color LED state
-extern uint16_t adc_value;
+
 extern uint8_t reset_enabled_f;
 
 extern uint16_t jig_test_enabled_f;
@@ -1522,8 +1523,8 @@ void mainHandlerTaskFunc(void const * argument)
 
   main_handler_f = 1;
 
-  //TODO : hrjung init modbus
-  //table_runFunc(ctrl_in_type, CTRL_IN_Modbus, REQ_FROM_NFC);
+  //TODO : hrjung init parameters setting for ctrl_in
+  table_initParam();
 
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
 
@@ -1642,6 +1643,7 @@ void userIoTimerCallback(void const * argument)
   /* USER CODE BEGIN userIoTimerCallback */
 	int i;
 	int32_t ctrl_in;
+	uint32_t ain_sample_sum=0;
 
 #ifndef SUPPORT_UNIT_TEST
 	// set DTM pin to check DSP error
@@ -1657,14 +1659,15 @@ void userIoTimerCallback(void const * argument)
 		// read ADC
 		if(ADC_ConvCpltFlag)
 		{
-			for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_val[i] = (ain_val[i]&0x0FFF); // only 12bit available
+			for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sample_val[i] = (ain_sample_val[i]&0x0FFF);
+			ain_sample_sum = 0;
+			for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sample_sum += (uint32_t)ain_sample_val[i];
+			adc_sample = (uint16_t)(ain_sample_sum/EXT_AIN_SAMPLE_CNT);
 
-			ain_sum=0;
-			for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sum += (uint32_t)ain_val[i];
-			adc_value = (uint16_t)(ain_sum/EXT_AIN_SAMPLE_CNT);
+			UTIL_readADC(adc_sample);
 
 			ADC_ConvCpltFlag=0;
-			HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ain_val, EXT_AIN_SAMPLE_CNT);
+			UTIL_startADC();
 		}
 	}
 	else

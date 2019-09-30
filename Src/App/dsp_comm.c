@@ -613,6 +613,7 @@ int8_t COMM_sendParamWrite(const uint16_t* data)
 	int32_t value;
 	int8_t result;
 
+#if 0 // remove read parameter before write
 	// read parameter before write, in order to avoid writing same value
 	result = COMM_sendCommand(SPICMD_PARAM_R, data);
 	if(result == COMM_FAILED) return COMM_FAILED;
@@ -620,7 +621,7 @@ int8_t COMM_sendParamWrite(const uint16_t* data)
 	//compare value
 	value = table_getValue(DSP_TO_TABLE_IDX[read_idx]);
 	if(read_value == value) return COMM_SUCCESS; // same value, not sending
-
+#endif
 	// send write parameter
 	result = COMM_sendCommand(SPICMD_PARAM_W, data);
 	if(result == COMM_FAILED) return COMM_FAILED;
@@ -688,4 +689,18 @@ int8_t COMM_sendTestCmd(uint16_t test_cmd)
 	kprintf(PORT_DEBUG, "SPICMD_TEST_CMD: status=%d, test_cmd=%d \r\n", status, test_cmd);
 
 	return status;
+}
+
+// for jig test only
+int32_t COM_getReadValue(void)
+{
+	int32_t value;
+	int8_t result;
+	uint16_t buf[3]={0,0,0};
+
+	buf[0] = (uint16_t)table_getDspAddr((PARAM_IDX_t)value_type);
+	result = COMM_sendCommand(SPICMD_PARAM_R, buf);
+//	if(result == COMM_FAILED) return COMM_FAILED;
+
+	return read_value;
 }

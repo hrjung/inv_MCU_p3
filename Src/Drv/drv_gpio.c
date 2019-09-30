@@ -37,11 +37,14 @@ static uint8_t dtm[2][EXT_DIN_SAMPLE_CNT] = {0};
 
 uint8_t dtm_value[2];
 
+uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
+uint32_t ain_sum=0;
 extern ADC_HandleTypeDef hadc1;
 
 extern uint8_t mdin_value[];
 
-extern uint16_t ain_val[];
+extern uint16_t ain_sample_val[];
+extern uint16_t adc_value;
 
 
 void UTIL_setTestPin(uint8_t index, uint8_t onoff)
@@ -274,7 +277,7 @@ void UTIL_writeDout(uint8_t index, uint8_t onoff)
 
 void UTIL_startADC(void)
 {
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ain_val, EXT_AIN_SAMPLE_CNT);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)ain_sample_val, EXT_AIN_SAMPLE_CNT);
 }
 
 void UTIL_stopADC(void)
@@ -282,6 +285,20 @@ void UTIL_stopADC(void)
 	HAL_ADC_Stop_DMA(&hadc1);
 }
 
+void UTIL_readADC(uint16_t adc_sample)
+{
+	static int ain_idx=0;
+	int i;
+
+	ain_idx = ain_idx%EXT_AIN_SAMPLE_CNT;
+	ain_val[ain_idx] = adc_sample&0x0FFF;
+	ain_idx++;
+
+	ain_sum=0;
+	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sum += (uint32_t)ain_val[i];
+	adc_value = (uint16_t)(ain_sum/EXT_AIN_SAMPLE_CNT);
+
+}
 
 void UTIL_setAOUT(uint16_t volt)
 {
