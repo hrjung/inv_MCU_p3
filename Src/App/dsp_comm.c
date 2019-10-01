@@ -32,6 +32,7 @@ int16_t state_run_stop = 0;
 int16_t state_direction = 0;
 int16_t st_overload = 0;
 int16_t st_brake = 0;
+int16_t gear_ratio = 1;
 
 int16_t comm_err_cnt=0;
 
@@ -460,7 +461,8 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(overload_alarm_type, (int32_t)st_overload);
 		table_setStatusValue(shaftbrake_status_type, (int32_t)st_brake);
 #endif
-		table_setStatusValue(run_freq_type, (int32_t)(10.0*run_freq_index + 0.05), REQ_FROM_DSP);
+		run_freq_index = (10.0*run_freq_index/(float)gear_ratio + 0.05); // apply gear_ratio for freq
+		table_setStatusValue(run_freq_type, (int32_t)run_freq_index, REQ_FROM_DSP);
 		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index + 0.05), REQ_FROM_DSP);
 		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index), REQ_FROM_DSP);
 		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index + 0.05), REQ_FROM_DSP);
@@ -610,7 +612,7 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 // only for SPICMD_PARAM_W command
 int8_t COMM_sendParamWrite(const uint16_t* data)
 {
-	int32_t value;
+	//int32_t value;
 	int8_t result;
 
 #if 0 // remove read parameter before write
@@ -694,7 +696,7 @@ int8_t COMM_sendTestCmd(uint16_t test_cmd)
 // for jig test only
 int32_t COM_getReadValue(void)
 {
-	int32_t value;
+	//int32_t value;
 	int8_t result;
 	uint16_t buf[3]={0,0,0};
 

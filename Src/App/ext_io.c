@@ -443,7 +443,7 @@ int32_t EXT_AI_getFreq(uint16_t adc_val)
 
 	if(V_val >= V_ai_max) { freq_l = (int32_t)(freq_max*10.0 + 0.05); return freq_l; }
 
-	if(V_val <= V_ai_min) { freq_l = (int32_t)(freq_min*10.0 + 0.05); return freq_l; }
+	if(V_val <= V_ai_min) { freq_l = (int32_t)(freq_min*10.0 + 0.05); return 0; } // below Vmin then stop
 
 	freq_calc = (V_val - V_ai_min)*(freq_max - freq_min)/(V_ai_max - V_ai_min) + freq_min; // add round up
 
@@ -473,7 +473,7 @@ int8_t EXT_AI_handleAin(void)
 	diff = labs(prev_adc_cmd - freq);
 	if(diff > F_CMD_DIFF_HYSTERISIS) // over 1Hz
 	{
-		if(freq <= 10)
+		if(freq == 0) // in case of below Vmin
 		{
 			freq = 0; //for stop
 			test_cmd = SPICMD_CTRL_STOP;
@@ -489,11 +489,17 @@ int8_t EXT_AI_handleAin(void)
 			if(state_run_stop == CMD_STOP)
 			{
 				test_cmd = SPICMD_CTRL_RUN;
-				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN freq=%d\r\n");
+				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN \r\n");
 #ifndef SUPPORT_UNIT_TEST
 				// send run to DSP
 				status = COMM_sendMessage(test_cmd, dummy);
 				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+#endif
+				test_cmd = SPICMD_PARAM_W;
+				kprintf(PORT_DEBUG, "send SPICMD_PARAM_W  freq=%d\r\n", freq);
+#ifndef SUPPORT_UNIT_TEST
+				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
+				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
 #endif
 			}
 			else

@@ -202,6 +202,7 @@ extern int16_t st_brake;
 extern uint8_t prev_run;
 extern uint8_t step_cmd;
 
+extern int16_t gear_ratio;
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
 extern uint32_t device_on_hour;
@@ -593,21 +594,28 @@ STATIC int dout_ser(uint8_t dport)
 	int32_t setting;
 	int8_t status;
 
-	if(arg_c != 3)
+	if(arg_c == 2 || arg_c > 3)
 	{
 		kprintf(dport, "\r\nInvalid number of parameters");
 		goto dout_err;
 	}
 
-	index = (uint8_t)atoi(arg_v[1]);
-	if(index != 0 && index != 1) goto dout_err;
+	if(arg_c == 1) // show DOUT status
+	{
+		kprintf(dport, "\r\n show status Dout[0]=%d, [1]=%d, run_stop=%d", mdout_value[0], mdout_value[1], state_run_stop);
+	}
+	else // arg_c == 3
+	{
+		index = (uint8_t)atoi(arg_v[1]);
+		if(index != 0 && index != 1) goto dout_err;
 
-	setting = (int32_t)atoi(arg_v[2]);
-	if(setting > DOUT_shaftbrake_on) goto dout_err;
+		setting = (int32_t)atoi(arg_v[2]);
+		if(setting > DOUT_shaftbrake_on) goto dout_err;
 
-	index = multi_Dout_0_type + index;
-	status = table_setValue((PARAM_IDX_t)index, setting, REQ_FROM_TEST);
-	kprintf(dport, "\r\n set Dout index=%d, value=%d, status=%d", index, setting, status);
+		index = multi_Dout_0_type + index;
+		status = table_setValue((PARAM_IDX_t)index, setting, REQ_FROM_TEST);
+		kprintf(dport, "\r\n set Dout index=%d, value=%d, status=%d", index, setting, status);
+	}
 
 	return 0;
 
@@ -632,6 +640,7 @@ STATIC int ain_ser(uint8_t dport)
 
 		kprintf(dport, "\r\n ADC val = %d %d %d %d  %d %d %d %d", \
 				ain_val[0],ain_val[1],ain_val[2],ain_val[3], ain_val[4],ain_val[5],ain_val[6],ain_val[7]);
+		//kprintf(dport, "\r\n ADC val = %d %d ", ain_val[8],ain_val[9]);
 		kprintf(dport, "\r\n ADC val = %d %d %d %d  %d %d %d %d", \
 						ain_val[8],ain_val[9],ain_val[10],ain_val[11], ain_val[12],ain_val[13],ain_val[14],ain_val[15]);
 		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d, freq=%d", ain_sum, (int)adc_value, (int)adc_sample, EXT_AI_getFreq(adc_value));
@@ -922,6 +931,9 @@ STATIC int test_ser(uint8_t dport)
     {
     	test_DinConfig();
     	EXT_printDIConfig();
+
+    	kprintf(dport, "\r\n Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
+    	kprintf(dport, "\r\n prev_run=%d, run_stop=%d, step=%d", prev_run, state_run_stop, step_cmd);
     }
     else if(test_case == 'E') // show error data
     {
@@ -946,11 +958,10 @@ STATIC int test_ser(uint8_t dport)
     else if(test_case == 'G')
     {
 
-    	kprintf(dport, "\r\n Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
-    	kprintf(dport, "\r\n prev_run=%d, run_stop=%d, step=%d", prev_run, state_run_stop, step_cmd);
+
 
     }
-    else if(test_case == 'R')
+    else if(test_case == 'R') // send Run/Stop command to DSP
     {
     	int8_t status;
     	uint16_t dummy[3] = {0,0,0};
@@ -976,7 +987,7 @@ STATIC int test_ser(uint8_t dport)
     	}
 
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
-    	kprintf(dport, "\r\n status oveload=%d, brake=%d", st_overload, st_brake);
+    	kprintf(dport, "\r\n status overload=%d, brake=%d, gear_ratio=%d", st_overload, st_brake, gear_ratio);
     	kprintf(dport, "\r\n run_count=%d on_hour=%d, run_hour=%d", motor_run_cnt, device_on_hour, motor_run_hour);
     }
     else if(test_case == 'G') // test DOUT

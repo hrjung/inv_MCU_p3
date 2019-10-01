@@ -37,6 +37,7 @@ extern int16_t state_run_stop; // run_stop status
 extern int16_t state_direction;
 extern int16_t st_overload;
 extern int16_t st_brake;
+extern int16_t gear_ratio;
 
 extern int32_t err_cnt;
 
@@ -145,7 +146,7 @@ STATIC Param_t param_table[] =
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm
 	{ model_type,			0x60,	40080,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
 	{ motor_type_type,		0x64,	40081,	1,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
-	{ gear_ratio_type,		0x68,	40082,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ gear_ratio_type,		0x68,	40082,	1,		1,		50,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
 	{ motor_on_cnt_type,	0x6C,	40083,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
 	{ elapsed_hour_type,	0x70,	40084,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
 	{ operating_hour_type,	0x74,	40085,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
@@ -1023,4 +1024,5 @@ void table_initParam(void)
 
 	// set dir_domain_type
 	param_table[dir_domain_type].param_func(dir_domain_type, table_data[dir_domain_type], REQ_FROM_TEST);
+	gear_ratio = (int16_t)table_getValue(gear_ratio_type);
 }

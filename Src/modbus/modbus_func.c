@@ -614,6 +614,7 @@ int MB_processModbusPacket(void) // error or response packet
 	case MOD_FC06_WR_REG:
 		value = (uint16_t)(((uint16_t)modbusRx.buf[4] << 8) | modbusRx.buf[5]);
 		ret_code = MB_handleWriteSingleRegister(reg_addr, value);
+		kprintf(PORT_DEBUG, " MOD_FC06_WR_REG : addr=%d, ret_code=%d \r\n", reg_addr, ret_code);
 		break;
 
 	case MOD_FC16_WRM_REG:
