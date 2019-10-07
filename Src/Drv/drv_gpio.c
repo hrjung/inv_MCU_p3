@@ -285,6 +285,30 @@ void UTIL_stopADC(void)
 	HAL_ADC_Stop_DMA(&hadc1);
 }
 
+uint16_t UTIL_getMaxADC(void)
+{
+	uint16_t max=0;
+
+	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++)
+	{
+		if(max < ain_val[i]) max = ain_val[i];
+	}
+
+	return max;
+}
+
+uint16_t UTIL_getMinADC(void)
+{
+	uint16_t min=0;
+
+	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++)
+	{
+		if(min > ain_val[i]) min = ain_val[i];
+	}
+
+	return min;
+}
+
 void UTIL_readADC(uint16_t adc_sample)
 {
 	static int ain_idx=0;
@@ -296,7 +320,14 @@ void UTIL_readADC(uint16_t adc_sample)
 
 	ain_sum=0;
 	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sum += (uint32_t)ain_val[i];
-	adc_value = (uint16_t)(ain_sum/EXT_AIN_SAMPLE_CNT);
+
+	// remove max, min value from ADC samples
+	max = UTIL_getMaxADC();
+	min = UTIL_getMinADC();
+	ain_sum -= max;
+	ain_sum -= min;
+
+	adc_value = (uint16_t)(ain_sum/(EXT_AIN_SAMPLE_CNT-2));
 
 }
 
