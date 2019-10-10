@@ -768,7 +768,7 @@ STATIC int test_ser(uint8_t dport)
     if(test_case == 0)
     	test_case = arg_v[1][0];
 
-    if(test_case == '0')
+    if(test_case == '0') // read EEPROM parameter
     {
 //    	addr = (uint16_t)atoi(arg_v[2]);
 //    	status = NVM_read(addr, &value);
@@ -777,7 +777,7 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_readParam((PARAM_IDX_t)idx, &value);
     	kprintf(dport, "\r\n NVM_readParam idx=%d, value=%d, status=%d", idx, (int)value, status);
     }
-    else if(test_case == 1)
+    else if(test_case == 1) // write parameter to EEPROM with CRC update
     {
 //    	addr = (uint16_t)atoi(arg_v[2]);
 //    	value = table_getInitValue(idx);
@@ -790,7 +790,7 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_setCRC();
     	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
     }
-    else if(test_case == 2)
+    else if(test_case == 2) // re-initialize EEPROM after reset
     {
     	status = NVM_clearInit();
 		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  %d\r\n", status);
@@ -812,22 +812,13 @@ STATIC int test_ser(uint8_t dport)
     		kprintf(dport, "\r\n AIN test stop");
     	}
     }
-    else if(test_case == 4) // set MCU error code to DSP
+    else if(test_case == 4) // set MCU error code to DSP  for testing
     {
-//    	int enable=0;
-//
-//    	enable = (int)atoi(arg_v[2]);
-//    	if(enable)
-//    		UTIL_setMTDpin(1);
-//    	else
-//    		UTIL_setMTDpin(0);
-//    	kprintf(dport, "\r\n set MCU to DSP pin=%d", enable);
     	ERR_setErrorState(TRIP_REASON_MCU_ERR_TEST);
     	kputs(dport, "\r\n set MCU ERR TEST");
     }
     else if(test_case == 5) // read table value
     {
-
     	idx = (uint16_t)atoi(arg_v[2]);
     	if(idx < PARAM_TABLE_SIZE)
     	{
@@ -837,7 +828,7 @@ STATIC int test_ser(uint8_t dport)
     	else
     		kprintf(dport, "\r\n index=%d error", idx);
     }
-    else if(test_case == 6)
+    else if(test_case == 6) // show error and counter, motor status ....
     {
 		kprintf(dport, "\r\n error code=%d, i2c_rd_err=%d, i2c_wr_err=%d", (int)ERR_getErrorState(), i2c_rd_error, i2c_wr_error);
 		kprintf(dport, "\r\n motor_on_cnt=%d, device_on_hour=%d, motor_run_hour=%d", (int)motor_run_cnt, (int)device_on_hour, (int)motor_run_hour);
@@ -890,7 +881,7 @@ STATIC int test_ser(uint8_t dport)
     		osDelay(5);
     	}
     }
-    else if(test_case == 9)
+    else if(test_case == 9) // initialize modbus port with baudrate
     {
     	uint16_t b_index;
     	//uint32_t mb_baudrate[] = {2400, 4800, 9600, 19200, 38400, 115200};
@@ -899,14 +890,14 @@ STATIC int test_ser(uint8_t dport)
    		MB_UART_init((uint32_t)b_index);
 		kprintf(dport, "\r\n MB_address=%d, baudrate=%d", mb_slaveAddress, mb_baudrate[b_index]);
     }
-    else if(test_case == 'A')
+    else if(test_case == 'A') // run parameter function of each parameter
     {
     	idx = (int)atoi(arg_v[2]);
     	value = (int32_t)atoi(arg_v[3]);
     	status = table_runFunc(idx, (int32_t)value, REQ_FROM_MODBUS);
     	kprintf(dport, "\r\n idx=%d, value=%d, status=%d, ", idx, value, status);
     }
-    else if(test_case == 'B')
+    else if(test_case == 'B') // 3 color LED test
     {
     	arg1 = (int)atoi(arg_v[2]);
     	switch(arg1)
@@ -919,7 +910,7 @@ STATIC int test_ser(uint8_t dport)
 
 		kprintf(dport, "\r\n set LED %d", arg1);
     }
-    else if(test_case == 'C')
+    else if(test_case == 'C') // show EEPROM CRC value
     {
     	uint32_t crc32_calc;
 
@@ -927,7 +918,7 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_verifyCRC(crc32_calc);
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
     }
-    else if(test_case == 'D')
+    else if(test_case == 'D') // show Din value
     {
     	test_DinConfig();
     	EXT_printDIConfig();
