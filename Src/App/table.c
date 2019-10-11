@@ -736,21 +736,21 @@ int8_t table_initNVM(void)
 	if(table_isInit() == 1) // correctly initialize
 	{
 		kputs(PORT_DEBUG, "load EEPROM\r\n");
-	  // load EEPROM, check CRC
-	  status = table_loadEEPROM(); // EEPROM -> table_data[]
-	  kprintf(PORT_DEBUG, "1: status=%d\r\n", status);
-	  if(status)
-	  {
-		  status = table_init();
-		  kprintf(PORT_DEBUG, "2: status=%d\r\n", status);
-	  }
+		// load EEPROM, check CRC
+		status = table_loadEEPROM(); // EEPROM -> table_data[]
+		kprintf(PORT_DEBUG, "1: status=%d\r\n", status);
+		if(status)
+		{
+			status = table_init();
+			kprintf(PORT_DEBUG, "2: status=%d\r\n", status);
+		}
 	}
 	else
 	{
-	  // blank NVM : initialize as init value
-	  kputs(PORT_DEBUG, "blank EEPROM\r\n");
-	  status = table_initializeBlankEEPROM();
-	  //printf("EEPROM status=%d\r\n", status);
+		// blank NVM : initialize as init value
+		kputs(PORT_DEBUG, "blank EEPROM\r\n");
+		status = table_initializeBlankEEPROM();
+		//printf("EEPROM status=%d\r\n", status);
 	}
 
 	err_cnt = table_getValue(err_date_0_type);

@@ -126,10 +126,13 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 {
 	int8_t status;
 	int32_t run_stop=0;
+	static int32_t prev_run_stop=0;
 	uint16_t dummy[3] = {0,0,0};
 
 	status = NVM_getRunStopFlag(&run_stop);
 	if(status == 0) return 0;
+
+	if(prev_run_stop == run_stop) return 0; //no change
 
 	switch(run_stop)
 	{
@@ -139,7 +142,8 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 		// clear flag to idle
 		if(status != COMM_FAILED)
 		{
-			status = NVM_clearRunStopFlag();
+			//status = NVM_clearRunStopFlag();
+			prev_run_stop = run_stop;
 			TM_setStartRunTime(); // set Run start time
 		}
 		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
@@ -151,7 +155,8 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 		// clear flag to idle
 		if(status != COMM_FAILED)
 		{
-			status = NVM_clearRunStopFlag();
+			//status = NVM_clearRunStopFlag();
+			prev_run_stop = run_stop;
 		}
 		kprintf(PORT_DEBUG, "STOP Flag, send to DSP status=%d\r\n", status);
 		break;
@@ -163,7 +168,8 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 
 	if(status == 0)
 	{
-		ERR_setErrorState(TRIP_REASON_MCU_INPUT);
+		//ERR_setErrorState(TRIP_REASON_MCU_INPUT);
+		kprintf(PORT_DEBUG, "ERROR!!  RUN/STOP Flag, status=%d\r\n", status);
 	}
 
 	return status;

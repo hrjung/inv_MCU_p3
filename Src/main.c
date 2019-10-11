@@ -1526,6 +1526,12 @@ void mainHandlerTaskFunc(void const * argument)
   //TODO : hrjung init parameters setting for ctrl_in
   table_initParam();
 
+  nv_status = NVM_clearRunStopFlag(); // set idle flag
+  if(nv_status == 0)
+  {
+	  kprintf(PORT_DEBUG, "NFC idle flag set error=%d\r\n", nv_status);
+  }
+
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
 
   /* Infinite loop */

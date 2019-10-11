@@ -287,6 +287,7 @@ void UTIL_stopADC(void)
 
 uint16_t UTIL_getMaxADC(void)
 {
+	int i;
 	uint16_t max=0;
 
 	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++)
@@ -299,6 +300,7 @@ uint16_t UTIL_getMaxADC(void)
 
 uint16_t UTIL_getMinADC(void)
 {
+	int i;
 	uint16_t min=0;
 
 	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++)
@@ -312,6 +314,7 @@ uint16_t UTIL_getMinADC(void)
 void UTIL_readADC(uint16_t adc_sample)
 {
 	static int ain_idx=0;
+	uint16_t min=0, max=0;
 	int i;
 
 	ain_idx = ain_idx%EXT_AIN_SAMPLE_CNT;
