@@ -43,6 +43,10 @@ extern int32_t err_cnt;
 
 extern COMM_CMD_t test_cmd;
 
+#ifdef SUPPORT_TASK_WATCHDOG
+extern uint8_t watchdog_f;
+#endif
+
 TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 
@@ -67,41 +71,43 @@ extern void MB_setSlaveAddress(uint8_t addr);
 extern void UTIL_startADC(void);
 extern void UTIL_stopADC(void);
 
+extern int8_t HDLR_isFactoryModeEnabled(void);
+
 STATIC Param_t param_table[] =
 {   //    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
-	{ value_type,			0x100,	40100,	200,	10,		2000,	1, 	10,		1, 	value_dsp,			table_setFreqValue, },
-	{ multi_val_0_type,		0x104,	40101,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_1_type,		0x108,	40102,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_2_type,		0x10C,	40103,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_3_type,		0x110,	40104,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_4_type,		0x114,	40105,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_5_type,		0x118,	40106,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_6_type,		0x11C,	40107,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_7_type,		0x120,	40108,	200,	10,		2000,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ freq_min_type,		0x124,	40109,	10,		10,		2000,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
-	{ freq_max_type,		0x128,	40110,	600,	10,		2000,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
+	{ value_type,			0x100,	40100,	200,	100,	700,	1, 	10,		1, 	value_dsp,			table_setFreqValue, },
+	{ multi_val_0_type,		0x104,	40101,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_1_type,		0x108,	40102,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_2_type,		0x10C,	40103,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_3_type,		0x110,	40104,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_4_type,		0x114,	40105,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_5_type,		0x118,	40106,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_6_type,		0x11C,	40107,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_7_type,		0x120,	40108,	200,	100,	700,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ freq_min_type,		0x124,	40109,	100,	100,	700,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
+	{ freq_max_type,		0x128,	40110,	600,	100,	700,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
 	{ accel_time_type,		0x12C,	40111,	100,	10,		6000,	1, 	10, 	1, 	accel_time_dsp,		table_setValue,},
 	{ decel_time_type,		0x130,	40112,	100,	10,		6000,	1, 	10,		1, 	decel_time_dsp,		table_setValue,},
 	{ dir_cmd_type,			0x134,	40113,	0,		0,		1,		1, 	1, 		1, 	dir_cmd_dsp,		table_setValue,},
 	{ jmp_enable0_type,		0x138,	40114,	0,		0,		1,		1, 	1, 		0, 	jmp_enable0_dsp,	table_setValue,	},
 	{ jmp_enable1_type,		0x13C,	40115,	0,		0,		1,		1, 	1, 		0, 	jmp_enable1_dsp,	table_setValue,	},
 	{ jmp_enable2_type,		0x140,	40116,	0,		0,		1,		1, 	1, 		0, 	jmp_enable2_dsp,	table_setValue,	},
-	{ jmp_low0_type,		0x144,	40117,	10,		10,		2000,	1, 	10, 	0, 	jmp_low0_dsp, 		table_setFreqValue,},
-	{ jmp_low1_type,		0x148,	40118,	10,		10,		2000,	1, 	10, 	0, 	jmp_low1_dsp, 		table_setFreqValue,},
-	{ jmp_low2_type,		0x14C,	40119,	10,		10,		2000,	1, 	10, 	0, 	jmp_low2_dsp, 		table_setFreqValue,},
-	{ jmp_high0_type,		0x150,	40120,	10,		10,		2000,	1, 	10, 	0, 	jmp_high0_dsp, 		table_setFreqValue,},
-	{ jmp_high1_type,		0x154,	40121,	10,		10,		2000,	1, 	10, 	0, 	jmp_high1_dsp, 		table_setFreqValue,},
-	{ jmp_high2_type,		0x158,	40122,	10,		10,		2000,	1, 	10, 	0, 	jmp_high2_dsp, 		table_setFreqValue,},
+	{ jmp_low0_type,		0x144,	40117,	100,	100,	700,	1, 	10, 	0, 	jmp_low0_dsp, 		table_setFreqValue,},
+	{ jmp_low1_type,		0x148,	40118,	100,	100,	700,	1, 	10, 	0, 	jmp_low1_dsp, 		table_setFreqValue,},
+	{ jmp_low2_type,		0x14C,	40119,	100,	100,	700,	1, 	10, 	0, 	jmp_low2_dsp, 		table_setFreqValue,},
+	{ jmp_high0_type,		0x150,	40120,	100,	100,	700,	1, 	10, 	0, 	jmp_high0_dsp, 		table_setFreqValue,},
+	{ jmp_high1_type,		0x154,	40121,	100,	100,	700,	1, 	10, 	0, 	jmp_high1_dsp, 		table_setFreqValue,},
+	{ jmp_high2_type,		0x158,	40122,	100,	100,	700,	1, 	10, 	0, 	jmp_high2_dsp, 		table_setFreqValue,},
 	{ dir_domain_type,		0x15C,	40123,	0,		0,		2,		1, 	1, 		0, 	none_dsp,			table_setValueDir,},
 	{ acc_base_set_type,	0x160,	40124,	0,		0,		1,		1, 	1, 		0, 	acc_base_set_dsp, 	table_setValue,	},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
-	{ ctrl_in_type,			0x200,	40200,	0,		0,		4,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
+	{ ctrl_in_type,			0x200,	40200,	0,		0,		3,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
 	{ energy_save_type,		0x204,	40201,	0,		0,		1,		1, 	1, 		0, 	energy_save_dsp,	table_setValue	},
 	{ pwm_freq_type,		0x208,	40202,	0,		0,		3,		1, 	1, 		0, 	pwm_freq_dsp,		table_setValue	},
 	{ brake_type_type,		0x20C,	40203,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
-	{ brake_freq_type,		0x210,	40204,	10,		1,		600,	1, 	10, 	0, 	brake_freq_dsp,		table_setFreqValue	},
-	{ dci_brk_freq_type,	0x214,	40205,	30,		1,		600,	1, 	10, 	0, 	dci_brk_freq_dsp,	table_setFreqValue	},
+	{ brake_freq_type,		0x210,	40204,	10,		10,		600,	1, 	10, 	0, 	brake_freq_dsp,		table_setFreqValue	},
+	{ dci_brk_freq_type,	0x214,	40205,	30,		10,		600,	1, 	10, 	0, 	dci_brk_freq_dsp,	table_setFreqValue	},
 	{ dci_brk_hold_type,	0x218,	40206,	10,		0,		600,	1,	10, 	0, 	dci_brk_hold_dsp,	table_setValue	},
 	{ dci_brk_time_type,	0x21C,	40207,	50,		0,		600,	1, 	10, 	0, 	dci_brk_time_dsp,	table_setValue	},
 	{ dci_brk_rate_type,	0x220,	40208,	500,	0,		2000,	1, 	10, 	0, 	dci_brk_rate_dsp,	table_setValue	},
@@ -124,32 +130,32 @@ STATIC Param_t param_table[] =
 	{ multi_Dout_0_type,	0x310,	40304,	0,		0,		5,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ multi_Dout_1_type,	0x314,	40305,	0,		0,		5,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ v_in_min_type,		0x318,	40306,	0,		0,		100,	1,	10, 	1, 	none_dsp,		table_setAinValue	},
-	{ v_in_min_freq_type,	0x31C,	40307,	10,		10,		2000,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
+	{ v_in_min_freq_type,	0x31C,	40307,	100,	100,	700,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
 	{ v_in_max_type,		0x320,	40308,	100,	0,		100,	1,	10, 	1, 	none_dsp,		table_setAinValue	},
-	{ v_in_max_freq_type,	0x324,	40309,	2000,	10,		2000,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
+	{ v_in_max_freq_type,	0x324,	40309,	600,	100,	700,	1,	10, 	1, 	none_dsp,		table_setAinFreqValue	},
 	{ aout_type_type,		0x328,	40310,	0,		0,		3,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ aout_rate_type,		0x32C,	40311,	100,	10,		200,	1,	1, 		1, 	none_dsp,		table_setValue	},
-	{ mb_address_type,		0x330,	40312,	1,		1,		254,	1,	1, 		1, 	none_dsp,		table_setCommValue	},
+	{ mb_address_type,		0x330,	40312,	1,		1,		247,	1,	1, 		1, 	none_dsp,		table_setCommValue	},
 	{ baudrate_type,		0x334,	40313,	2,		0,		5,		1,	1, 		1, 	none_dsp,		table_setBaudValue	},
 
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm		do nothing for read only
-	{ Rs_type,				0x20,	40040,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ Rr_type,				0x24,	40041,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ Ls_type,				0x28,	40042,	0,		0,		0,		0, 	10, 	0,	none_dsp,		table_setFactoryValue},
-	{ noload_current_type,	0x2C,	40043,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ rated_current_type,	0x30,	40044,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ poles_type,			0x34,	40045,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ input_voltage_type,	0x38,	40046,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ rated_freq_type,		0x3C,	40047,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ Rs_type,				0x20,	40020,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ Rr_type,				0x24,	40021,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ Ls_type,				0x28,	40022,	0,		0,		0,		0, 	10, 	0,	none_dsp,		table_setFactoryValue},
+	{ noload_current_type,	0x2C,	40023,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ rated_current_type,	0x30,	40024,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
+	{ poles_type,			0x34,	40025,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ input_voltage_type,	0x38,	40026,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ rated_freq_type,		0x3C,	40027,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm
-	{ model_type,			0x60,	40080,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ motor_type_type,		0x64,	40081,	1,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
-	{ gear_ratio_type,		0x68,	40082,	1,		1,		50,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ motor_on_cnt_type,	0x6C,	40083,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
-	{ elapsed_hour_type,	0x70,	40084,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
-	{ operating_hour_type,	0x74,	40085,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
+	{ model_type,			0x60,	40060,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ motor_type_type,		0x64,	40061,	1,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
+	{ gear_ratio_type,		0x68,	40062,	1,		1,		50,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ motor_on_cnt_type,	0x6C,	40063,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
+	{ elapsed_hour_type,	0x70,	40064,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
+	{ operating_hour_type,	0x74,	40065,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
 
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm
@@ -501,6 +507,7 @@ int8_t table_setFactoryValue(PARAM_IDX_t index, int32_t value, int16_t option)
 	table_nvm[index] = value;
 	//printf("idx=%d set value=%d\r\n", idx, value);
 
+	return 1;
 }
 
 int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
@@ -571,6 +578,9 @@ int8_t table_initializeBlankEEPROM(void)
 
 		table_data[i] = param_table[i].initValue;
 		//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
+#ifdef SUPPORT_TASK_WATCHDOG
+		watchdog_f= 0x1F; // WATCHDOG_ALL; to kick watchdog in case of no NFC B/D
+#endif
 	}
 
 	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
@@ -1007,7 +1017,7 @@ void table_initParam(void)
 	{
 	case CTRL_IN_Digital:
 		// initialize DIN
-		for(idx=multi_Din_0_type; idx<=multi_Din_3_type; idx++)
+		for(idx=multi_Din_0_type; idx<=multi_Din_2_type; idx++)
 		{
 			index = (int)(idx - multi_Din_0_type);
 			EXT_DI_setupMultiFuncDin(index, (DIN_config_t)table_data[idx], REQ_FROM_TEST);

@@ -18,6 +18,9 @@
 #include "table.h"
 
 
+// modbus broadcast address always accept
+#define MB_BRAODCAST_ADDR		(0)
+
 // in case of baudrate > 19200, inter-frame delay is 1.75ms
 // baudrate < 19200, need to calculate as 3.5 character
 #define MODBUS_INTER_FRAME_DELAY		35
@@ -172,7 +175,7 @@ void MB_processTimerExpired(void)
 
 int MB_isValidRecvPacket(void)
 {
-	if(mbBufRx.buf[0] != mb_slaveAddress) return 0; // slave address check
+	if(mbBufRx.buf[0] != mb_slaveAddress && mbBufRx.buf[0] != MB_BRAODCAST_ADDR) return 0; // slave address or broadcast check
 
 	// CRC error
 	if(!MB_isCRC_OK(mbBufRx.buf, mbBufRx.wp)) return 0; // CRC check

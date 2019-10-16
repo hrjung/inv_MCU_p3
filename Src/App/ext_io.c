@@ -398,6 +398,13 @@ void EXT_AI_needReconfig(void)
 	isConfigured = 0;
 }
 
+// when run this function, MCU reset
+void EXT_AI_printConfig(void)
+{
+	//kprintf(PORT_DEBUG, "\r\n AI config f_min=%f, f_max=%f, V_min=%f, V_max=%f", freq_min, freq_max, V_ai_min, V_ai_max);
+	//kprintf(PORT_DEBUG, "\r\n AI config f_min=%f", freq_min);
+}
+
 int8_t EXT_AI_setConfig(void)
 {
 	uint16_t ratio;

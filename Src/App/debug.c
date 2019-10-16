@@ -215,6 +215,8 @@ extern uint16_t adc_sample;
 extern uint16_t adc_value;
 extern volatile int8_t ADC_error;
 
+//extern float freq_min, freq_max, V_ai_min, V_ai_max;
+
 extern int32_t table_nvm[];
 extern int32_t table_data[];
 
@@ -244,6 +246,7 @@ extern uint8_t watchdog_f;
 extern void EXT_printDIConfig(void);
 extern uint16_t EXT_AI_readADC(void);
 extern int32_t EXT_AI_getFreq(uint16_t adc_val);
+//extern void EXT_AI_printConfig(void);
 
 extern void MB_UART_init(uint32_t baudrate);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
@@ -890,12 +893,11 @@ STATIC int test_ser(uint8_t dport)
    		MB_UART_init((uint32_t)b_index);
 		kprintf(dport, "\r\n MB_address=%d, baudrate=%d", mb_slaveAddress, mb_baudrate[b_index]);
     }
-    else if(test_case == 'A') // run parameter function of each parameter
+    else if(test_case == 'A') // show Analog input setting
     {
-    	idx = (int)atoi(arg_v[2]);
-    	value = (int32_t)atoi(arg_v[3]);
-    	status = table_runFunc(idx, (int32_t)value, REQ_FROM_MODBUS);
-    	kprintf(dport, "\r\n idx=%d, value=%d, status=%d, ", idx, value, status);
+    	kprintf(PORT_DEBUG, "\r\n AI setting f_min=%d, f_max=%d, V_min=%d, V_max=%d", \
+    			table_data[v_in_min_freq_type], table_data[v_in_max_freq_type], table_data[v_in_min_type], table_data[v_in_max_type]);
+    	//EXT_AI_printConfig();
     }
     else if(test_case == 'B') // 3 color LED test
     {
@@ -937,7 +939,21 @@ STATIC int test_ser(uint8_t dport)
     				i, table_data[idx[i]], table_data[idx[i]+1], table_data[idx[i]+2], table_data[idx[i]+3], table_data[idx[i]+4]);
     	}
     }
-    else if(test_case == 'F') // show table_data and table_nvm to compare
+    else if(test_case == 'F') // run parameter function of each parameter
+    {
+    	idx = (int)atoi(arg_v[2]);
+    	value = (int32_t)atoi(arg_v[3]);
+    	status = table_runFunc(idx, (int32_t)value, REQ_FROM_MODBUS);
+    	kprintf(dport, "\r\n idx=%d, value=%d, status=%d, ", idx, value, status);
+    }
+    else if(test_case == 'I') // setting info
+    {
+    	// freq, ctrl_in
+    	kprintf(dport, "\r\n freq=%d, ctrl_in=%d, baudrate=%d, motor_type=%d, gear_ratio=%d", \
+    		table_data[value_type], table_data[ctrl_in_type], table_data[baudrate_type], table_data[motor_type_type], table_data[gear_ratio_type]);
+
+    }
+    else if(test_case == 'L') // show table_data and table_nvm to compare
     {
     	int i;
 
@@ -945,12 +961,6 @@ STATIC int test_ser(uint8_t dport)
     	{
     		kprintf(dport, "\r\n %d, table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
     	}
-    }
-    else if(test_case == 'G')
-    {
-
-
-
     }
     else if(test_case == 'R') // send Run/Stop command to DSP
     {
