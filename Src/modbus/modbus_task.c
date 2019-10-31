@@ -108,6 +108,7 @@ void MB_init(void)
 	mb_slaveAddress = (uint8_t)table_getValue(mb_address_type);
 	b_index = table_getValue(baudrate_type);
 
+	//b_index = 2; //// fix only 9600bps for exhibition
 	MB_UART_init((uint32_t)b_index);
 	MB_initTimer(MODBUS_INTER_FRAME_DELAY); // 1.75ms for 3.5 char
 
@@ -176,6 +177,8 @@ void MB_processTimerExpired(void)
 int MB_isValidRecvPacket(void)
 {
 	if(mbBufRx.buf[0] != mb_slaveAddress && mbBufRx.buf[0] != MB_BRAODCAST_ADDR) return 0; // slave address or broadcast check
+
+	if(mbBufRx.wp < 4) return 0; // discard invalid packet
 
 	// CRC error
 	if(!MB_isCRC_OK(mbBufRx.buf, mbBufRx.wp)) return 0; // CRC check

@@ -19,6 +19,7 @@
 #include "table.h"
 #include "error.h"
 #include "dsp_comm.h"
+#include "handler.h"
 //#include "task.h"
 
 #include "drv_nvm.h"
@@ -31,7 +32,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-#define KEYPAD_SCAN_TIME_INTERVAL	10
 
 //#define CMDLINE_MAX_ARGS        8
 #define NUM_OF_DEBUGCHAR    	64
@@ -922,7 +922,7 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 'D') // show Din value
     {
-    	test_DinConfig();
+    	//test_DinConfig();
     	EXT_printDIConfig();
 
     	kprintf(dport, "\r\n Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
@@ -1166,7 +1166,7 @@ static int display_BoardInfo(uint8_t dport)
 void debugTaskFunc(void const * argument)
 {
 
-  osDelay(1000);
+  osDelay(800);
 
   kputs(PORT_DEBUG, "start debugTask\r\n");
   /* Infinite loop */

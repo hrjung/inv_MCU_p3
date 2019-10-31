@@ -136,6 +136,7 @@ STATIC Param_t param_table[] =
 	{ aout_type_type,		0x328,	40310,	0,		0,		3,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ aout_rate_type,		0x32C,	40311,	100,	10,		200,	1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ mb_address_type,		0x330,	40312,	1,		1,		247,	1,	1, 		1, 	none_dsp,		table_setCommValue	},
+	//{ baudrate_type,		0x334,	40313,	2,		2,		2,		1,	1, 		1, 	none_dsp,		table_doNothing	},
 	{ baudrate_type,		0x334,	40313,	2,		0,		5,		1,	1, 		1, 	none_dsp,		table_setBaudValue	},
 
 

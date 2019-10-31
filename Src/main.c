@@ -406,7 +406,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityIdle, 0, 128);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityBelowNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of NfcNvmTask */
@@ -422,11 +422,11 @@ int main(void)
   mainHandlerTaskHandle = osThreadCreate(osThread(mainHandlerTask), NULL);
 
   /* definition and creation of mbus485Task */
-  osThreadDef(mbus485Task, mbus485TaskFunc, osPriorityIdle, 0, 256);
+  osThreadDef(mbus485Task, mbus485TaskFunc, osPriorityNormal, 0, 256);
   mbus485TaskHandle = osThreadCreate(osThread(mbus485Task), NULL);
 
   /* definition and creation of opt485Task */
-  osThreadDef(opt485Task, opt485TaskFunc, osPriorityIdle, 0, 256);
+  osThreadDef(opt485Task, opt485TaskFunc, osPriorityBelowNormal, 0, 256);
   opt485TaskHandle = osThreadCreate(osThread(opt485Task), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -1156,16 +1156,22 @@ void StartDefaultTask(void const * argument)
   {
 
 #ifdef SUPPORT_TASK_WATCHDOG
-	if((watchdog_f&WATCHDOG_ALL) == WATCHDOG_ALL)
+	if(main_handler_f == 0)
 	{
-		watchdog_f = 0;
 		HAL_IWDG_Refresh(&hiwdg); // kick
 	}
-	//HAL_IWDG_Refresh(&hiwdg); // kick
+	else
+	{
+		if((watchdog_f&WATCHDOG_ALL) == WATCHDOG_ALL)
+		{
+			watchdog_f = 0;
+			HAL_IWDG_Refresh(&hiwdg); // kick
+		}
+	}
 #endif
 
 	default_cnt++;
-    osDelay(100);
+    osDelay(50);
   }
   /* USER CODE END 5 */ 
 }
@@ -1285,7 +1291,7 @@ void userIoTaskFunc(void const * argument)
 
   while(main_handler_f == 0) osDelay(5);
 
-  osDelay(300);
+  osDelay(100);
   kputs(PORT_DEBUG, "start userIoTask\r\n");
   /* Infinite loop */
   for(;;)
@@ -1294,7 +1300,7 @@ void userIoTaskFunc(void const * argument)
 #ifdef SUPPORT_TASK_WATCHDOG
 	watchdog_f |= WATCHDOG_USERIO;
 #endif
-    osDelay(100);
+    osDelay(50);
   }
   /* USER CODE END userIoTaskFunc */
 }
@@ -1566,7 +1572,7 @@ void mbus485TaskFunc(void const * argument)
 
 	while(main_handler_f == 0) osDelay(5);
 
-	osDelay(100);
+	osDelay(80);
 
 	MB_init();
 
@@ -1605,7 +1611,7 @@ void opt485TaskFunc(void const * argument)
   /* USER CODE BEGIN opt485TaskFunc */
   while(main_handler_f == 0) osDelay(5);
 
-  osDelay(300);
+  osDelay(100);
 
   OPT_init();
 
@@ -1681,7 +1687,7 @@ void userIoTimerCallback(void const * argument)
 
 
 
-	if(exec_do_cnt%10 == 0) // 10ms * 10 cycle
+	if(exec_do_cnt%10 == 0) // 10ms * 10 cycle -> 100ms
 	{
 		EXT_DO_handleDout();
 		if(exec_do_cnt >= 1000) exec_do_cnt=0;
@@ -1689,7 +1695,7 @@ void userIoTimerCallback(void const * argument)
 	exec_do_cnt++;
 
 
-	if(user_io_handle_cnt++ > 50) // 500 ms, set flag for EXT IO handler
+	if(user_io_handle_cnt++ > 25) // 250 ms, set flag for EXT IO handler
 	{
 		user_io_handle_cnt=0;
 		user_io_handle_f = 1;
