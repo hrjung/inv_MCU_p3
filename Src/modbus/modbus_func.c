@@ -579,6 +579,10 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 
 	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : read only
 
+#ifdef SUPPORT_PASSWORD
+	if(table_isLocked()) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : parameter locked
+#endif
+
 	modbusTx.wp = 0;
 	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
 	modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
@@ -618,7 +622,7 @@ int MB_handleLockReq(uint16_t addr, uint16_t count, uint16_t *value)
 
 	stored_password = table_getValue(password_type);
 	if(stored_password != (int32_t)password) return MOD_EX_SLAVE_FAIL;
-	else lock_pass_ok = 1;
+	else lock_pass_ok = 1; // password OK
 
 	ret = table_runFunc(modify_lock_type, (int32_t)lock, REQ_FROM_MODBUS);
 	if(ret == 0) return MOD_EX_SLAVE_FAIL;

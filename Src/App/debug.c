@@ -1050,6 +1050,32 @@ STATIC int test_ser(uint8_t dport)
     	mdout_value[index] = onoff;
     	kprintf(dport, "\r\n set Dout index=%d, value=%d", index, onoff);
     }
+#ifdef SUPPORT_PASSWORD
+    else if(test_case == 'U') // lock/unock with password
+    {
+    	int32_t lock, password=0;
+
+    	if(arg_c == 2) // show password, lock status
+    	{
+    		password = table_getValue(password_type);
+    		lock = table_getValue(modify_lock_type);
+    		kprintf(dport, "\r\n password = %d, lock status = %d", password, lock);
+    	}
+    	else if(arg_c > 3) // >TEST U pass lock
+    	{
+    		password = (int32_t)atoi(arg_v[2]);
+    		lock = (int32_t)atoi(arg_v[3]);
+    		if(password == table_getValue(password_type))
+    		{
+    			status = table_setValue(modify_lock_type, lock, REQ_FROM_MODBUS);
+    			kprintf(dport, "\r\n set lock status = %d", lock);
+    		}
+    		else
+    			kprintf(dport, "\r\n wrong password Error!!");
+    	}
+    }
+#endif
+
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
     else if(test_case == 'P') // Production test start
     {
