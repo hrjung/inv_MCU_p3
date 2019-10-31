@@ -17,6 +17,8 @@
 
 #define SUPPORT_NFC_OLD
 
+#define SUPPORT_PASSWORD
+
 //#define SUPPORT_PARAMETER_BACKUP
 
 //#define SUPPORT_UNIT_TEST

@@ -57,6 +57,10 @@ typedef enum{
 	regen_duty_type,
 	regen_band_type,
 	fan_onoff_type,
+#ifdef SUPPORT_PASSWORD
+	password_type,
+	modify_lock_type,
+#endif
 
 	multi_Din_0_type,
 	multi_Din_1_type,
@@ -129,6 +133,9 @@ typedef enum{
 	dc_voltage_type,
 	ipm_temperature_type,
 	mtr_temperature_type,
+	di_status_type,
+	do_status_type,
+	ai_status_type,
 
 	PARAM_TABLE_SIZE,
 } PARAM_IDX_t ;//new
@@ -295,6 +302,10 @@ extern int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float cur
 extern int8_t table_updateCommError(uint16_t err_code);
 
 extern int32_t table_getCtrllIn(void);
+
+#ifdef SUPPORT_PASSWORD
+extern int table_isLocked(void);
+#endif
 
 extern int8_t table_runFunc(PARAM_IDX_t idx, int32_t value, int16_t opt);
 

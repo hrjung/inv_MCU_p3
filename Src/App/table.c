@@ -47,6 +47,10 @@ extern COMM_CMD_t test_cmd;
 extern uint8_t watchdog_f;
 #endif
 
+#ifdef SUPPORT_PASSWORD
+extern int lock_pass_ok;
+#endif
+
 TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 
@@ -57,6 +61,10 @@ STATIC int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
+#ifdef SUPPORT_PASSWORD
+STATIC int8_t table_setPassValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+STATIC int8_t table_setLockValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+#endif
 STATIC int8_t table_setDinValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setAinValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
@@ -121,6 +129,10 @@ STATIC Param_t param_table[] =
 	{ regen_duty_type,		0x294,	40285,	30,		0,		80,		1,	1, 		0, 	regen_duty_dsp,		table_setValue	},
 	{ regen_band_type,		0x298,	40286,	10,		0,		80,		1,	1, 		0, 	regen_band_dsp,		table_setValue	},
 	{ fan_onoff_type,		0x29C,	40287,	0,		0,		1,		1,	1, 		1, 	fan_onoff_dsp,		table_setValue	},
+#ifdef SUPPORT_PASSWORD
+	{ password_type,		0x2A0,	40288,	0,		0,		9999,	1,	1, 		1, 	none_dsp,			table_setPassValue	},
+	{ modify_lock_type,		0x2A4,	40289,	0,		0,		1,		1,	1, 		1, 	none_dsp,			table_setLockValue	},
+#endif
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx		param_func
 	{ multi_Din_0_type,		0x300,	40300,	0,		0,		8,		1,	1, 		1, 	none_dsp,		table_setDinValue	},
@@ -197,6 +209,9 @@ STATIC Param_t param_table[] =
 	{ dc_voltage_type,		0xB0,	40164,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
 	{ ipm_temperature_type,	0xB4,	40165,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
 	{ mtr_temperature_type,	0xB8,	40166,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
+	{ di_status_type,		0xBC,	40167,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
+	{ do_status_type,		0xC0,	40168,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
+	{ ai_status_type,		0xC4,	40169,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
 };
 
 
@@ -428,6 +443,44 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 	return status;
 }
+
+#ifdef SUPPORT_PASSWORD
+int table_isLocked(void)
+{
+	return (table_getValue(modify_lock_type) != (int32_t)0);
+}
+
+int table_isPasswordAddrModbus(uint16_t mb_addr)
+{
+	return (param_table[password_type].mb_addr == mb_addr);
+}
+
+int8_t table_setPassValue(PARAM_IDX_t idx, int32_t value, int16_t option)
+{
+	int8_t status=1;
+
+	if(table_isLocked()) return 0; // check parameter lock
+
+	status = table_setValue(idx, value, option);
+	if(status == 0) return 0;
+
+
+	return status;
+}
+
+int8_t table_setLockValue(PARAM_IDX_t idx, int32_t value, int16_t option)
+{
+	int8_t status=1;
+
+	if(lock_pass_ok == 0) return 0; // check password is correct
+
+	status = table_setValue(idx, value, option);
+	lock_pass_ok = 0; // clear flag
+	if(status == 0) return 0;
+
+	return status;
+}
+#endif
 
 int8_t table_setDinValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
