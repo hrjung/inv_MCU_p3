@@ -375,6 +375,30 @@ void MB_generateErrorResp(uint8_t func_code, uint8_t excep_code)
 
 }
 
+int MB_handleDummyRead(uint8_t func_code, uint16_t addr, uint16_t cnt)
+{
+	int result=MOD_EX_NO_ERR;
+	int32_t value=1;
+
+	switch(addr)
+	{
+	case MB_CTRL_CONN_CHECK_ADDR:
+		modbusTx.wp = 0;
+		modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+		modbusTx.buf[modbusTx.wp++] = func_code;
+		modbusTx.buf[modbusTx.wp++] = cnt*2;
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+		result = MOD_EX_NO_ERR;
+		kprintf(PORT_DEBUG, "addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+
+		break;
+	}
+
+	return result;
+}
+
 int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 {
 	int i, result=MOD_EX_NO_ERR;
@@ -387,6 +411,12 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	 * - data count error : MOD_EX_DataADD
 	 * - function cannot be processed : MOD_EX_SLAVE_FAIL
 	 */
+
+	if(addr == MB_CTRL_CONN_CHECK_ADDR)
+	{
+		result = MB_handleDummyRead(func_code, addr, cnt);
+		goto FC03_ERR;
+	}
 
 	// valid address range ?
 	index = MB_convModbusAddr(addr, cnt, &type);
@@ -425,6 +455,101 @@ FC03_ERR:
 	return result;
 }
 
+int MB_handleFlagRegister(uint16_t addr, uint16_t value)
+{
+	int result=MOD_EX_NO_ERR;
+
+	switch(addr)
+	{
+	case MB_CTRL_RUN_STOP_ADDR:
+		if(!ERR_isErrorState())
+		{
+			if(value == 1 || value == 2)
+			{
+				HDLR_setRunStopFlagModbus((int8_t)value);
+				modbusTx.wp = 0;
+				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+				result = MOD_EX_NO_ERR;
+				kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			}
+			else
+				result = MOD_EX_DataVAL;
+		}
+		else
+			result = MOD_EX_SLAVE_FAIL;
+
+		break;
+
+	case MB_CTRL_RESET_ADDR:
+
+		//TODO: add handler for SW_reset after send response
+		reset_requested_f = 1;
+
+		modbusTx.wp = 0;
+		modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+		modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+		result = MOD_EX_NO_ERR;
+		kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+		break;
+
+#ifdef SUPPORT_PARAMETER_BACKUP
+	case MB_CTRL_BACKUP_FLAG_ADDR:
+		if(value == MB_BACKUP_SAVE || value == MB_BACKUP_RESTORE)
+		{
+			HDLR_setBackupFlagModbus(value);
+			modbusTx.wp = 0;
+			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+			modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+			result = MOD_EX_NO_ERR;
+			kprintf(PORT_DEBUG, "set backup_addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+		}
+		else
+			result = MOD_EX_DataVAL;
+
+		break;
+#endif
+	case MB_CTRL_FACTORY_MODE_ADDR: // enable/disable factory mode
+
+		if(value == 0 || value == 1)
+		{
+			HDLR_setFactoryModeFlagModbus(value);
+			modbusTx.wp = 0;
+			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+			modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+			result = MOD_EX_NO_ERR;
+			kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+		}
+		else
+			result = MOD_EX_DataVAL;
+
+		break;
+
+	}
+
+	return result;
+}
+
 int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 {
 	int ret, result=MOD_EX_NO_ERR;
@@ -439,72 +564,7 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 
 	if(addr == MB_CTRL_RUN_STOP_ADDR || addr == MB_CTRL_RESET_ADDR || addr == MB_CTRL_FACTORY_MODE_ADDR)
 	{
-		switch(addr)
-		{
-		case MB_CTRL_RUN_STOP_ADDR:
-			if(!ERR_isErrorState())
-			{
-				if(value == 1 || value == 2)
-				{
-					HDLR_setRunStopFlagModbus((int8_t)value);
-					modbusTx.wp = 0;
-					modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-					modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
-					modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-					modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-					modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
-					modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
-
-					result = MOD_EX_NO_ERR;
-					kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
-				}
-				else
-					result = MOD_EX_DataVAL;
-			}
-			else
-				result = MOD_EX_SLAVE_FAIL;
-
-			break;
-
-		case MB_CTRL_RESET_ADDR:
-
-			//TODO: add handler for SW_reset after send response
-			reset_requested_f = 1;
-
-			modbusTx.wp = 0;
-			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-			modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
-
-			result = MOD_EX_NO_ERR;
-			kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
-			break;
-
-		case MB_CTRL_FACTORY_MODE_ADDR: // enable/disable factory mode
-
-			if(value == 0 || value == 1)
-			{
-				HDLR_setFactoryModeFlagModbus(value);
-				modbusTx.wp = 0;
-				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
-				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
-				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
-
-				result = MOD_EX_NO_ERR;
-				kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
-			}
-			else
-				result = MOD_EX_DataVAL;
-
-			break;
-		}
-
+		result = MB_handleFlagRegister(addr, value);
 		goto FC06_ERR;
 	}
 

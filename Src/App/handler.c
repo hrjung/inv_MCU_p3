@@ -41,7 +41,9 @@ extern void TM_setStartRunTime(void);
 extern int8_t NVM_setMotorRunTime(uint32_t run_time);
 extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
 
-
+#ifdef SUPPORT_PARAMETER_BACKUP
+extern uint16_t table_getAddr(PARAM_IDX_t index);
+#endif
 
 void HDLR_setRunStopFlagModbus(int8_t flag)
 {
@@ -365,3 +367,75 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 	if(errflag) return 0;
 	else	return 1;
 }
+
+#ifdef SUPPORT_PARAMETER_BACKUP
+int8_t mb_backup_mode_f=0;
+
+void HDLR_setBackupFlagModbus(int8_t flag)
+{
+	mb_backup_mode_f = flag;
+}
+
+void HDLR_clearBackupFlagModbus(void)
+{
+	mb_backup_mode_f = 0;
+}
+
+int8_t HDLR_getBackupFlag(void)
+{
+	return mb_backup_mode_f;
+}
+
+int8_t HDLR_isBackupEnabled(void)
+{
+	return (mb_backup_mode_f != 0);
+}
+
+// store table parameter to backup area in EEPROM
+int8_t HDLR_backupParameter(void)
+{
+	PARAM_IDX_t idx;
+	int8_t nvm_status;
+	int32_t addr=0, value=0;
+	int16_t errflag=0;
+
+	for(idx=value_type; idx <= baudrate_type; idx++)
+	{
+		addr = NVM_BACKUP_START_ADDR + idx*4;
+		value = table_getValue(idx);
+		nvm_status = NVM_write(addr, value);
+		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM backup error idx=0x%x\r\n", idx); errflag++;}
+
+		osDelay(5);
+	}
+	kprintf(PORT_DEBUG,"NVM backup finished err=%d\r\n", errflag);
+
+	if(errflag) return 0;
+	else	return 1;
+}
+
+// read parameters in backup area, write to parameter table
+int8_t HDLR_restoreParameter(void)
+{
+	PARAM_IDX_t idx;
+	int8_t nvm_status;
+	int32_t s_addr=0, t_addr=0, value=0;
+	int16_t errflag=0;
+
+	for(idx=value_type; idx <= baudrate_type; idx++)
+	{
+		s_addr = NVM_BACKUP_START_ADDR + idx*4;
+		nvm_status = NVM_read(s_addr, &value);
+		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR backup NVM read error idx=0x%x\r\n", idx); errflag++;}
+
+		t_addr = table_getAddr(idx);
+		nvm_status = NVM_write(t_addr, value);
+		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR backup NVM write error idx=0x%x\r\n", idx); errflag++;}
+
+		osDelay(3);
+	}
+
+	if(errflag) return 0;
+	else	return 1;
+}
+#endif

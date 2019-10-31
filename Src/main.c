@@ -1187,7 +1187,7 @@ void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
   int32_t tag_tryed=0, tag_end=0;
-  int8_t status;
+  int8_t status, nvm_backup=0;
   static uint32_t prev_time_tick;
 
   // wait until mainHandler initialized
@@ -1263,6 +1263,33 @@ void NfcNvmTaskFunc(void const * argument)
 
 		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
+
+#ifdef SUPPORT_PARAMETER_BACKUP
+	  if(HDLR_isBackupEnabled())
+	  {
+		  nvm_backup = HDLR_getBackupFlag();
+		  if(nvm_backup == MB_BACKUP_SAVE) // backup
+		  {
+			  status = HDLR_backupParameter();
+			  if(status == 0) kputs(PORT_DEBUG, "HDLR_backupParameter ERROR\r\n");
+		  }
+		  else if(nvm_backup == MB_BACKUP_RESTORE) // restore
+		  {
+			  status = HDLR_restoreParameter(); // store NVM
+			  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
+
+			  status = NVM_setCRC(); // set new CRC
+			  if(status == 0) kputs(PORT_DEBUG, "restore CRC update ERROR\r\n");
+
+			  // update table data
+			  status = HDLR_updateParamNVM(); // notify to update table data
+			  if(status == 0) kputs(PORT_DEBUG, "restore HDLR_updateParamNVM ERROR\r\n");
+		  }
+
+		  UTIL_setLED(LED_COLOR_G, 0);
+		  HDLR_clearBackupFlagModbus(); // clear flag
+	  }
+#endif
 
 	  // time info update
 	  if(prev_time_tick != device_10min_cnt)

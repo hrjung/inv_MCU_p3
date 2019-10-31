@@ -18,6 +18,13 @@ extern int8_t HDLR_handleRunStopFlagModbus(void);
 
 extern int8_t HDLR_isFactoryModeEnabled(void);
 
+#ifdef SUPPORT_PARAMETER_BACKUP
+extern void HDLR_setBackupFlagModbus(int8_t flag);
+extern void HDLR_clearBackupFlagModbus(void);
+extern int8_t HDLR_getBackupFlag(void);
+extern int8_t HDLR_isBackupEnabled(void);
+#endif
+
 // NFC task function
 extern int8_t HDLR_updatebyNfc(void);
 extern int8_t HDLR_restoreNVM(void);

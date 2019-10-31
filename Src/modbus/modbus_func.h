@@ -33,10 +33,15 @@
 #define MODBUS_ADDR_MAP_ERR		0xFFFF
 #define MODBUS_COUNT_ERR		0xFFFF
 
+#define MB_BACKUP_SAVE			1
+#define MB_BACKUP_RESTORE		2
+
 // special purpose parameter for PC application
 #define MB_CTRL_RESET_ADDR			(40090)
 #define MB_CTRL_FACTORY_MODE_ADDR	(40092)
+#define MB_CTRL_BACKUP_FLAG_ADDR	(40093)
 #define MB_CTRL_RUN_STOP_ADDR		(40095)
+#define MB_CTRL_CONN_CHECK_ADDR		(40096) // connection check command
 
 // normal parameter
 #define MB_DRIVER_START_ADDR		(40100)
