@@ -1231,18 +1231,30 @@ void NfcNvmTaskFunc(void const * argument)
 		  }
 		  else
 		  {
-			  status = HDLR_updatebyNfc();
-			  if(status == 0)
+#ifdef SUPPORT_PASSWORD
+			  if(table_isLocked()) // in case of lock, parameter should be restored
 			  {
-				  kputs(PORT_DEBUG, "nfc tag update error\r\n");
-				  UTIL_setLED(LED_COLOR_B, 1);
+				  osDelay(5);
+				  status = HDLR_restoreNVM();
+				  if(status == 0) {kputs(PORT_DEBUG, "locked!! nfc tag restore error\r\n"); }
+
+				  UTIL_setLED(LED_COLOR_G, 0);
 			  }
 			  else
-				  UTIL_setLED(LED_COLOR_G, 0);
-
+			  {
+#endif
+				  status = HDLR_updatebyNfc(); // EEPROM updated -> table update
+				  if(status == 0)
+				  {
+					  kputs(PORT_DEBUG, "nfc tag update error\r\n");
+					  UTIL_setLED(LED_COLOR_B, 1);
+				  }
+				  else
+					  UTIL_setLED(LED_COLOR_G, 0);
+			  }
 		  }
 	  }
-	  else if(tag_tryed == 1 || tag_end == 1)
+	  else if(tag_tryed == 1 || tag_end == 1) // NFC write is incomplete -> restore
 	  {
 		  // tag error : restore NVM <- table
 		  osDelay(5);

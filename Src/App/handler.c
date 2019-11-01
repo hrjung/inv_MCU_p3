@@ -258,6 +258,10 @@ int8_t HDLR_restoreNVM(void)
 	status = NVM_setCRC();
 	if(status == 0) errflag++;
 
+	// clear NFC tag flag
+	status = NVM_clearNfcStatus();
+	if(status == -1) {errflag++; kprintf(PORT_DEBUG, "ERROR clear tag flag \r\n");}
+
 	if(errflag) return 0;
 
 	return 1;
