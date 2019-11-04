@@ -21,6 +21,7 @@
 #include "dsp_comm.h"
 #include "handler.h"
 //#include "task.h"
+#include "nvm_queue.h"
 
 #include "drv_nvm.h"
 #include "drv_ST25DV.h"
@@ -105,6 +106,14 @@ const char	*uio_test_msg[] = {
 };
 #endif
 
+#ifdef SUPPORT_PASSWORD
+const char	*pass_msg[] = {
+	"PASS",
+	"Usage: PASS old new",
+	0
+};
+#endif
+
 #ifdef SUPPORT_PARAMETER_BACKUP
 const char	*backup_msg[] = {
 	"BKUP",
@@ -148,6 +157,9 @@ STATIC int dout_ser(uint8_t dport);
 STATIC int ain_ser(uint8_t dport);
 //STATIC int aout_ser(uint8_t dport);
 //STATIC int uio_enable_ser(uint8_t dport);
+#ifdef SUPPORT_PASSWORD
+STATIC int pass_ser(uint8_t dport);
+#endif
 #ifdef SUPPORT_PARAMETER_BACKUP
 STATIC int backup_ser(uint8_t dport);
 #endif
@@ -172,6 +184,9 @@ const COMMAND	Cmd_List[] =
 	{ 1,  	"AIN",			1,		ain_ser,			ain_msg		},
 //	{ 1,  	"AOUT",			2,		aout_ser,			aout_msg	},
 //	{ 1,  	"UIOT",			2,		uio_enable_ser,		uio_test_msg},
+#ifdef SUPPORT_PASSWORD
+	{ 1,  	"PASS",			2,		pass_ser,			pass_msg	},
+#endif
 #ifdef SUPPORT_PARAMETER_BACKUP
 	{ 1,  	"BKUP",			2,		backup_ser,			backup_msg	},
 #endif
@@ -730,6 +745,42 @@ STATIC int uio_enable_ser(uint8_t dport)
 }
 #endif
 
+#ifdef SUPPORT_PASSWORD
+STATIC int pass_ser(uint8_t dport)
+{
+	int32_t	old_pass=0, new_pass, stored_pass;
+	int8_t status=0;
+
+	if(arg_c == 1)
+	{
+		stored_pass = table_getValue(password_type);
+		kprintf(dport, "\r\n password=%d", stored_pass);
+		return -1;
+	}
+	else if(arg_c == 3)
+	{
+		old_pass = (uint8_t)atoi(arg_v[1]);
+		new_pass = (uint8_t)atoi(arg_v[2]);
+		stored_pass = table_getValue(password_type);
+		if(stored_pass != old_pass)
+		{
+			kprintf(dport, "\r\n password is not correct !!");
+			return -1;
+		}
+
+		status = NVMQ_enqueueNfcQ(password_type, new_pass);
+		kprintf(dport, "\r\n set password=%d status=%d", new_pass, status);
+	}
+	else
+	{
+		kprintf(dport, "\r\nInvalid number of parameters");
+		return -1;
+	}
+
+	return 0;
+}
+#endif
+
 #ifdef SUPPORT_PARAMETER_BACKUP
 STATIC int backup_ser(uint8_t dport)
 {
@@ -1019,12 +1070,12 @@ STATIC int test_ser(uint8_t dport)
     	if(state_run_stop == CMD_RUN)
     	{
     		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
-    		kprintf(dport, "\r\n send SPICMD_CTRL_STOP");
+    		kprintf(dport, "\r\n send SPICMD_CTRL_STOP, status=%d", status);
     	}
     	else
     	{
     		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
-    		kprintf(dport, "\r\n send SPICMD_CTRL_RUN");
+    		kprintf(dport, "\r\n send SPICMD_CTRL_RUN, status=%d", status);
     	}
     }
     else if(test_case == 'S') // show status info
@@ -1061,7 +1112,7 @@ STATIC int test_ser(uint8_t dport)
     		lock = table_getValue(modify_lock_type);
     		kprintf(dport, "\r\n password = %d, lock status = %d", password, lock);
     	}
-    	else if(arg_c > 3) // >TEST U pass lock
+    	else if(arg_c > 3) // >TEST U pass lock : set lock value with password
     	{
     		password = (int32_t)atoi(arg_v[2]);
     		lock = (int32_t)atoi(arg_v[3]);
@@ -1128,24 +1179,24 @@ STATIC int ptest_ser(uint8_t dport)
 	case 0:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_TEST_START);
 		relay_test_state=1;
-		kprintf(dport, "\r\n send SPI_TEST_DSP_TEST_START");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_TEST_START, status=%d", status);
 		break;
 
 	case 1:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_OK);
 		relay_test_state=2;
-		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_OK");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_OK, status=%d", status);
 		break;
 
 	case 2:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_NOK);
 		relay_test_state=3;
-		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_NOK");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_NOK, status=%d", status);
 		break;
 
 	case 3:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_MOTOR_RUN);
-		kprintf(dport, "\r\n send SPI_TEST_DSP_MOTOR_RUN");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_MOTOR_RUN, status=%d", status);
 		break;
 	}
 
