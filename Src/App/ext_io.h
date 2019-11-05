@@ -29,6 +29,9 @@ typedef struct {
 } DIN_PIN_NUM_t;
 
 
+extern int32_t EXT_getDIValue(void);
+extern int32_t EXT_getDOValue(void);
+extern int32_t EXT_getAIValue(void);
 
 //extern void EXT_DI_updateMultiDinPinIndex(uint8_t index, DIN_config_t func_set);
 extern int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option);

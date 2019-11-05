@@ -26,6 +26,7 @@
 #include "drv_nvm.h"
 #include "drv_ST25DV.h"
 #include "drv_gpio.h"
+#include "ext_io.h"
 
 #ifdef SUPPORT_UNIT_TEST
 #include "../test/unity.h"
@@ -275,6 +276,7 @@ extern uint8_t watchdog_f;
 extern void EXT_printDIConfig(void);
 extern uint16_t EXT_AI_readADC(void);
 extern int32_t EXT_AI_getFreq(uint16_t adc_val);
+extern int32_t EXT_getAIValue(void);
 //extern void EXT_AI_printConfig(void);
 
 extern void MB_UART_init(uint32_t baudrate);
@@ -675,7 +677,7 @@ STATIC int ain_ser(uint8_t dport)
 		//kprintf(dport, "\r\n ADC val = %d %d ", ain_val[8],ain_val[9]);
 		kprintf(dport, "\r\n ADC val = %d %d %d %d  %d %d %d %d", \
 						ain_val[8],ain_val[9],ain_val[10],ain_val[11], ain_val[12],ain_val[13],ain_val[14],ain_val[15]);
-		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d, freq=%d", ain_sum, (int)adc_value, (int)adc_sample, EXT_AI_getFreq(adc_value));
+		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d, V_val=%d, freq=%d", ain_sum, (int)adc_value, (int)adc_sample, EXT_getAIValue, EXT_AI_getFreq(adc_value));
 		//kprintf(dport, "\r\n read Ain value=%d", (int)EXT_AI_readADC());
 	}
 	return 0;
@@ -858,7 +860,6 @@ STATIC int test_ser(uint8_t dport)
 	int idx;
 	int32_t value;
 	uint8_t status;
-	uint16_t addr;
 	int test_case, arg1;
 
 	if(arg_c > 4)
@@ -873,6 +874,7 @@ STATIC int test_ser(uint8_t dport)
 
     if(test_case == '0') // read EEPROM parameter
     {
+//    	uint16_t addr;
 //    	addr = (uint16_t)atoi(arg_v[2]);
 //    	status = NVM_read(addr, &value);
 //    	kprintf(dport, "\r\n NVM_read addr=%d, value=%d, status=%d", addr, (int)value, status);
@@ -882,10 +884,12 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 1) // write parameter to EEPROM with CRC update
     {
+//    	uint16_t addr;
 //    	addr = (uint16_t)atoi(arg_v[2]);
 //    	value = table_getInitValue(idx);
 //    	status = NVM_write(addr, value);
 //		kprintf(dport, "\r\n NVM_write addr=%d, value=%d status=%d", addr, value, status);
+
     	idx = (int)atoi(arg_v[2]);
     	value = table_getInitValue(idx);
     	status = NVM_writeParam((PARAM_IDX_t)idx, value);
@@ -1089,6 +1093,7 @@ STATIC int test_ser(uint8_t dport)
 
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
     	kprintf(dport, "\r\n status overload=%d, brake=%d, gear_ratio=%d", st_overload, st_brake, gear_ratio);
+    	kprintf(dport, "\r\n status di_val=%d, do_val=%d, ai_val=%d", EXT_getDIValue(), EXT_getDOValue(), EXT_getAIValue());
     	kprintf(dport, "\r\n run_count=%d on_hour=%d, run_hour=%d", motor_run_cnt, device_on_hour, motor_run_hour);
     }
     else if(test_case == 'G') // test DOUT

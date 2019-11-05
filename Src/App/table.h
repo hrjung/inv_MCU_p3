@@ -297,6 +297,8 @@ extern int32_t table_getValue(PARAM_IDX_t index);
 extern uint16_t table_getRatio(PARAM_IDX_t index);
 extern uint8_t table_getRW(PARAM_IDX_t index);
 
+extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option);
+extern void table_setExtStatusValue(void);
 extern int8_t table_setStatusDSP(void);
 extern int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq);
 extern int8_t table_updateCommError(uint16_t err_code);

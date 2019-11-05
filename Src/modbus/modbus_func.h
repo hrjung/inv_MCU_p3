@@ -66,7 +66,7 @@
 #define MB_ERROR_END_ADDR			(40424)
 
 #define MB_STATUS_START_ADDR		(40160)
-#define MB_STATUS_END_ADDR			(40166)
+#define MB_STATUS_END_ADDR			(40169)
 
 
 /*

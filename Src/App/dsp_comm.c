@@ -46,7 +46,6 @@ extern int8_t NVM_isNfcMonitoring(void);
 
 extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 
-extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option);
 
 const static PARAM_IDX_t DSP_TO_TABLE_IDX[] =
 {
@@ -467,6 +466,7 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index), REQ_FROM_DSP);
 		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index + 0.05), REQ_FROM_DSP);
 		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index), REQ_FROM_DSP);
+		table_setExtStatusValue();
 
 #ifdef SUPPORT_NFC_OLD
 		// update EEPROM while NFC tagged

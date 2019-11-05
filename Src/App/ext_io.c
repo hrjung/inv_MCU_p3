@@ -27,14 +27,15 @@ STATIC DIN_PIN_NUM_t m_din = {
 		EXT_DIN_COUNT,
 };
 
-uint8_t mdin_value[EXT_DIN_COUNT]; // actual DI pin value
+uint8_t mdin_value[EXT_DIN_COUNT]={0,0,0}; // actual DI pin value
 COMM_CMD_t test_cmd=0;
 uint8_t prev_emergency=0, prev_trip=0, prev_run=0, prev_dir=0, prev_step=0;
 uint8_t step_cmd=0;
 
-uint8_t mdout_value[EXT_DOUT_COUNT];
+uint8_t mdout_value[EXT_DOUT_COUNT]={0,0};
 
 uint16_t adc_value=0; // analog input value
+float V_adc_val=0;
 float freq_min=0.0, freq_max=0.0, V_ai_min=0.0, V_ai_max=0.0;
 STATIC int32_t prev_adc_cmd=0;
 
@@ -57,6 +58,39 @@ void EXT_printDIConfig(void)
 {
 	kprintf(PORT_DEBUG, "Din config run=%d, dir=%d, trip=%d, emerg=%d\r\n", m_din.run_pin, m_din.dir_pin, m_din.trip_pin, m_din.emergency_pin);
 	kprintf(PORT_DEBUG, "Din config bit_L=%d, bit_M=%d, bit_H=%d\r\n", m_din.bit_L, m_din.bit_M, m_din.bit_H);
+}
+
+int32_t EXT_getDIValue(void)
+{
+	int32_t di_val=0;
+
+	if(table_getCtrllIn() == CTRL_IN_Digital)
+	{
+		di_val |= (int32_t)((((mdin_value[2]&0x01)<<2) | ((mdin_value[1]&0x01)<<1) | (mdin_value[0]&0x01)));
+	}
+
+	return di_val;
+}
+
+int32_t EXT_getDOValue(void)
+{
+	int32_t do_val=0;
+
+	do_val |= (int32_t)(((mdout_value[1]&0x01)<<1) | (mdin_value[0]&0x01));
+
+	return do_val;
+}
+
+int32_t EXT_getAIValue(void)
+{
+	int32_t ai_val=0;
+
+	if(table_getCtrllIn() == CTRL_IN_Analog_V)
+	{
+		ai_val = (int32_t)(V_adc_val*10.0 + 0.5);
+	}
+
+	return ai_val;
 }
 
 int EXT_DI_isMultiStepValid(void)
@@ -447,6 +481,7 @@ int32_t EXT_AI_getFreq(uint16_t adc_val)
 	float freq_calc;
 	int32_t freq_l;
 
+	V_adc_val = V_val; //get V value from adc value
 
 	if(V_val >= V_ai_max) { freq_l = (int32_t)(freq_max*10.0 + 0.05); return freq_l; }
 

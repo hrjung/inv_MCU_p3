@@ -572,6 +572,23 @@ int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 	return 1;
 }
 
+void table_setExtStatusValue(void)
+{
+	int32_t di_val, do_val, ai_val;
+
+	di_val = EXT_getDIValue();
+	table_data[di_status_type] = di_val;
+	table_nvm[di_status_type] = di_val;
+
+	do_val = EXT_getDOValue();
+	table_data[do_status_type] = do_val;
+	table_nvm[do_status_type] = do_val;
+
+	ai_val = EXT_getAIValue();
+	table_data[ai_status_type] = ai_val;
+	table_nvm[ai_status_type] = ai_val;
+}
+
 /*
  * 		test only for debug
  *
@@ -868,7 +885,7 @@ int32_t table_getCtrllIn(void)
 
 int32_t table_getStatusValue(int16_t index)
 {
-	if(index >= run_status1_type && index <= mtr_temperature_type)
+	if(index >= run_status1_type && index <= ai_status_type)
 		return table_data[index];
 	else
 		kprintf(PORT_DEBUG, "table_getStatusValue index=%d error\r\n", index);
@@ -894,6 +911,12 @@ int8_t table_setStatusDSP(void)
 	nvm_status = NVMQ_enqueueNfcQ(ipm_temperature_type, table_data[ipm_temperature_type]);
 	if(nvm_status == 0) errflag++;
 	nvm_status = NVMQ_enqueueNfcQ(mtr_temperature_type, table_data[mtr_temperature_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(di_status_type, table_data[di_status_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(do_status_type, table_data[do_status_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(ai_status_type, table_data[ai_status_type]);
 	if(nvm_status == 0) errflag++;
 
 	if(errflag) return 0;
