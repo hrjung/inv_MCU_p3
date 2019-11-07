@@ -25,6 +25,7 @@
 #include "drv_nvm.h"
 #include "drv_ST25DV.h"
 #include "drv_gpio.h"
+#include "ext_io.h"
 
 #ifdef SUPPORT_UNIT_TEST
 #include "../test/unity.h"
@@ -586,7 +587,7 @@ STATIC int din_ser(uint8_t dport)
 
 	for(i=0; i<20; i++) {UTIL_readDin(); osDelay(10);}
 
-	kprintf(dport, "\r\n set Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
+	kprintf(dport, "\r\n set Din mdin %d, %d, %d", (mdin_value[0]==EXT_DI_ACTIVE), (mdin_value[1]==EXT_DI_ACTIVE), (mdin_value[2]==EXT_DI_ACTIVE));
 
 	return 0;
 }
@@ -758,7 +759,6 @@ STATIC int test_ser(uint8_t dport)
 	int idx;
 	int32_t value;
 	uint8_t status;
-	uint16_t addr;
 	int test_case, arg1;
 
 	if(arg_c > 4)
@@ -773,6 +773,7 @@ STATIC int test_ser(uint8_t dport)
 
     if(test_case == '0') // read EEPROM parameter
     {
+//    	uint16_t addr;
 //    	addr = (uint16_t)atoi(arg_v[2]);
 //    	status = NVM_read(addr, &value);
 //    	kprintf(dport, "\r\n NVM_read addr=%d, value=%d, status=%d", addr, (int)value, status);
@@ -782,6 +783,7 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 1) // write parameter to EEPROM with CRC update
     {
+//    	uint16_t addr;
 //    	addr = (uint16_t)atoi(arg_v[2]);
 //    	value = table_getInitValue(idx);
 //    	status = NVM_write(addr, value);
@@ -970,12 +972,12 @@ STATIC int test_ser(uint8_t dport)
     	if(state_run_stop == CMD_RUN)
     	{
     		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
-    		kprintf(dport, "\r\n send SPICMD_CTRL_STOP");
+    		kprintf(dport, "\r\n send SPICMD_CTRL_STOP, status=%d", status);
     	}
     	else
     	{
     		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
-    		kprintf(dport, "\r\n send SPICMD_CTRL_RUN");
+    		kprintf(dport, "\r\n send SPICMD_CTRL_RUN, status=%d", status);
     	}
     }
     else if(test_case == 'S') // show status info
@@ -1053,24 +1055,24 @@ STATIC int ptest_ser(uint8_t dport)
 	case 0:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_TEST_START);
 		relay_test_state=1;
-		kprintf(dport, "\r\n send SPI_TEST_DSP_TEST_START");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_TEST_START, status=%d", status);
 		break;
 
 	case 1:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_OK);
 		relay_test_state=2;
-		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_OK");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_OK, status=%d", status);
 		break;
 
 	case 2:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_RELAY_NOK);
 		relay_test_state=3;
-		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_NOK");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_RELAY_NOK, status=%d", status);
 		break;
 
 	case 3:
 		status = COMM_sendTestCmd(SPI_TEST_DSP_MOTOR_RUN);
-		kprintf(dport, "\r\n send SPI_TEST_DSP_MOTOR_RUN");
+		kprintf(dport, "\r\n send SPI_TEST_DSP_MOTOR_RUN, status=%d", status);
 		break;
 	}
 

@@ -27,12 +27,12 @@ STATIC DIN_PIN_NUM_t m_din = {
 		EXT_DIN_COUNT,
 };
 
-uint8_t mdin_value[EXT_DIN_COUNT]; // actual DI pin value
+uint8_t mdin_value[EXT_DIN_COUNT]={0,0,0}; // actual DI pin value
 COMM_CMD_t test_cmd=0;
 uint8_t prev_emergency=0, prev_trip=0, prev_run=0, prev_dir=0, prev_step=0;
 uint8_t step_cmd=0;
 
-uint8_t mdout_value[EXT_DOUT_COUNT];
+uint8_t mdout_value[EXT_DOUT_COUNT]={0,0};
 
 uint16_t adc_value=0; // analog input value
 float freq_min=0.0, freq_max=0.0, V_ai_min=0.0, V_ai_max=0.0;
@@ -103,7 +103,7 @@ uint8_t EXT_DI_convertMultiStep(void)
 
 	//printf("step = %d, high:mid:low = %d:%d:%d\n", step, high, mid, low);
 
-	return step;
+	return (7-step); // low active
 }
 
 // same setting for 2 or more pin is not allowed, last one is only set
@@ -173,7 +173,7 @@ int8_t EXI_DI_handleDin(void)
 
 	if(m_din.emergency_pin != EXT_DIN_COUNT)
 	{
-		if(mdin_value[m_din.emergency_pin] == 1 && prev_emergency == 0) // send STOP regardless of run_status
+		if(mdin_value[m_din.emergency_pin] == EXT_DI_ACTIVE && prev_emergency == EXT_DI_INACTIVE) // send STOP regardless of run_status
 		{
 			test_cmd = SPICMD_CTRL_STOP;
 			kprintf(PORT_DEBUG, "send emergency SPICMD_CTRL_STOP\r\n");
@@ -192,7 +192,7 @@ int8_t EXI_DI_handleDin(void)
 
 	if(m_din.trip_pin != EXT_DIN_COUNT)
 	{
-		if(mdin_value[m_din.trip_pin] == 1 && prev_trip == 0)
+		if(mdin_value[m_din.trip_pin] == EXT_DI_ACTIVE && prev_trip == EXT_DI_INACTIVE)
 		{
 			test_cmd = SPICMD_CTRL_STOP;
 			kprintf(PORT_DEBUG, "send trip SPICMD_CTRL_STOP\r\n");
@@ -215,7 +215,7 @@ int8_t EXI_DI_handleDin(void)
 		// handle run/stop
 		if(m_din.run_pin != EXT_DIN_COUNT)
 		{
-			if(mdin_value[m_din.run_pin] == 0 && prev_run == 1 && state_run_stop == CMD_RUN)
+			if(mdin_value[m_din.run_pin] == EXT_DI_INACTIVE && prev_run == EXT_DI_ACTIVE && state_run_stop == CMD_RUN)
 			{
 				// send STOP cmd
 				test_cmd = SPICMD_CTRL_STOP;
@@ -228,7 +228,7 @@ int8_t EXI_DI_handleDin(void)
 #endif
 					prev_run = mdin_value[m_din.run_pin];
 			}
-			else if(mdin_value[m_din.run_pin] == 1 && prev_run == 0 && state_run_stop == CMD_STOP)
+			else if(mdin_value[m_din.run_pin] == EXT_DI_ACTIVE && prev_run == EXT_DI_INACTIVE && state_run_stop == CMD_STOP)
 			{
 				// send run cmd
 				test_cmd = SPICMD_CTRL_RUN;
@@ -252,7 +252,7 @@ int8_t EXI_DI_handleDin(void)
 		if(m_din.dir_pin != EXT_DIN_COUNT)
 		{
 			dir_ctrl = table_getValue(dir_domain_type);
-			if(mdin_value[m_din.dir_pin] == 0 && prev_dir == 1 && state_direction != CMD_DIR_F) // forward
+			if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE && prev_dir == EXT_DI_ACTIVE && state_direction != CMD_DIR_F) // forward
 			{
 				// send FWD cmd
 				if(dir_ctrl != DIR_REVERSE_ONLY)
@@ -270,7 +270,7 @@ int8_t EXI_DI_handleDin(void)
 				}
 
 			}
-			else if(mdin_value[m_din.dir_pin] == 1 && prev_dir == 0 && state_direction != CMD_DIR_R)	// reverse
+			else if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE && prev_dir == EXT_DI_INACTIVE && state_direction != CMD_DIR_R)	// reverse
 			{
 				// send RVS cmd
 				if(dir_ctrl != DIR_FORWARD_ONLY)
@@ -447,6 +447,8 @@ int32_t EXT_AI_getFreq(uint16_t adc_val)
 	float freq_calc;
 	int32_t freq_l;
 
+
+	if(adc_val <= 60) return 0; // stop for minimum adc value
 
 	if(V_val >= V_ai_max) { freq_l = (int32_t)(freq_max*10.0 + 0.05); return freq_l; }
 
