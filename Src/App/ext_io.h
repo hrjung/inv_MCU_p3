@@ -18,6 +18,9 @@
 #define EXT_AIN_ADC_MIN		(60.0)
 #define EXT_AIN_ADC_MAX		(3280.0)
 
+#define EXT_DI_ACTIVE		0
+#define EXT_DI_INACTIVE		1
+
 typedef struct {
 	uint8_t bit_L; 		// pin_number for bit_L, can be 0, 1, 2, ..  (EXT_DIN_COUNT for not assigned)
 	uint8_t bit_M;

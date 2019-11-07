@@ -66,17 +66,17 @@ int32_t EXT_getDIValue(void)
 
 	if(table_getCtrllIn() == CTRL_IN_Digital)
 	{
-		di_val |= (int32_t)((((mdin_value[2]&0x01)<<2) | ((mdin_value[1]&0x01)<<1) | (mdin_value[0]&0x01)));
+		di_val = (int32_t)((((mdin_value[2]&0x01)<<2) | ((mdin_value[1]&0x01)<<1) | (mdin_value[0]&0x01)));
 	}
 
-	return di_val;
+	return (7-di_val); // low active
 }
 
 int32_t EXT_getDOValue(void)
 {
 	int32_t do_val=0;
 
-	do_val |= (int32_t)(((mdout_value[1]&0x01)<<1) | (mdin_value[0]&0x01));
+	do_val = (int32_t)(((mdout_value[1]&0x01)<<1) | (mdin_value[0]&0x01));
 
 	return do_val;
 }
@@ -137,7 +137,7 @@ uint8_t EXT_DI_convertMultiStep(void)
 
 	//printf("step = %d, high:mid:low = %d:%d:%d\n", step, high, mid, low);
 
-	return step;
+	return (7-step); // low active
 }
 
 // same setting for 2 or more pin is not allowed, last one is only set
@@ -207,7 +207,7 @@ int8_t EXI_DI_handleDin(void)
 
 	if(m_din.emergency_pin != EXT_DIN_COUNT)
 	{
-		if(mdin_value[m_din.emergency_pin] == 1 && prev_emergency == 0) // send STOP regardless of run_status
+		if(mdin_value[m_din.emergency_pin] == EXT_DI_ACTIVE && prev_emergency == EXT_DI_INACTIVE) // send STOP regardless of run_status
 		{
 			test_cmd = SPICMD_CTRL_STOP;
 			kprintf(PORT_DEBUG, "send emergency SPICMD_CTRL_STOP\r\n");
@@ -226,7 +226,7 @@ int8_t EXI_DI_handleDin(void)
 
 	if(m_din.trip_pin != EXT_DIN_COUNT)
 	{
-		if(mdin_value[m_din.trip_pin] == 1 && prev_trip == 0)
+		if(mdin_value[m_din.trip_pin] == EXT_DI_ACTIVE && prev_trip == EXT_DI_INACTIVE)
 		{
 			test_cmd = SPICMD_CTRL_STOP;
 			kprintf(PORT_DEBUG, "send trip SPICMD_CTRL_STOP\r\n");
@@ -249,7 +249,7 @@ int8_t EXI_DI_handleDin(void)
 		// handle run/stop
 		if(m_din.run_pin != EXT_DIN_COUNT)
 		{
-			if(mdin_value[m_din.run_pin] == 0 && prev_run == 1 && state_run_stop == CMD_RUN)
+			if(mdin_value[m_din.run_pin] == EXT_DI_INACTIVE && prev_run == EXT_DI_ACTIVE && state_run_stop == CMD_RUN)
 			{
 				// send STOP cmd
 				test_cmd = SPICMD_CTRL_STOP;
@@ -262,7 +262,7 @@ int8_t EXI_DI_handleDin(void)
 #endif
 					prev_run = mdin_value[m_din.run_pin];
 			}
-			else if(mdin_value[m_din.run_pin] == 1 && prev_run == 0 && state_run_stop == CMD_STOP)
+			else if(mdin_value[m_din.run_pin] == EXT_DI_ACTIVE && prev_run == EXT_DI_INACTIVE && state_run_stop == CMD_STOP)
 			{
 				// send run cmd
 				test_cmd = SPICMD_CTRL_RUN;
@@ -286,7 +286,7 @@ int8_t EXI_DI_handleDin(void)
 		if(m_din.dir_pin != EXT_DIN_COUNT)
 		{
 			dir_ctrl = table_getValue(dir_domain_type);
-			if(mdin_value[m_din.dir_pin] == 0 && prev_dir == 1 && state_direction != CMD_DIR_F) // forward
+			if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE && prev_dir == EXT_DI_ACTIVE && state_direction != CMD_DIR_F) // forward
 			{
 				// send FWD cmd
 				if(dir_ctrl != DIR_REVERSE_ONLY)
@@ -304,7 +304,7 @@ int8_t EXI_DI_handleDin(void)
 				}
 
 			}
-			else if(mdin_value[m_din.dir_pin] == 1 && prev_dir == 0 && state_direction != CMD_DIR_R)	// reverse
+			else if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE && prev_dir == EXT_DI_INACTIVE && state_direction != CMD_DIR_R)	// reverse
 			{
 				// send RVS cmd
 				if(dir_ctrl != DIR_FORWARD_ONLY)

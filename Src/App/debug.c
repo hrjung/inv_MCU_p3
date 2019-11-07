@@ -617,7 +617,7 @@ STATIC int din_ser(uint8_t dport)
 
 	for(i=0; i<20; i++) {UTIL_readDin(); osDelay(10);}
 
-	kprintf(dport, "\r\n set Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
+	kprintf(dport, "\r\n set Din mdin %d, %d, %d", (mdin_value[0]==EXT_DI_ACTIVE), (mdin_value[1]==EXT_DI_ACTIVE), (mdin_value[2]==EXT_DI_ACTIVE));
 
 	return 0;
 }
