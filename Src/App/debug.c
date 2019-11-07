@@ -677,7 +677,7 @@ STATIC int ain_ser(uint8_t dport)
 		//kprintf(dport, "\r\n ADC val = %d %d ", ain_val[8],ain_val[9]);
 		kprintf(dport, "\r\n ADC val = %d %d %d %d  %d %d %d %d", \
 						ain_val[8],ain_val[9],ain_val[10],ain_val[11], ain_val[12],ain_val[13],ain_val[14],ain_val[15]);
-		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d, V_val=%d, freq=%d", ain_sum, (int)adc_value, (int)adc_sample, EXT_getAIValue, EXT_AI_getFreq(adc_value));
+		kprintf(dport, "\r\n set Ain sum=%d, value=%d %d, V_val=%d, freq=%d", ain_sum, (int)adc_value, (int)adc_sample, EXT_getAIValue(), EXT_AI_getFreq(adc_value));
 		//kprintf(dport, "\r\n read Ain value=%d", (int)EXT_AI_readADC());
 	}
 	return 0;

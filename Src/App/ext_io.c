@@ -483,6 +483,8 @@ int32_t EXT_AI_getFreq(uint16_t adc_val)
 
 	V_adc_val = V_val; //get V value from adc value
 
+	if(adc_val <= 60) return 0; // stop for minimum adc value
+
 	if(V_val >= V_ai_max) { freq_l = (int32_t)(freq_max*10.0 + 0.05); return freq_l; }
 
 	if(V_val <= V_ai_min) { freq_l = (int32_t)(freq_min*10.0 + 0.05); return 0; } // below Vmin then stop
