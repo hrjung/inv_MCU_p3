@@ -21,8 +21,11 @@
 
 
 //extern uint8_t DTM_readNotify(void);
+extern uint8_t ERR_isErrorState(void);
 
+#ifndef SUPPORT_DRIVER_HW
 static uint8_t di_val[3];
+#endif
 uint8_t dtm_test_val=0;
 
 LED_status_t LED_state[3] =
