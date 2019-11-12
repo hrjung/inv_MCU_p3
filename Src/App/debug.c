@@ -790,7 +790,7 @@ STATIC int backup_ser(uint8_t dport)
 
 	if(arg_c == 1)
 	{
-		kprintf(dport, "\r\n backup_flag=%d", HDLR_getBackupFlag());
+		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_getBackupFlag(), HDLR_isBackupAvailable());
 		return -1;
 	}
 	else if(arg_c == 2)
@@ -901,6 +901,10 @@ STATIC int test_ser(uint8_t dport)
     {
     	status = NVM_clearInit();
 		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  %d\r\n", status);
+#ifdef SUPPORT_PARAMETER_BACKUP
+		status = HDLR_setBackAvailableFlag(0);
+		kprintf(dport, "\r\n clear Backup data...  %d\r\n", status);
+#endif
     }
     else if(test_case == 3) // analog input test start
     {

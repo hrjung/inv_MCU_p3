@@ -17,6 +17,7 @@
 #include "table.h"
 #include "modbus_queue.h"
 #include "error.h"
+#include "handler.h"
 
 
 /* Private variables ---------------------------------------------------------*/

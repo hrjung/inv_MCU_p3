@@ -14,7 +14,6 @@
 #include "dsp_comm.h"
 #include "nvm_queue.h"
 #include "drv_nvm.h"
-#include "nvm_queue.h"
 #include "ext_io.h"
 #include "error.h"
 
@@ -266,7 +265,7 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 	table_data[idx] = value;
 	table_nvm[idx] = value;
-	//printf("idx=%d set value=%d\r\n", idx, value);
+	kprintf(PORT_DEBUG,"table_setValueAPI: idx=%d set value=%d\r\n", idx, value);
 
 	if(option > REQ_FROM_DSP) // need DSP comm
 	{

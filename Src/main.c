@@ -184,6 +184,7 @@ uint32_t device_on_hour=0;
 uint32_t motor_run_start_time=0;
 
 uint32_t device_10min_cnt=0;
+uint32_t timer_100ms=0;
 
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
@@ -393,6 +394,7 @@ int main(void)
   osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
   osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1 sec to read Accelerometer
   osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 10 min to inverter operation time
+  osTimerStart(YstcTriggerTimerHandle, 100); //100ms
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
@@ -1285,7 +1287,7 @@ void NfcNvmTaskFunc(void const * argument)
 			  status = HDLR_backupParameter();
 			  if(status == 0) kputs(PORT_DEBUG, "HDLR_backupParameter ERROR\r\n");
 		  }
-		  else if(nvm_backup == MB_BACKUP_RESTORE) // restore
+		  else if(nvm_backup == MB_BACKUP_RESTORE && HDLR_isBackupAvailable()) // restore
 		  {
 			  status = HDLR_restoreParameter(); // store NVM
 			  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
@@ -1674,7 +1676,7 @@ void opt485TaskFunc(void const * argument)
 void YstcTriggerTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN YstcTriggerTimerCallback */
-  
+  timer_100ms++;
   /* USER CODE END YstcTriggerTimerCallback */
 }
 
@@ -1734,13 +1736,11 @@ void userIoTimerCallback(void const * argument)
 	exec_do_cnt++;
 
 
-	if(user_io_handle_cnt++ > 25) // 250 ms, set flag for EXT IO handler
+	if(user_io_handle_cnt++ > 20) // 200 ms, set flag for EXT IO handler
 	{
 		user_io_handle_cnt=0;
 		user_io_handle_f = 1;
 	}
-
-
 #endif
   /* USER CODE END userIoTimerCallback */
 }

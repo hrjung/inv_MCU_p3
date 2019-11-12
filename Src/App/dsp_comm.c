@@ -652,9 +652,11 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 {
 	int8_t result;
 
+#if 0
 	if(cmd == SPICMD_PARAM_W)
 		result = COMM_sendParamWrite(data);
 	else
+#endif
 		result = COMM_sendCommand(cmd, data);
 
 	COMM_handleError(result);

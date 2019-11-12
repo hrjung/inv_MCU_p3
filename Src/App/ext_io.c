@@ -46,6 +46,8 @@ extern int16_t state_direction; // global forward/reverse direction status
 extern int16_t st_overload;
 extern int16_t st_brake;
 
+extern uint32_t timer_100ms;
+
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
@@ -540,7 +542,7 @@ int8_t EXT_AI_handleAin(void)
 				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
 #endif
 				test_cmd = SPICMD_PARAM_W;
-				kprintf(PORT_DEBUG, "send SPICMD_PARAM_W  freq=%d\r\n", freq);
+				kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
 #ifndef SUPPORT_UNIT_TEST
 				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
 				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
@@ -549,7 +551,7 @@ int8_t EXT_AI_handleAin(void)
 			else
 			{
 				test_cmd = SPICMD_PARAM_W;
-				kprintf(PORT_DEBUG, "send SPICMD_PARAM_W  freq=%d\r\n", freq);
+				kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
 #ifndef SUPPORT_UNIT_TEST
 				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
 				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }

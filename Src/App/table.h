@@ -9,7 +9,10 @@
 #define SRC_TABLE_H_
 
 
+#define NVM_BACKUP_FLAG_ADDR	0x5F8
 #define NVM_BACKUP_START_ADDR	0x600
+
+#define NVM_BACKUP_AVAILABLE_F	(0x5555)
 
 typedef enum{
 	value_type,
