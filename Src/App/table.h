@@ -249,10 +249,10 @@ typedef enum{
 
 typedef enum{
 	DOUT_unuse = 0,
-	DOUT_overload,
 	DOUT_running,
 	DOUT_stop,
 	DOUT_trip_notify,
+	DOUT_overload,
 	DOUT_shaftbrake_on,
 
 } DOUT_config_t;
