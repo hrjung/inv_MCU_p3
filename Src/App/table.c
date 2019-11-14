@@ -91,7 +91,7 @@ STATIC Param_t param_table[] =
 	{ multi_val_6_type,		0x11C,	40107,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
 	{ multi_val_7_type,		0x120,	40108,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
 	{ freq_min_type,		0x124,	40109,	100,	100,	800,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
-	{ freq_max_type,		0x128,	40110,	600,	100,	800,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
+	{ freq_max_type,		0x128,	40110,	800,	100,	800,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
 	{ accel_time_type,		0x12C,	40111,	100,	10,		6000,	1, 	10, 	1, 	accel_time_dsp,		table_setValue,},
 	{ decel_time_type,		0x130,	40112,	100,	10,		6000,	1, 	10,		1, 	decel_time_dsp,		table_setValue,},
 	{ dir_cmd_type,			0x134,	40113,	0,		0,		1,		1, 	1, 		1, 	dir_cmd_dsp,		table_setValue,},
