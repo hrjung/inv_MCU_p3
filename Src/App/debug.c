@@ -894,8 +894,8 @@ STATIC int test_ser(uint8_t dport)
     	value = table_getInitValue(idx);
     	status = NVM_writeParam((PARAM_IDX_t)idx, value);
     	kprintf(dport, "\r\n NVM_writeParam idx=%d, value=%d status=%d", idx, value, status);
-    	status = NVM_setCRC();
-    	kprintf(dport, "\r\n NVM_setCRC() status=%d", status);
+    	NVM_setCRC();
+    	kprintf(dport, "\r\n NVM_setCRC()");
     }
     else if(test_case == 2) // re-initialize EEPROM after reset
     {

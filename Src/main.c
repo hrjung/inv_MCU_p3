@@ -1188,6 +1188,7 @@ void StartDefaultTask(void const * argument)
 void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
+  int sys_index=SYSTEM_PARAM_SIZE;
   int32_t tag_tryed=0, tag_end=0;
   int8_t status, nvm_backup=0;
   static uint32_t prev_time_tick;
@@ -1278,8 +1279,15 @@ void NfcNvmTaskFunc(void const * argument)
 		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
 
+	  // update system_parameter to NVM
+	  if((sys_index = NVM_isSysParamUpdateRequred()) != SYSTEM_PARAM_SIZE)
+	  {
+
+	  }
+
+
 #ifdef SUPPORT_PARAMETER_BACKUP
-	  if(HDLR_isBackupEnabled()) //TODO : need to add NFC interface for backup
+	  if(HDLR_isBackupEnabled())
 	  {
 		  nvm_backup = HDLR_getBackupFlag();
 		  if(nvm_backup == MB_BACKUP_SAVE) // backup
@@ -1292,8 +1300,7 @@ void NfcNvmTaskFunc(void const * argument)
 			  status = HDLR_restoreParameter(); // restore NVM
 			  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
 
-			  status = NVM_setCRC(); // set new CRC
-			  if(status == 0) kputs(PORT_DEBUG, "restore CRC update ERROR\r\n");
+			  NVM_setCRC(); // set new CRC
 
 			  // update table data
 			  status = HDLR_updateParamNVM(); // notify to update table data
@@ -1574,11 +1581,11 @@ void mainHandlerTaskFunc(void const * argument)
   //TODO : hrjung init parameters setting for ctrl_in
   table_initParam();
 
-  nv_status = NVM_clearRunStopFlag(); // set idle flag
-  if(nv_status == 0)
-  {
-	  kprintf(PORT_DEBUG, "NFC idle flag set error=%d\r\n", nv_status);
-  }
+//  nv_status = NVM_clearRunStopFlag(); // set idle flag
+//  if(nv_status == 0)
+//  {
+//	  kprintf(PORT_DEBUG, "NFC idle flag set error=%d\r\n", nv_status);
+//  }
 
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
 

@@ -647,15 +647,11 @@ int8_t table_initializeBlankEEPROM(void)
 
 	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
 
-	status = NVM_setInit();
-	if(status == 0) errflag++;
+	NVM_setInit();
+
+	NVM_setCRC();
 
 	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
-
-	status = NVM_setCRC();
-	if(status == 0) errflag++;
-
-	kprintf(PORT_DEBUG, "4: err=%d\r\n", errflag);
 
 	if(errflag) return 0;
 

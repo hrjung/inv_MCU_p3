@@ -255,12 +255,10 @@ int8_t HDLR_restoreNVM(void)
 	}
 
 	// restore CRC as well
-	status = NVM_setCRC();
-	if(status == 0) errflag++;
+	NVM_setCRC();
 
 	// clear NFC tag flag
-	status = NVM_clearNfcStatus();
-	if(status == -1) {errflag++; kprintf(PORT_DEBUG, "ERROR clear tag flag \r\n");}
+	NVM_clearNfcStatus();
 
 	if(errflag) return 0;
 
@@ -300,8 +298,7 @@ int8_t HDLR_updateParamNVM(void)
 	} while(empty == 0); // not empty
 
 	// update CRC
-	status = NVM_setCRC();
-	if(status == 0) errflag++;
+	NVM_setCRC();
 
 	if(errflag) return 0;
 
@@ -332,13 +329,12 @@ int8_t HDLR_updatebyNfc(void)
 		index++;
 	}
 
-//	// update CRC is updated by NFC App
+//	// CRC is updated by NFC App
 //	status = NVM_setCRC();
 //	if(status == 0) errflag++;
 
 	// clear NFC tag flag
-	status = NVM_clearNfcStatus();
-	if(status == -1) {kprintf(PORT_DEBUG, "ERROR clear tag flag \r\n"); return 0;}
+	NVM_clearNfcStatus();
 
 	if(errflag) return 0;
 	else	return 1;
@@ -382,7 +378,15 @@ void HDLR_setBackupFlagModbus(int8_t flag)
 
 void HDLR_clearBackupFlagModbus(void)
 {
-	mb_backup_mode_f = 0;
+	if(mb_backup_mode_f != 0)
+	{
+		mb_backup_mode_f = 0;
+		return;
+	}
+	else
+	{
+		NVM_clearBackupCmd();
+	}
 }
 
 int8_t HDLR_getBackupFlag(void)
@@ -392,7 +396,7 @@ int8_t HDLR_getBackupFlag(void)
 
 int8_t HDLR_isBackupEnabled(void)
 {
-	return (mb_backup_mode_f != 0);
+	return (mb_backup_mode_f != 0 || NVM_getBackupCmd() != 0);
 }
 
 int8_t HDLR_setBackupAvailableFlag(int32_t flag)
