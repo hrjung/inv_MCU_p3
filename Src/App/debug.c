@@ -902,7 +902,7 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_clearInit();
 		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  %d\r\n", status);
 #ifdef SUPPORT_PARAMETER_BACKUP
-		status = HDLR_setBackAvailableFlag(0);
+		status = HDLR_clearBackupFlag();
 		kprintf(dport, "\r\n clear Backup data...  %d\r\n", status);
 #endif
     }

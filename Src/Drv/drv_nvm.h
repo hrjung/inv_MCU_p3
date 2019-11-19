@@ -34,6 +34,11 @@ extern int8_t NVM_clearNfcStatus(void);
 extern int8_t NVM_getRunStopFlag(int32_t *run_stop);
 extern int8_t NVM_clearRunStopFlag(void);
 
+#ifdef SUPPORT_PARAMETER_BACKUP
+extern int8_t NVM_getBackupCmd(int32_t *bk_cmd);
+extern int8_t NVM_clearBackupCmd(void);
+#endif
+
 extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
 extern int8_t NVM_setCRC(void);
 

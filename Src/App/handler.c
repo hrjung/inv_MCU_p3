@@ -395,7 +395,7 @@ int8_t HDLR_isBackupEnabled(void)
 	return (mb_backup_mode_f != 0);
 }
 
-int8_t HDLR_setBackAvailableFlag(int32_t flag)
+int8_t HDLR_setBackupAvailableFlag(int32_t flag)
 {
 	int8_t nvm_status;
 	int32_t addr=0;
@@ -405,6 +405,11 @@ int8_t HDLR_setBackAvailableFlag(int32_t flag)
 	if(nvm_status == 0) return 0;
 
 	return 1;
+}
+
+int8_t HDLR_clearBackupFlag(void)
+{
+	return HDLR_setBackupAvailableFlag((int32_t)0);
 }
 
 int HDLR_isBackupAvailable(void)
@@ -438,7 +443,7 @@ int8_t HDLR_backupParameter(void)
 	}
 	kprintf(PORT_DEBUG,"NVM backup finished err=%d\r\n", errflag);
 
-	nvm_status = HDLR_setBackAvailableFlag(NVM_BACKUP_AVAILABLE_F);
+	nvm_status = HDLR_setBackupAvailableFlag(NVM_BACKUP_AVAILABLE_F);
 	if(nvm_status == 0) {kprintf(PORT_DEBUG,"set NVM backup flag error\r\n"); errflag++;}
 
 	if(errflag) return 0;

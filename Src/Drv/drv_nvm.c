@@ -43,6 +43,7 @@ static int32_t sysparam_addr[] =
 		420,		//SYSTEM_PARAM_NFC_TRYED
 		424,		//SYSTEM_PARAM_ON_MONITORING
 		428,		//SYSTEM_PARAM_IDLE0_RUN1_STOP2
+		432,		//SYSTEM_PARAM_BACKUP_CMD
 };
 #endif
 
@@ -349,6 +350,29 @@ int8_t NVM_clearRunStopFlag(void)
 
 	return NVM_OK;
 }
+
+#ifdef SUPPORT_PARAMETER_BACKUP
+int8_t NVM_getBackupCmd(int32_t *bk_cmd)
+{
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sysparam_addr[SYSTEM_PARAM_BACKUP_CMD], bk_cmd);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t NVM_clearBackupCmd(void)
+{
+	uint8_t status;
+	int32_t value=0;
+
+	status = NVM_write((uint16_t)sysparam_addr[SYSTEM_PARAM_BACKUP_CMD], value);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+#endif
 
 int8_t NVM_verifyCRC(uint32_t crc32_calc)
 {

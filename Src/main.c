@@ -1279,7 +1279,7 @@ void NfcNvmTaskFunc(void const * argument)
 	  }
 
 #ifdef SUPPORT_PARAMETER_BACKUP
-	  if(HDLR_isBackupEnabled())
+	  if(HDLR_isBackupEnabled()) //TODO : need to add NFC interface for backup
 	  {
 		  nvm_backup = HDLR_getBackupFlag();
 		  if(nvm_backup == MB_BACKUP_SAVE) // backup
@@ -1289,7 +1289,7 @@ void NfcNvmTaskFunc(void const * argument)
 		  }
 		  else if(nvm_backup == MB_BACKUP_RESTORE && HDLR_isBackupAvailable()) // restore
 		  {
-			  status = HDLR_restoreParameter(); // store NVM
+			  status = HDLR_restoreParameter(); // restore NVM
 			  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
 
 			  status = NVM_setCRC(); // set new CRC
@@ -1298,6 +1298,7 @@ void NfcNvmTaskFunc(void const * argument)
 			  // update table data
 			  status = HDLR_updateParamNVM(); // notify to update table data
 			  if(status == 0) kputs(PORT_DEBUG, "restore HDLR_updateParamNVM ERROR\r\n");
+
 		  }
 
 		  UTIL_setLED(LED_COLOR_G, 0);

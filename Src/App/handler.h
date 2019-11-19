@@ -24,6 +24,7 @@ extern void HDLR_clearBackupFlagModbus(void);
 extern int8_t HDLR_getBackupFlag(void);
 extern int8_t HDLR_isBackupEnabled(void);
 extern int HDLR_isBackupAvailable(void);
+extern int8_t HDLR_clearBackupFlag(void);
 
 extern int8_t HDLR_backupParameter(void);
 extern int8_t HDLR_restoreParameter(void);
