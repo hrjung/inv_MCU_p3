@@ -224,7 +224,7 @@ extern int32_t mb_baudrate[];
 extern int32_t i2c_rd_error;
 extern int32_t i2c_wr_error;
 
-extern int32_t isMonitoring;
+//extern int32_t isMonitoring;
 extern int16_t state_run_stop;
 extern int16_t state_direction;
 extern int16_t st_overload;
@@ -249,6 +249,7 @@ extern volatile int8_t ADC_error;
 
 extern int32_t table_nvm[];
 extern int32_t table_data[];
+extern int32_t sys_data[];
 
 extern uint8_t reset_cmd_send_f;
 
@@ -790,7 +791,7 @@ STATIC int backup_ser(uint8_t dport)
 
 	if(arg_c == 1)
 	{
-		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_getBackupFlag(), HDLR_isBackupAvailable());
+		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_isBackupEnabled(), HDLR_isBackupAvailable());
 		return -1;
 	}
 	else if(arg_c == 2)
@@ -899,8 +900,8 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 2) // re-initialize EEPROM after reset
     {
-    	status = NVM_clearInit();
-		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  %d\r\n", status);
+    	NVM_clearInit();
+		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  \r\n");
 #ifdef SUPPORT_PARAMETER_BACKUP
 		status = HDLR_clearBackupFlag();
 		kprintf(dport, "\r\n clear Backup data...  %d\r\n", status);
@@ -943,7 +944,7 @@ STATIC int test_ser(uint8_t dport)
     {
 		kprintf(dport, "\r\n error code=%d, i2c_rd_err=%d, i2c_wr_err=%d", (int)ERR_getErrorState(), i2c_rd_error, i2c_wr_error);
 		kprintf(dport, "\r\n motor_on_cnt=%d, device_on_hour=%d, motor_run_hour=%d", (int)motor_run_cnt, (int)device_on_hour, (int)motor_run_hour);
-		kprintf(dport, "\r\n monitor=%d, run_stop=%d", isMonitoring, state_run_stop);
+		kprintf(dport, "\r\n monitor=%d, run_stop=%d", NVM_isNfcMonitoring(), state_run_stop);
     }
     else if(test_case == 7)
     {
@@ -1068,6 +1069,21 @@ STATIC int test_ser(uint8_t dport)
     	for(i=0; i<PARAM_TABLE_SIZE; i++)
     	{
     		kprintf(dport, "\r\n %d, table_data=%d, table_nvm=%d %d", i, table_data[i], table_nvm[i], (table_data[i] == table_nvm[i]));
+    	}
+    }
+    else if(test_case == 'N') // show sys_table list
+    {
+    	int i;
+    	uint8_t status=0;
+    	uint16_t addr=0;
+    	int32_t value=0;
+
+    	for(i=0; i<SYSTEM_PARAM_SIZE; i++)
+    	{
+    		addr = NVM_getSystemParamAddr(i);
+    		status = NVM_read(addr, &value);
+    		kprintf(dport, "\r\n sys_data[%d]=%d, nvm=%d, update=%d, status=%d", i, sys_data[i], value, NVM_isSysParamNeedUpdate(i), status);
+    		//kprintf(dport, "\r\n update_index=%d", NVM_getSysParamUpdateIndex());
     	}
     }
     else if(test_case == 'R') // send Run/Stop command to DSP

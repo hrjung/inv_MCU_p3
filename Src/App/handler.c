@@ -229,7 +229,6 @@ int8_t HDLR_restoreNVM(void)
 	PARAM_IDX_t index=value_type;
 	int32_t nvm_value, table_value;
 	uint8_t nvm_status;
-	int8_t status;
 	int16_t errflag=0;
 
 	while(index < baudrate_type) // only writable parameter
@@ -366,6 +365,23 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 
 	if(errflag) return 0;
 	else	return 1;
+}
+
+int8_t HDLR_updateSysParam(int index)
+{
+	int8_t status=0;
+	uint16_t addr;
+	int32_t value;
+
+	addr = NVM_getSystemParamAddr(index);
+	value = NVM_getSystemParamValue(index);
+	status = NVM_write(addr, value);
+	if(status == 1)
+		NVM_clearSysParamUpdateFlag(index);
+
+	//kprintf(PORT_DEBUG, "HDLR_updateSysParam() index=%d status=%d\r\n", index, status);
+
+	return status;
 }
 
 #ifdef SUPPORT_PARAMETER_BACKUP

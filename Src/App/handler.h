@@ -37,4 +37,6 @@ extern int8_t HDLR_updateParamNVM(void);
 
 extern int8_t HDLR_updateTime(uint32_t cur_time);
 
+extern int8_t HDLR_updateSysParam(int index);
+
 #endif /* SRC_HANDLER_H_ */

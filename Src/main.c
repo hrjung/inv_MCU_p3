@@ -1192,6 +1192,7 @@ void NfcNvmTaskFunc(void const * argument)
   int32_t tag_tryed=0, tag_end=0;
   int8_t status, nvm_backup=0;
   static uint32_t prev_time_tick;
+  static uint32_t bk_cnt=0;
 
   // wait until mainHandler initialized
   while(main_handler_f==0) osDelay(1);
@@ -1280,36 +1281,46 @@ void NfcNvmTaskFunc(void const * argument)
 	  }
 
 	  // update system_parameter to NVM
-	  if((sys_index = NVM_isSysParamUpdateRequred()) != SYSTEM_PARAM_SIZE)
+	  sys_index = NVM_getSysParamUpdateIndex();
+	  if(sys_index != SYSTEM_PARAM_SIZE)
 	  {
+		  int8_t status=0;
 
+		  status = HDLR_updateSysParam(sys_index);
+		  if(status == 0) kprintf(PORT_DEBUG, "HDLR_updateSysParam index=%d ERROR\r\n", sys_index);
+
+		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
 
 
 #ifdef SUPPORT_PARAMETER_BACKUP
-	  if(HDLR_isBackupEnabled())
+	  bk_cnt++;
+	  if(bk_cnt%50 == 0) // every 500ms
 	  {
-		  nvm_backup = HDLR_getBackupFlag();
-		  if(nvm_backup == MB_BACKUP_SAVE) // backup
+		  if(HDLR_isBackupEnabled())
 		  {
-			  status = HDLR_backupParameter();
-			  if(status == 0) kputs(PORT_DEBUG, "HDLR_backupParameter ERROR\r\n");
+			  nvm_backup = HDLR_getBackupFlag();
+			  if(nvm_backup == MB_BACKUP_SAVE) // backup
+			  {
+				  status = HDLR_backupParameter();
+				  if(status == 0) kputs(PORT_DEBUG, "HDLR_backupParameter ERROR\r\n");
+			  }
+			  else if(nvm_backup == MB_BACKUP_RESTORE && HDLR_isBackupAvailable()) // restore
+			  {
+				  status = HDLR_restoreParameter(); // restore NVM
+				  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
+
+				  NVM_setCRC(); // set new CRC
+
+				  // update table data
+				  status = HDLR_updateParamNVM(); // notify to update table data
+				  if(status == 0) kputs(PORT_DEBUG, "restore HDLR_updateParamNVM ERROR\r\n");
+
+			  }
+
+			  UTIL_setLED(LED_COLOR_G, 0);
+			  HDLR_clearBackupFlagModbus(); // clear flag
 		  }
-		  else if(nvm_backup == MB_BACKUP_RESTORE && HDLR_isBackupAvailable()) // restore
-		  {
-			  status = HDLR_restoreParameter(); // restore NVM
-			  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
-
-			  NVM_setCRC(); // set new CRC
-
-			  // update table data
-			  status = HDLR_updateParamNVM(); // notify to update table data
-			  if(status == 0) kputs(PORT_DEBUG, "restore HDLR_updateParamNVM ERROR\r\n");
-
-		  }
-
-		  UTIL_setLED(LED_COLOR_G, 0);
-		  HDLR_clearBackupFlagModbus(); // clear flag
 	  }
 #endif
 

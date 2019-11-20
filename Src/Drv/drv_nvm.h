@@ -22,7 +22,6 @@ enum
 typedef struct {
 	const SYSTEM_PARAM_t idx;
 	const uint16_t addr;	// EEPROM address
-	int32_t value;			// stored value
 	int8_t	need_update;
 } Param_sys_t;
 
@@ -52,10 +51,14 @@ extern int8_t NVM_getBackupCmd(void);
 extern void NVM_clearBackupCmd(void);
 #endif
 
+extern uint16_t NVM_getSystemParamAddr(uint16_t index);
+extern int32_t NVM_getSystemParamValue(uint16_t index);
+extern void NVM_clearSysParamUpdateFlag(uint16_t index);
+extern int NVM_isSysParamNeedUpdate(uint16_t index);
+
 extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
 extern void NVM_setCRC(void);
 
-extern int NVM_isSysParamUpdateRequred(void);
-extern int NVM_isSysParamTableUpdateRequired(void);
+extern int NVM_getSysParamUpdateIndex(void);
 
 #endif /* SRC_DRV_NVM_H_ */
