@@ -144,7 +144,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 		// clear flag to idle
 		if(status != COMM_FAILED)
 		{
-			//status = NVM_clearRunStopFlag();
+			NVM_clearRunStopFlag();
 			prev_run_stop = run_stop;
 			TM_setStartRunTime(); // set Run start time
 		}
@@ -157,7 +157,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 		// clear flag to idle
 		if(status != COMM_FAILED)
 		{
-			//status = NVM_clearRunStopFlag();
+			NVM_clearRunStopFlag();
 			prev_run_stop = run_stop;
 		}
 		kprintf(PORT_DEBUG, "STOP Flag, send to DSP status=%d\r\n", status);
@@ -170,7 +170,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 
 	if(status == 0)
 	{
-		//ERR_setErrorState(TRIP_REASON_MCU_INPUT);
+		ERR_setErrorState(TRIP_REASON_MCU_INPUT);
 		kprintf(PORT_DEBUG, "ERROR!!  RUN/STOP Flag, status=%d\r\n", status);
 	}
 
@@ -328,6 +328,8 @@ int8_t HDLR_updatebyNfc(void)
 		index++;
 	}
 
+	kprintf(PORT_DEBUG, "HDLR_updatebyNfc\r\n");
+
 //	// CRC is updated by NFC App
 //	status = NVM_setCRC();
 //	if(status == 0) errflag++;
@@ -379,7 +381,7 @@ int8_t HDLR_updateSysParam(int index)
 	if(status == 1)
 		NVM_clearSysParamUpdateFlag(index);
 
-	//kprintf(PORT_DEBUG, "HDLR_updateSysParam() index=%d status=%d\r\n", index, status);
+	kprintf(PORT_DEBUG, "HDLR_updateSysParam() index=%d status=%d\r\n", index, status);
 
 	return status;
 }

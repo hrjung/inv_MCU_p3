@@ -55,17 +55,17 @@ int32_t table_nvm[PARAM_TABLE_SIZE];
 
 
 STATIC Param_sys_t sys_table[] =
-{		// SYSTEM_PARAM_t					addr	need_update
-		{ SYSTEM_PARAM_NFC_TAGGED, 			400, 	NO_CHANGE},
-		{ SYSTEM_PARAM_CRC_VALUE, 			404,	NO_CHANGE},
-		{ SYSTEM_PARAM_IS_INITIATED, 		408, 	NO_CHANGE},
-		{ SYSTEM_PARAM_HAS_SYSTEM_ERROR, 	412, 	NO_CHANGE},
-		{ SYSTEM_PARAM_ENABLE_NFC_WRITER,	416, 	NO_CHANGE},
-		{ SYSTEM_PARAM_NFC_TRYED, 			420, 	NO_CHANGE},
-		{ SYSTEM_PARAM_ON_MONITORING, 		424, 	NO_CHANGE},
-		{ SYSTEM_PARAM_RUN1_STOP2, 			428, 	NO_CHANGE},
+{		// SYSTEM_PARAM_t					addr	need_update		done
+		{ SYSTEM_PARAM_NFC_TAGGED, 			400, 	NO_CHANGE, 		0},
+		{ SYSTEM_PARAM_CRC_VALUE, 			404,	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_IS_INITIATED, 		408, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_HAS_SYSTEM_ERROR, 	412, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_ENABLE_NFC_WRITER,	416, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_NFC_TRYED, 			420, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_ON_MONITORING, 		424, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_RUN1_STOP2, 			428, 	NO_CHANGE,		0},
 #ifdef SUPPORT_PARAMETER_BACKUP
-		{ SYSTEM_PARAM_BACKUP_CMD, 			432, 	NO_CHANGE},
+		{ SYSTEM_PARAM_BACKUP_CMD, 			432, 	NO_CHANGE,		0},
 #endif
 };
 
@@ -287,19 +287,29 @@ int8_t NVM_initError(void)
 
 void NVM_setInit(void)
 {
+	uint8_t status;
+
 	if(sys_data[SYSTEM_PARAM_IS_INITIATED] != 1)
 	{
 		sys_data[SYSTEM_PARAM_IS_INITIATED] = 1;
 		sys_table[SYSTEM_PARAM_IS_INITIATED].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_IS_INITIATED].addr, sys_data[SYSTEM_PARAM_IS_INITIATED]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_IS_INITIATED);
 	}
 }
 
 void NVM_clearInit(void)
 {
+	uint8_t status;
+
 	if(sys_data[SYSTEM_PARAM_IS_INITIATED] != 0)
 	{
 		sys_data[SYSTEM_PARAM_IS_INITIATED] = 0;
 		sys_table[SYSTEM_PARAM_IS_INITIATED].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_IS_INITIATED].addr, sys_data[SYSTEM_PARAM_IS_INITIATED]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_IS_INITIATED);
 	}
 }
 
@@ -324,7 +334,7 @@ int8_t NVM_isNfcMonitoring(void)
 	uint8_t status;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_ON_MONITORING].addr, &isMonitoring);
-	if(status!=NVM_OK) return -1;
+	if(status!=NVM_OK) return 0; // default not monitoring
 
 	sys_data[SYSTEM_PARAM_ON_MONITORING] = isMonitoring;
 
@@ -333,10 +343,15 @@ int8_t NVM_isNfcMonitoring(void)
 
 void NVM_clearNfcMonitoring(void)
 {
+	uint8_t status;
+
 	if(sys_data[SYSTEM_PARAM_ON_MONITORING] != 0)
 	{
 		sys_data[SYSTEM_PARAM_ON_MONITORING] = 0;
 		sys_table[SYSTEM_PARAM_ON_MONITORING].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_ON_MONITORING].addr, sys_data[SYSTEM_PARAM_ON_MONITORING]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_ON_MONITORING);
 	}
 }
 
@@ -355,17 +370,20 @@ int8_t NVM_getNfcStatus(int32_t *tag_tryed, int32_t *tag_end)
 
 void NVM_clearNfcStatus(void)
 {
-	if(sys_data[SYSTEM_PARAM_NFC_TAGGED] != 0)
-	{
-		sys_data[SYSTEM_PARAM_NFC_TAGGED] = 0;
-		sys_table[SYSTEM_PARAM_NFC_TAGGED].need_update = WRITE_TO_NVM;
-	}
+	uint8_t status;
 
-	if(sys_data[SYSTEM_PARAM_NFC_TRYED] != 0)
-	{
-		sys_data[SYSTEM_PARAM_NFC_TRYED] = 0;
-		sys_table[SYSTEM_PARAM_NFC_TRYED].need_update = WRITE_TO_NVM;
-	}
+	sys_data[SYSTEM_PARAM_NFC_TAGGED] = 0;
+	sys_table[SYSTEM_PARAM_NFC_TAGGED].need_update = WRITE_TO_NVM;
+	status = NVM_write(sys_table[SYSTEM_PARAM_NFC_TAGGED].addr, sys_data[SYSTEM_PARAM_NFC_TAGGED]);
+	if(status == 1)
+		NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_NFC_TAGGED);
+
+	sys_data[SYSTEM_PARAM_NFC_TRYED] = 0;
+	sys_table[SYSTEM_PARAM_NFC_TRYED].need_update = WRITE_TO_NVM;
+	status = NVM_write(sys_table[SYSTEM_PARAM_NFC_TRYED].addr, sys_data[SYSTEM_PARAM_NFC_TRYED]);
+	if(status == 1)
+		NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_NFC_TRYED);
+
 }
 
 int8_t NVM_getRunStopFlag(int32_t *run_stop)
@@ -382,10 +400,15 @@ int8_t NVM_getRunStopFlag(int32_t *run_stop)
 
 void NVM_clearRunStopFlag(void)
 {
+	uint8_t status;
+
 	if(sys_data[SYSTEM_PARAM_RUN1_STOP2] != 0)
 	{
 		sys_data[SYSTEM_PARAM_RUN1_STOP2] = 0;
 		sys_table[SYSTEM_PARAM_RUN1_STOP2].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_RUN1_STOP2].addr, sys_data[SYSTEM_PARAM_RUN1_STOP2]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_RUN1_STOP2);
 	}
 }
 
@@ -405,10 +428,15 @@ int8_t NVM_getBackupCmd(void)
 
 void NVM_clearBackupCmd(void)
 {
+	uint8_t status;
+
 	if(sys_data[SYSTEM_PARAM_BACKUP_CMD] != 0)
 	{
 		sys_data[SYSTEM_PARAM_BACKUP_CMD] = 0;
 		sys_table[SYSTEM_PARAM_BACKUP_CMD].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, sys_data[SYSTEM_PARAM_BACKUP_CMD]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_BACKUP_CMD);
 	}
 }
 #endif
@@ -432,6 +460,7 @@ int8_t NVM_verifyCRC(uint32_t crc32_calc)
 
 void NVM_setCRC(void)
 {
+	uint8_t status;
 	uint32_t crc32_calc;
 
 	crc32_calc = table_calcCRC();
@@ -440,6 +469,9 @@ void NVM_setCRC(void)
 	{
 		sys_data[SYSTEM_PARAM_CRC_VALUE] = crc32_calc;
 		sys_table[SYSTEM_PARAM_CRC_VALUE].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_CRC_VALUE].addr, sys_data[SYSTEM_PARAM_CRC_VALUE]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_CRC_VALUE);
 	}
 }
 

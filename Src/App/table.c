@@ -265,7 +265,7 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 	table_data[idx] = value;
 	table_nvm[idx] = value;
-	kprintf(PORT_DEBUG,"table_setValueAPI: idx=%d set value=%d\r\n", idx, value);
+	//kprintf(PORT_DEBUG,"table_setValueAPI: idx=%d set value=%d\r\n", idx, value);
 
 	if(option > REQ_FROM_DSP) // need DSP comm
 	{
@@ -1054,7 +1054,7 @@ int8_t table_updatebyTableQ(void)
 		if(table_data[index] != value)
 		{
 			status = table_runFunc(index, value, REQ_FROM_NFC);
-			kprintf(PORT_DEBUG,"update table_data[%d] = %d \r\n", index, (int)value);
+			kprintf(PORT_DEBUG,"table_updatebyTableQ table_data[%d]=%d \r\n", index, (int)value);
 		}
 
 		empty = NVMQ_isEmptyTableQ();

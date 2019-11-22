@@ -22,7 +22,8 @@ enum
 typedef struct {
 	const SYSTEM_PARAM_t idx;
 	const uint16_t addr;	// EEPROM address
-	int8_t	need_update;
+	int8_t	need_update;	// require NVM write
+	int8_t 	done;			// process done
 } Param_sys_t;
 
 extern void NVM_clear(void);
