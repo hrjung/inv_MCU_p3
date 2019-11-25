@@ -907,6 +907,7 @@ int8_t table_setStatusDSP(void)
 	if(nvm_status == 0) errflag++;
 	nvm_status = NVMQ_enqueueNfcQ(mtr_temperature_type, table_data[mtr_temperature_type]);
 	if(nvm_status == 0) errflag++;
+
 	nvm_status = NVMQ_enqueueNfcQ(di_status_type, table_data[di_status_type]);
 	if(nvm_status == 0) errflag++;
 	nvm_status = NVMQ_enqueueNfcQ(do_status_type, table_data[do_status_type]);

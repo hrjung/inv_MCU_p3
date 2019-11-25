@@ -34,6 +34,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+#define VERSION_MAJ		0
+#define VERSION_MIN		20
 
 //#define CMDLINE_MAX_ARGS        8
 #define NUM_OF_DEBUGCHAR    	64
@@ -1307,9 +1309,9 @@ STATIC int utest_ser(uint8_t dport)
 
 static int display_BoardInfo(uint8_t dport)
 {
-	kputs(dport, "\r\n*************************************************");
-	kputs(dport, "\r\n    Nara Inverter MCU ");
-	kputs(dport, "\r\n*************************************************\r\n");
+	kputs  (dport, "\r\n*************************************************");
+	kprintf(dport, "\r\n    Nara Inverter MCU v%d.%d", VERSION_MAJ, VERSION_MIN);
+	kputs  (dport, "\r\n*************************************************\r\n");
 
 	return 0;
 }

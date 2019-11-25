@@ -323,7 +323,7 @@ int main(void)
   initUarts(); // debug UART
   HAL_TIM_Base_Start_IT(&htim3); // Analog Out timer, no used for P3
   HAL_TIM_Base_Start_IT(&htim10);
-  printf("\r\n======== P3 Started ==========");
+  printf("\r\n======== MCU-pass Started ==========");
   printf("\r\n** Compiled :    %4d/%02d/%02d   **\r\n\r\n ", BUILD_YEAR, BUILD_MONTH, BUILD_DAY);
  
   // LED on

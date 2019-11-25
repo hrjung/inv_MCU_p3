@@ -89,7 +89,7 @@ int32_t EXT_getAIValue(void)
 
 	if(table_getCtrllIn() == CTRL_IN_Analog_V)
 	{
-		ai_val = (int32_t)(V_adc_val*10.0 + 0.5);
+		ai_val = (int32_t)(V_adc_val*10.0 + 0.5); // voltage value
 	}
 
 	return ai_val;
