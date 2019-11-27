@@ -96,7 +96,7 @@ osThreadId userIoTaskHandle;
 osThreadId mainHandlerTaskHandle;
 osThreadId mbus485TaskHandle;
 osThreadId opt485TaskHandle;
-osMessageQId YSTC_eventQHandle;
+osMessageQId NFC_eventQHandle;
 osTimerId YstcTriggerTimerHandle;
 osTimerId YstcUpdateTimerHandle;
 osTimerId userIoTimerHandle;
@@ -150,7 +150,7 @@ void OperationTimerCallback(void const * argument);
 #define UIO_UPDATE_TIME_INTERVAL	10 // 10ms
 #define ACC_READ_TIME_INTERVAL		1000 // 1sec
 #define DSP_STATUS_TIME_INTERVAL	1000 // 1sec
-#define OPERATION_TIME_INTERVAL		600000 // 10 min
+#define OPERATION_TIME_INTERVAL		60000 // 1 min
 
 #define WATCHDOG_NFC		0x01
 #define WATCHDOG_MAIN		0x02
@@ -177,13 +177,12 @@ uint16_t user_io_handle_cnt=0;
 uint8_t user_io_handle_f = 0;
 
 // device working hour
-uint32_t motor_run_cnt=0;
 uint32_t motor_run_hour=0;
 uint32_t device_on_hour=0;
+uint32_t run_minutes=0;
 
-uint32_t motor_run_start_time=0;
-
-uint32_t device_10min_cnt=0;
+uint32_t device_min_cnt=0;
+uint32_t dev_start_time=0;
 
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
@@ -258,19 +257,6 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc)
 	ADC_error=1;
 }
 
-void TM_setStartRunTime(void)
-{
-	int8_t status;
-
-	if(state_run_stop == CMD_RUN) return; // already run state
-
-	motor_run_start_time = device_10min_cnt;
-
-	motor_run_cnt++;
-	status = NVM_setMotorRunCount(motor_run_cnt);
-	if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run Count \r\n"); }
-}
-
 /* USER CODE END 0 */
 
 /**
@@ -322,7 +308,7 @@ int main(void)
   initUarts(); // debug UART
   HAL_TIM_Base_Start_IT(&htim3); // Analog Out timer, no used for P3
   HAL_TIM_Base_Start_IT(&htim10);
-  printf("\r\n======== P3 Started ==========");
+  printf("\r\n======== P3-dev Started ==========");
   printf("\r\n** Compiled :    %4d/%02d/%02d   **\r\n\r\n ", BUILD_YEAR, BUILD_MONTH, BUILD_DAY);
  
   // LED on
@@ -392,13 +378,12 @@ int main(void)
   /* start timers, add new ones, ... */
   osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
   osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1 sec to read Accelerometer
-  osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 10 min to inverter operation time
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
-  /* definition and creation of YSTC_eventQ */
-  osMessageQDef(YSTC_eventQ, 128, uint8_t);
-  YSTC_eventQHandle = osMessageCreate(osMessageQ(YSTC_eventQ), NULL);
+  /* definition and creation of NFC_eventQ */
+  osMessageQDef(NFC_eventQ, 128, uint8_t);
+  NFC_eventQHandle = osMessageCreate(osMessageQ(NFC_eventQ), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -1265,13 +1250,14 @@ void NfcNvmTaskFunc(void const * argument)
 	  }
 
 	  // time info update
-	  if(prev_time_tick != device_10min_cnt)
+	  if(prev_time_tick != device_min_cnt) // every minute
 	  {
-		  status = HDLR_updateTime(device_10min_cnt);
+		  status = HDLR_updateTime(device_min_cnt);
 		  if(status == 0) kputs(PORT_DEBUG, "HDLR_updateTime ERROR\r\n");
 
-		  prev_time_tick = device_10min_cnt;
+		  prev_time_tick = device_min_cnt;
 	  }
+
 #endif
 
   }
@@ -1538,6 +1524,7 @@ void mainHandlerTaskFunc(void const * argument)
 	  kprintf(PORT_DEBUG, "NFC idle flag set error=%d\r\n", nv_status);
   }
 
+  osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 1 min to inverter operation time
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
 
   /* Infinite loop */
@@ -1730,7 +1717,7 @@ void AccReadTimerCallback(void const * argument)
 void OperationTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN OperationTimerCallback */
-	device_10min_cnt++;
+	device_min_cnt++;
 
   /* USER CODE END OperationTimerCallback */
 }

@@ -209,6 +209,8 @@ extern int16_t gear_ratio;
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
 extern uint32_t device_on_hour;
+extern uint32_t device_min_cnt;
+extern uint32_t run_minutes;
 
 extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
@@ -993,7 +995,6 @@ STATIC int test_ser(uint8_t dport)
 
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
     	kprintf(dport, "\r\n status overload=%d, brake=%d, gear_ratio=%d", st_overload, st_brake, gear_ratio);
-    	kprintf(dport, "\r\n run_count=%d on_hour=%d, run_hour=%d", motor_run_cnt, device_on_hour, motor_run_hour);
     }
     else if(test_case == 'G') // test DOUT
     {
@@ -1004,6 +1005,11 @@ STATIC int test_ser(uint8_t dport)
 
     	mdout_value[index] = onoff;
     	kprintf(dport, "\r\n set Dout index=%d, value=%d", index, onoff);
+    }
+    else if(test_case == 'T') // test DOUT
+    {
+    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d, minutes=%d", \
+    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour, run_minutes);
     }
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
     else if(test_case == 'P') // Production test start

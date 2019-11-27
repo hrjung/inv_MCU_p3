@@ -18,6 +18,9 @@
 #include "drv_nvm.h"
 
 
+#define INTERNAL_DEV_COUNTER		0x5A0
+#define INTERNAL_RUN_REMAIN_TIME	0x5A4
+
 //#define TABLE_SIZE_MAX	250
 
 #if 0
@@ -56,6 +59,9 @@ int32_t isMonitoring=0;
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
 extern uint32_t device_on_hour;
+extern uint32_t device_min_cnt;
+extern uint32_t dev_start_time;
+extern uint32_t run_minutes;
 
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 extern uint32_t table_calcCRC(void);
@@ -152,6 +158,16 @@ int8_t NVM_readTime(void)
 	status = NVM_read(addr, (int32_t *)&motor_run_hour);
 	if(status==NVM_NOK) errflag++;
 
+	// restore device counter
+	status = NVM_read((uint16_t)INTERNAL_DEV_COUNTER, (int32_t *)&device_min_cnt);
+	if(status==NVM_NOK) errflag++;
+
+	dev_start_time = device_min_cnt;
+
+	// run minute time
+	status = NVM_read((uint16_t)INTERNAL_RUN_REMAIN_TIME, (int32_t *)&run_minutes);
+	if(status==NVM_NOK) errflag++;
+
 	if(errflag) status=NVM_NOK;
 
 	return status;
@@ -205,6 +221,14 @@ int8_t NVM_initTime(void)
 
 	motor_run_hour=0;
 	status = NVM_setMotorRunTime(motor_run_hour);
+	if(status==NVM_NOK) errflag++;
+
+	device_min_cnt=0; dev_start_time=0;
+	status = NVM_setMotorDevCounter(device_min_cnt);
+	if(status==NVM_NOK) errflag++;
+
+	run_minutes=0;
+	status = NVM_setMotorRunTimeMinute(run_minutes);
 	if(status==NVM_NOK) errflag++;
 
 	if(errflag) status=NVM_NOK;
@@ -379,6 +403,36 @@ int8_t NVM_setCRC(void)
 
 		if(status != NVM_OK) return NVM_NOK;
 	}
+
+	return NVM_OK;
+}
+
+int8_t NVM_getMotorRunTimeMinute(int32_t *remain_time)
+{
+	uint8_t status;
+
+	status = NVM_read((uint16_t)INTERNAL_RUN_REMAIN_TIME, remain_time);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t NVM_setMotorRunTimeMinute(uint32_t r_time)
+{
+	uint8_t status;
+
+	status = NVM_write((uint16_t)INTERNAL_RUN_REMAIN_TIME, (int32_t)r_time);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	return NVM_OK;
+}
+
+int8_t NVM_setMotorDevCounter(uint32_t r_time)
+{
+	uint8_t status;
+
+	status = NVM_write((uint16_t)INTERNAL_DEV_COUNTER, (int32_t)r_time);
+	if(status!=NVM_OK) return NVM_NOK;
 
 	return NVM_OK;
 }

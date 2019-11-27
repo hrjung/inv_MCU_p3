@@ -34,6 +34,10 @@ extern int8_t NVM_clearNfcStatus(void);
 extern int8_t NVM_getRunStopFlag(int32_t *run_stop);
 extern int8_t NVM_clearRunStopFlag(void);
 
+extern int8_t NVM_setMotorRunCount(uint32_t run_count);
+extern int8_t NVM_setMotorDevCounter(uint32_t r_time);
+extern int8_t NVM_setMotorRunTimeMinute(uint32_t r_time);
+
 extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
 extern int8_t NVM_setCRC(void);
 
