@@ -54,7 +54,6 @@ extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 //extern int8_t COMM_setMultiStepFreq(PARAM_IDX_t table_idx, uint16_t *buf);
 //extern int8_t COMM_setAnalogFreq(int32_t freq, uint16_t *buf);
 
-extern void TM_setStartRunTime(void);
 
 void EXT_printDIConfig(void)
 {
@@ -276,7 +275,7 @@ int8_t EXI_DI_handleDin(void)
 				else
 #endif
 				{
-					TM_setStartRunTime(); // set Run start time, count
+					HDLR_setStartRunTime(); // set Run start time, count
 					prev_run = mdin_value[m_din.run_pin];
 				}
 			}

@@ -57,6 +57,10 @@ extern int32_t NVM_getSystemParamValue(uint16_t index);
 extern void NVM_clearSysParamUpdateFlag(uint16_t index);
 extern int NVM_isSysParamNeedUpdate(uint16_t index);
 
+extern int8_t NVM_setMotorRunCount(uint32_t run_count);
+extern int8_t NVM_setMotorDevCounter(uint32_t r_time);
+extern int8_t NVM_setMotorRunTimeMinute(uint32_t r_time);
+
 extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
 extern void NVM_setCRC(void);
 

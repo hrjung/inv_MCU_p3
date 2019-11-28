@@ -37,6 +37,7 @@
 #define VERSION_MAJ		0
 #define VERSION_MIN		20
 
+
 //#define CMDLINE_MAX_ARGS        8
 #define NUM_OF_DEBUGCHAR    	64
 
@@ -177,7 +178,7 @@ STATIC int utest_ser(uint8_t dport);
 const COMMAND	Cmd_List[] =
 {
 	{ 1,   	"HELP",			2,		help_ser,			help_msg	},
-	{ 1,  	"RESET",		1,		reset_ser,			help_msg	},
+	{ 1,  	"RESET",		1,		reset_ser,			reset_msg	},
 	{ 1,  	"INITP",		1,		init_param_ser,		init_param_msg	},
 	{ 1,  	"PARAM",		3,		param_ser,			param_msg	},
 	{ 1,  	"RNV",			2,		read_nv_ser,		read_nv_msg	},
@@ -238,6 +239,8 @@ extern int16_t gear_ratio;
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
 extern uint32_t device_on_hour;
+extern uint32_t device_min_cnt;
+extern uint32_t run_minutes;
 
 extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
@@ -1116,7 +1119,6 @@ STATIC int test_ser(uint8_t dport)
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
     	kprintf(dport, "\r\n status overload=%d, brake=%d, gear_ratio=%d", st_overload, st_brake, gear_ratio);
     	kprintf(dport, "\r\n status di_val=%d, do_val=%d, ai_val=%d", EXT_getDIValue(), EXT_getDOValue(), EXT_getAIValue());
-    	kprintf(dport, "\r\n run_count=%d on_hour=%d, run_hour=%d", motor_run_cnt, device_on_hour, motor_run_hour);
     }
     else if(test_case == 'G') // test DOUT
     {
@@ -1153,7 +1155,11 @@ STATIC int test_ser(uint8_t dport)
     	}
     }
 #endif
-
+    else if(test_case == 'T') // test DOUT
+    {
+    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d, minutes=%d", \
+    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour, run_minutes);
+    }
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
     else if(test_case == 'P') // Production test start
     {

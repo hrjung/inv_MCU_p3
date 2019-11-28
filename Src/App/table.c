@@ -611,7 +611,7 @@ int8_t table_isInit(void)
 // CRC value for initial value : 0xf2364d63
 uint32_t table_calcCRC(void)
 {
-	int table_length = (int)Rs_type; // RW data only
+	int table_length = (int)(baudrate_type+1); // RW data only
 	uint8_t* buff = (uint8_t *)table_nvm;
 	uint32_t crc32 = update_crc(-1, buff, table_length *sizeof(int32_t));
 
@@ -639,6 +639,21 @@ int8_t table_initializeBlankEEPROM(void)
 #endif
 	}
 
+	kprintf(PORT_DEBUG, "0: err=%d\r\n", errflag);
+
+	// initialize error, status
+	for(i=err_date_0_type; i<PARAM_TABLE_SIZE; i++)
+	{
+		status = NVM_writeParam((PARAM_IDX_t)i, param_table[i].initValue);
+		if(status == 0) errflag++;
+
+		table_data[i] = param_table[i].initValue;
+		//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
+#ifdef SUPPORT_TASK_WATCHDOG
+		watchdog_f= 0x1F; // WATCHDOG_ALL; to kick watchdog in case of no NFC B/D
+#endif
+	}
+
 	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 
 	// init system param
@@ -647,11 +662,14 @@ int8_t table_initializeBlankEEPROM(void)
 
 	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
 
+	status = NVM_initTime();
+	if(status == 0) errflag++;
+
+	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
+
 	NVM_setInit();
 
 	NVM_setCRC();
-
-	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
 
 	if(errflag) return 0;
 
