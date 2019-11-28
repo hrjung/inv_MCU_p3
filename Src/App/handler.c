@@ -86,7 +86,7 @@ void HDLR_setStartRunTime(void)
 {
 	int8_t status;
 
-	if(state_run_stop == CMD_RUN) return; // already run state
+	//if(state_run_stop == CMD_RUN) return; // already run state
 
 	motor_run_start_time = device_min_cnt - run_minutes;
 
@@ -119,7 +119,6 @@ int8_t HDLR_handleDspError(void)
 			{
 				err_code = table_getValue(err_code_0_type);
 			}
-			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 
 			// store dev_on_time, in case of power off
 			if(err_code == TRIP_REASON_VDC_UNDER)
@@ -127,6 +126,8 @@ int8_t HDLR_handleDspError(void)
 				status = NVM_setMotorDevCounter(device_min_cnt);
 				HDLR_saveMotorRunTime();
 			}
+
+			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 		}
 		ERR_setErrorState(err_code);
 		//UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
@@ -175,7 +176,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 		{
 			NVM_clearRunStopFlag();
 			prev_run_stop = run_stop;
-			HDLR_setStartRunTime(); // set Run start time
+			//HDLR_setStartRunTime(); // set Run start time
 		}
 		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
 		break;
@@ -222,7 +223,7 @@ int8_t HDLR_handleRunStopFlagModbus(void)
 		if(status != COMM_FAILED)
 		{
 			HDLR_clearRunStopFlagModbus();
-			HDLR_setStartRunTime(); // set Run start time
+			//HDLR_setStartRunTime(); // set Run start time
 		}
 		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
 		break;
@@ -401,6 +402,11 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 	// process Run time
 	if(state_run_stop == CMD_RUN)
 	{
+		if(prev_state_run_stop == CMD_STOP)
+		{
+			HDLR_setStartRunTime();
+		}
+
 		if(cur_time - motor_run_start_time >= 60) // update 1 hour
 		{
 			motor_run_hour++;
@@ -408,7 +414,7 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run time \r\n"); errflag++;}
 
 			motor_run_start_time = cur_time;
-			kprintf(PORT_DEBUG, "start on time %d\r\n", cur_time);
+			kprintf(PORT_DEBUG, "1 more hour %d\r\n", cur_time);
 
 			status = NVM_setMotorDevCounter(cur_time);
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Dev time at STOP\r\n"); errflag++;}
@@ -420,11 +426,14 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 	{
 		if(prev_state_run_stop == CMD_RUN) // run -> stop
 		{
+			status = NVM_setMotorDevCounter(cur_time);
+			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Dev time \r\n"); errflag++;}
+
 			run_minutes = (cur_time - motor_run_start_time)%60;
 			status = NVM_setMotorRunTimeMinute(run_minutes);
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run time minute\r\n"); errflag++;}
 
-			kprintf(PORT_DEBUG, "stop on time %d\r\n", cur_time);
+			kprintf(PORT_DEBUG, "stop run time %d, minutes=%d\r\n", cur_time, run_minutes);
 		}
 
 		prev_state_run_stop = state_run_stop;

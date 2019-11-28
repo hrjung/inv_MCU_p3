@@ -241,6 +241,7 @@ extern uint32_t motor_run_hour;
 extern uint32_t device_on_hour;
 extern uint32_t device_min_cnt;
 extern uint32_t run_minutes;
+extern uint32_t motor_run_start_time;
 
 extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
@@ -1155,10 +1156,10 @@ STATIC int test_ser(uint8_t dport)
     	}
     }
 #endif
-    else if(test_case == 'T') // test DOUT
+    else if(test_case == 'T') // show time info
     {
-    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d, minutes=%d", \
-    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour, run_minutes);
+    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d, r_start=%d, minutes=%d", \
+    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour, motor_run_start_time, run_minutes);
     }
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
     else if(test_case == 'P') // Production test start
@@ -1325,7 +1326,7 @@ static int display_BoardInfo(uint8_t dport)
 void debugTaskFunc(void const * argument)
 {
 
-  osDelay(800);
+  osDelay(1000);
 
   kputs(PORT_DEBUG, "start debugTask\r\n");
   /* Infinite loop */

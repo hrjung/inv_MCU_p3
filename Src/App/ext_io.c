@@ -275,7 +275,7 @@ int8_t EXI_DI_handleDin(void)
 				else
 #endif
 				{
-					HDLR_setStartRunTime(); // set Run start time, count
+					//HDLR_setStartRunTime(); // set Run start time, count
 					prev_run = mdin_value[m_din.run_pin];
 				}
 			}
@@ -541,6 +541,8 @@ int8_t EXT_AI_handleAin(void)
 				// send run to DSP
 				status = COMM_sendMessage(test_cmd, dummy);
 				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+
+				//HDLR_setStartRunTime();
 #endif
 				test_cmd = SPICMD_PARAM_W;
 				kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
