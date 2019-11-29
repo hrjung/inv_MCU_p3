@@ -1197,8 +1197,8 @@ void NfcNvmTaskFunc(void const * argument)
 
 #ifndef SUPPORT_UNIT_TEST
 	  // read NFC tag flag
-	  tag_tryed=0, tag_end=0;
-	  status = NVM_getNfcStatus(&tag_end, &tag_tryed);
+	  tag_end=0;
+	  status = NVM_getNfcStatus(&tag_end);
 	  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); continue;}
 
 	  if(NFC_Access_flag)
@@ -1211,7 +1211,7 @@ void NfcNvmTaskFunc(void const * argument)
 //		  UTIL_setLED(LED_COLOR_G, 0);
 
 	  // if tagged, wait tag_end
-	  if(tag_tryed == 1 && tag_end == 1)
+	  if(tag_end == 1)
 	  {
 		  // if tag end, update NVM -> table
 		  //	check parameter table
@@ -1244,14 +1244,18 @@ void NfcNvmTaskFunc(void const * argument)
 				  else
 					  UTIL_setLED(LED_COLOR_G, 0);
 			  }
+
+			  kputs(PORT_DEBUG, "nfc tag processed!\r\n");
 		  }
 	  }
-	  else if(tag_tryed == 1 || tag_end == 1) // NFC write is incomplete -> restore
+	  else if(tag_end != 0 && tag_end != 1) // NFC write is incomplete -> restore
 	  {
 		  // tag error : restore NVM <- table
 		  osDelay(5);
 		  status = HDLR_restoreNVM();
 		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
+
+		  kputs(PORT_DEBUG, "nfc tag imcomplete!\r\n");
 
 		  UTIL_setLED(LED_COLOR_G, 0);
 	  }

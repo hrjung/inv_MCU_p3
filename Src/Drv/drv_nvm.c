@@ -379,14 +379,14 @@ void NVM_clearNfcMonitoring(void)
 	}
 }
 
-int8_t NVM_getNfcStatus(int32_t *tag_tryed, int32_t *tag_end)
+int8_t NVM_getNfcStatus(int32_t *tag_end)
 {
 	uint8_t status;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_NFC_TAGGED].addr, tag_end);
 	//if(status!=NVM_OK) return NVM_NOK;
 
-	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_NFC_TRYED].addr, tag_tryed);
+	//status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_NFC_TRYED].addr, tag_tryed);
 	//if(status!=NVM_OK) return NVM_NOK;
 
 	return NVM_OK;

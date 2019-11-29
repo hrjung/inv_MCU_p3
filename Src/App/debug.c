@@ -35,7 +35,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		20
+#define VERSION_MIN		21
 
 
 //#define CMDLINE_MAX_ARGS        8
@@ -1158,8 +1158,9 @@ STATIC int test_ser(uint8_t dport)
 #endif
     else if(test_case == 'T') // show time info
     {
-    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d, r_start=%d, minutes=%d", \
-    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour, motor_run_start_time, run_minutes);
+    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d", \
+    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour);
+    	kprintf(dport, "\r\n r_start=%d, minutes=%d", motor_run_start_time, run_minutes);
     }
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
     else if(test_case == 'P') // Production test start

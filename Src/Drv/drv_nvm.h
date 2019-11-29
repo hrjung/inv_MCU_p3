@@ -42,7 +42,7 @@ extern void NVM_setInit(void);
 extern int8_t NVM_isInit(void);
 extern int8_t NVM_isNfcMonitoring(void);
 extern void NVM_clearNfcMonitoring(void);
-extern int8_t NVM_getNfcStatus(int32_t *tag_started, int32_t *tag_end);
+extern int8_t NVM_getNfcStatus(int32_t *tag_end);
 extern void NVM_clearNfcStatus(void);
 extern int8_t NVM_getRunStopFlag(int32_t *run_stop);
 extern void NVM_clearRunStopFlag(void);
