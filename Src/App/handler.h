@@ -40,6 +40,7 @@ extern void HDLR_saveMotorRunTime(void);
 extern int8_t HDLR_updatebyNfc(void);
 extern int8_t HDLR_restoreNVM(void);
 extern int8_t HDLR_updateParamNVM(void);
+extern int8_t HDLR_initNVM(void);
 
 extern int8_t HDLR_updateTime(uint32_t cur_time);
 

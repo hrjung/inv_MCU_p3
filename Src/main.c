@@ -194,6 +194,7 @@ extern int16_t state_run_stop;
 extern LED_status_t LED_state[]; // 3 color LED state
 
 extern uint8_t reset_enabled_f;
+extern uint8_t reset_requested_f;
 
 extern uint16_t jig_test_enabled_f;
 
@@ -1125,7 +1126,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void main_kickWatchdogNFC(void)
+{
+	watchdog_f |= WATCHDOG_NFC;
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1177,7 +1181,7 @@ void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
   int sys_index=SYSTEM_PARAM_SIZE;
-  int32_t tag_tryed=0, tag_end=0;
+  int32_t tag_end=0;
   int8_t status, nvm_backup=0;
   static uint32_t prev_time_tick;
   static uint32_t bk_cnt=0;
@@ -1268,6 +1272,17 @@ void NfcNvmTaskFunc(void const * argument)
 	  {
 		  status = HDLR_updateParamNVM();
 		  if(status == 0) kputs(PORT_DEBUG, "HDLR_updateParamNVM ERROR\r\n");
+
+		  UTIL_setLED(LED_COLOR_G, 0);
+	  }
+
+	  if(reset_requested_f)
+	  {
+		  UTIL_setLED(LED_COLOR_B, 0);
+
+		  status = HDLR_initNVM();
+		  if(status == 0) kputs(PORT_DEBUG, "HDLR_initNVM ERROR\r\n");
+		  else	reset_requested_f = 0;
 
 		  UTIL_setLED(LED_COLOR_G, 0);
 	  }

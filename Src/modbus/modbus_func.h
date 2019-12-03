@@ -38,6 +38,7 @@
 
 // special purpose parameter for PC application
 #define MB_CTRL_RESET_ADDR			(40090)
+#define MB_CTRL_NVM_INIT_ADDR		(40091)
 #define MB_CTRL_FACTORY_MODE_ADDR	(40092)
 #define MB_CTRL_BACKUP_FLAG_ADDR	(40093)
 #define MB_CTRL_RUN_STOP_ADDR		(40095)

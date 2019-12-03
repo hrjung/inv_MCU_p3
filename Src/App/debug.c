@@ -39,7 +39,7 @@
 
 
 //#define CMDLINE_MAX_ARGS        8
-#define NUM_OF_DEBUGCHAR    	64
+#define NUM_OF_DEBUGCHAR    	80
 
 const char	*help_msg[] = {
 	"Display Command Help",
@@ -55,7 +55,7 @@ const char	*reset_msg[] = {
 };
 
 const char	*init_param_msg[] = {
-	"INITP : set EEPROM not initialized",
+	"INITP : initialize EEPROM as default",
 	"Usage: INITP ",
 	0
 };
@@ -259,21 +259,8 @@ extern int32_t sys_data[];
 
 extern uint8_t reset_cmd_send_f;
 
-//extern osThreadId defaultTaskHandle;
-//extern osThreadId YstcNfcTaskHandle;
-//extern osThreadId userIoTaskHandle;
-//extern osThreadId YstcEventTaskHandle;
-//extern osThreadId rs485TaskHandle;
+extern uint8_t reset_requested_f;
 
-extern uint32_t ystc_event_cnt, default_cnt, nfc_cnt, rs485_cnt, user_io_cnt;
-extern uint32_t key_scan_cnt, nfc_app_cnt, ystc_trigger_cnt;
-//extern uint32_t ystc_default_cnt, ystc_run_cnt;
-//extern int ystc_state;
-//extern int ystc_enter, ystc_exit;
-//extern int run_enter, run_enter1, run_enter2, run_enter3, run_enter4,run_enter5;
-//extern int run_exit, run_exit1, run_exit2,run_exit3, run_exit4,run_exit5;
-//extern int rs_f1,rs_f2,rs_f3,rs_f4,rs_f5,rs_f6, i2c_st;
-extern eTaskState eTaskGetState( TaskHandle_t xTask );
 #ifdef SUPPORT_TASK_WATCHDOG
 extern uint8_t watchdog_f;
 #endif
@@ -504,9 +491,9 @@ STATIC int reset_ser(uint8_t dport)
 
 STATIC int init_param_ser(uint8_t dport)
 {
-	kputs(dport, "\r\n\r\n---set EEPROM not initialized");
-	kputs(dport, "\r\n please reset device	\r\n\r\n");
-	//EEPROM_setNotInitiated();
+	kputs(dport, "\r\n\r\n--- going to initialize EEPROM, please make sure motor is stopped");
+
+	reset_requested_f = 1;
 	return 0;
 }
 

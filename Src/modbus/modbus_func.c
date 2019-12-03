@@ -70,6 +70,7 @@ uint8_t reset_requested_f=0;
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
 
+extern int16_t state_run_stop;
 
 extern void HDLR_setRunStopFlagModbus(int8_t flag);
 extern void HDLR_setFactoryModeFlagModbus(int8_t flag);
@@ -491,20 +492,28 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 		break;
 
 	case MB_CTRL_RESET_ADDR:
+		if(value == 1)
+		{
+			if(state_run_stop == CMD_STOP) // only on motor not running
+			{
+				reset_requested_f = 1;
 
-		//TODO: add handler for SW_reset after send response
-		reset_requested_f = 1;
+				modbusTx.wp = 0;
+				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 
-		modbusTx.wp = 0;
-		modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-		modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
-		modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-		modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
-		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
-
-		result = MOD_EX_NO_ERR;
-		kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+				result = MOD_EX_NO_ERR;
+				kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			}
+			else
+				result = MOD_EX_SLAVE_FAIL; // motor is running
+		}
+		else
+			result = MOD_EX_DataVAL;
 		break;
 
 #ifdef SUPPORT_PARAMETER_BACKUP
@@ -542,13 +551,38 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 
 			result = MOD_EX_NO_ERR;
-			kprintf(PORT_DEBUG, "set run_stop=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			kprintf(PORT_DEBUG, "set run_stop addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
 		}
 		else
 			result = MOD_EX_DataVAL;
 
 		break;
 
+	case MB_CTRL_NVM_INIT_ADDR:
+		if(value == 1)
+		{
+			if(state_run_stop == CMD_STOP) // only on motor not running
+			{
+				reset_requested_f = 1; // set flag
+
+				modbusTx.wp = 0;
+				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+
+				result = MOD_EX_NO_ERR;
+				kprintf(PORT_DEBUG, "set NVM init addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			}
+			else
+				result = MOD_EX_SLAVE_FAIL; // motor is running
+		}
+		else
+			result = MOD_EX_DataVAL;
+
+		break;
 	}
 
 	return result;
@@ -566,7 +600,11 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	 * - function cannot be processed : MOD_EX_SLAVE_FAIL
 	 */
 
-	if(addr == MB_CTRL_RUN_STOP_ADDR || addr == MB_CTRL_RESET_ADDR || addr == MB_CTRL_FACTORY_MODE_ADDR)
+	if(addr == MB_CTRL_RUN_STOP_ADDR
+		|| addr == MB_CTRL_RESET_ADDR		// device reset
+		|| addr == MB_CTRL_FACTORY_MODE_ADDR  // go into factory mode
+		|| addr == MB_CTRL_NVM_INIT_ADDR	// initialize NVM
+		)
 	{
 		result = MB_handleFlagRegister(addr, value);
 		goto FC06_ERR;

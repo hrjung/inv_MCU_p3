@@ -47,6 +47,10 @@ void HDLR_saveMotorRunTime(void);
 extern int8_t NVM_setMotorRunTime(uint32_t run_time);
 extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
 
+extern int32_t table_getInitValue(PARAM_IDX_t index);
+extern int8_t table_initStatusError(uint16_t index);
+extern void main_kickWatchdogNFC(void);
+
 #ifdef SUPPORT_PARAMETER_BACKUP
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 #endif
@@ -366,6 +370,83 @@ int8_t HDLR_updatebyNfc(void)
 
 	// clear NFC tag flag
 	NVM_clearNfcStatus();
+
+	if(errflag) return 0;
+	else	return 1;
+}
+
+int8_t HDLR_initNVM(void)
+{
+	PARAM_IDX_t index=value_type;
+	int32_t nvm_value, init_value;
+	uint8_t nvm_status;
+	int8_t status;
+	int16_t errflag=0;
+
+	while(index <= baudrate_type) // only writable parameter
+	{
+		osDelay(5);
+		nvm_status = NVM_readParam(index, &nvm_value);
+		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;}
+
+		init_value = table_getInitValue(index);
+		if(nvm_value != init_value)
+		{
+			nvm_status = NVM_writeParam(index, init_value);
+			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error index=0x%x\r\n", index); errflag++;}
+
+			status = NVMQ_enqueueTableQ(index, init_value);
+			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
+			//kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+		}
+		index++;
+
+#ifdef SUPPORT_TASK_WATCHDOG
+		main_kickWatchdogNFC();
+#endif
+	}
+
+	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
+
+	// initialize error, status
+	for(index=err_date_0_type; index<PARAM_TABLE_SIZE; index++)
+	{
+		init_value = table_getInitValue(index);
+		status = NVM_writeParam((PARAM_IDX_t)index, init_value);
+		if(status == 0) errflag++;
+
+		table_initStatusError(index);
+		//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
+
+#ifdef SUPPORT_TASK_WATCHDOG
+		main_kickWatchdogNFC();
+#endif
+	}
+
+	// init system param
+	status = NVM_initSystemParam();
+	if(status == 0) errflag++;
+
+#ifdef SUPPORT_TASK_WATCHDOG
+	main_kickWatchdogNFC();
+#endif
+
+	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
+
+	status = NVM_initTime();
+	if(status == 0) errflag++;
+
+#ifdef SUPPORT_TASK_WATCHDOG
+	main_kickWatchdogNFC();
+#endif
+
+	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
+
+	NVM_setInit();
+
+	NVM_setCRC();
+
+	kprintf(PORT_DEBUG, "HDLR_initNVM() Done \r\n");
 
 	if(errflag) return 0;
 	else	return 1;
