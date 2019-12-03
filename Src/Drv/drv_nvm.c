@@ -64,11 +64,13 @@ STATIC Param_sys_t sys_table[] =
 		{ SYSTEM_PARAM_IS_INITIATED, 		408, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_HAS_SYSTEM_ERROR, 	412, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_ENABLE_NFC_WRITER,	416, 	NO_CHANGE,		0},
+
 		{ SYSTEM_PARAM_NFC_TRYED, 			420, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_ON_MONITORING, 		424, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_RUN1_STOP2, 			428, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_INIT_NVM, 			432, 	NO_CHANGE,		0},
 #ifdef SUPPORT_PARAMETER_BACKUP
-		{ SYSTEM_PARAM_BACKUP_CMD, 			432, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_BACKUP_CMD, 			436, 	NO_CHANGE,		0},
 #endif
 };
 
@@ -539,5 +541,33 @@ int8_t NVM_setMotorDevCounter(uint32_t r_time)
 	if(status!=NVM_OK) return NVM_NOK;
 
 	return NVM_OK;
+}
+
+int8_t NVM_isInitNvmNfc(void)
+{
+	int32_t init_nvm=0;
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_INIT_NVM].addr, &init_nvm);
+	if(status!=NVM_OK) return 0; // default not monitoring
+
+	sys_data[SYSTEM_PARAM_INIT_NVM] = init_nvm;
+
+	return (int8_t)init_nvm;
+}
+
+
+void NVM_clearInitNvm(void)
+{
+	uint8_t status;
+
+	if(sys_data[SYSTEM_PARAM_INIT_NVM] != 0)
+	{
+		sys_data[SYSTEM_PARAM_INIT_NVM] = 0;
+		sys_table[SYSTEM_PARAM_INIT_NVM].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_INIT_NVM].addr, sys_data[SYSTEM_PARAM_INIT_NVM]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_INIT_NVM);
+	}
 }
 

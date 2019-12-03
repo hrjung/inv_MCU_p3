@@ -1276,17 +1276,6 @@ void NfcNvmTaskFunc(void const * argument)
 		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
 
-	  if(reset_requested_f)
-	  {
-		  UTIL_setLED(LED_COLOR_B, 0);
-
-		  status = HDLR_initNVM();
-		  if(status == 0) kputs(PORT_DEBUG, "HDLR_initNVM ERROR\r\n");
-		  else	reset_requested_f = 0;
-
-		  UTIL_setLED(LED_COLOR_G, 0);
-	  }
-
 	  // update system_parameter to NVM
 	  sys_index = NVM_getSysParamUpdateIndex();
 	  if(sys_index != SYSTEM_PARAM_SIZE)
@@ -1300,10 +1289,25 @@ void NfcNvmTaskFunc(void const * argument)
 	  }
 
 
-#ifdef SUPPORT_PARAMETER_BACKUP
 	  bk_cnt++;
 	  if(bk_cnt%50 == 0) // every 500ms
 	  {
+		  if(reset_requested_f || NVM_isInitNvmNfc()) // need NVM initialize ?
+		  {
+			  UTIL_setLED(LED_COLOR_B, 0);
+
+			  status = HDLR_initNVM();
+			  if(status == 0)
+				  kputs(PORT_DEBUG, "HDLR_initNVM ERROR\r\n");
+			  else
+			  {
+				  NVM_clearInitNvm();
+				  reset_requested_f = 0;
+			  }
+
+			  UTIL_setLED(LED_COLOR_G, 0);
+		  }
+#ifdef SUPPORT_PARAMETER_BACKUP
 		  if(HDLR_isBackupEnabled())
 		  {
 			  nvm_backup = HDLR_getBackupFlag();
@@ -1328,8 +1332,8 @@ void NfcNvmTaskFunc(void const * argument)
 			  UTIL_setLED(LED_COLOR_G, 0);
 			  HDLR_clearBackupFlagModbus(); // clear flag
 		  }
-	  }
 #endif
+	  }
 
 	  // time info update
 	  if(prev_time_tick != device_min_cnt) // every minute

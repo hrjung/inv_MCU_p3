@@ -66,4 +66,7 @@ extern void NVM_setCRC(void);
 
 extern int NVM_getSysParamUpdateIndex(void);
 
+extern int8_t NVM_isInitNvmNfc(void);
+extern void NVM_clearInitNvm(void);
+
 #endif /* SRC_DRV_NVM_H_ */
