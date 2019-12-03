@@ -199,10 +199,13 @@ void MB_TaskFunction(void)
 		// wrong slave address
 		if(MB_isValidRecvPacket() == 0) {mb_frame_received=0; return;}
 
-		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
-		time_val = sTime.Seconds;
-		kprintf(PORT_DEBUG, "cnt=%d RX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
-			time_val, mbBufRx.buf[0], mbBufRx.buf[1], mbBufRx.buf[2], mbBufRx.buf[3], mbBufRx.buf[4]);
+//		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+//		time_val = sTime.Seconds;
+//		kprintf(PORT_DEBUG, "cnt=%d RX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",
+//			time_val, mbBufRx.buf[0], mbBufRx.buf[1], mbBufRx.buf[2], mbBufRx.buf[3], mbBufRx.buf[4]);
+
+		kprintf(PORT_DEBUG, "%d RX: 0x%x 0x%x 0x%x 0x%x 0x%x 0x%0x\r\n",
+				timer_100ms, mbBufRx.buf[0], mbBufRx.buf[1], mbBufRx.buf[2], mbBufRx.buf[3], mbBufRx.buf[4], mbBufRx.buf[5]);
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 		if(p_test_enabled)

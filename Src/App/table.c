@@ -915,6 +915,11 @@ int8_t table_initStatusError(uint16_t index)
 		return 0;
 }
 
+int table_isMotorStop(void)
+{
+	return (state_run_stop == CMD_STOP);
+}
+
 int8_t table_setStatusDSP(void)
 {
 	int8_t nvm_status;

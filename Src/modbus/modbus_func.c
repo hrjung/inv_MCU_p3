@@ -70,8 +70,6 @@ uint8_t reset_requested_f=0;
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
 
-extern int16_t state_run_stop;
-
 extern void HDLR_setRunStopFlagModbus(int8_t flag);
 extern void HDLR_setFactoryModeFlagModbus(int8_t flag);
 #ifdef SUPPORT_PASSWORD
@@ -494,7 +492,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 	case MB_CTRL_RESET_ADDR:
 		if(value == 1)
 		{
-			if(state_run_stop == CMD_STOP) // only on motor not running
+			if(table_isMotorStop()) // only on motor not running
 			{
 				reset_requested_f = 1;
 
@@ -541,17 +539,22 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 
 		if(value == 0 || value == 1)
 		{
-			HDLR_setFactoryModeFlagModbus(value);
-			modbusTx.wp = 0;
-			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-			modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+			if(table_isMotorStop()) // only on motor not running
+			{
+				HDLR_setFactoryModeFlagModbus(value);
+				modbusTx.wp = 0;
+				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 
-			result = MOD_EX_NO_ERR;
-			kprintf(PORT_DEBUG, "set run_stop addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+				result = MOD_EX_NO_ERR;
+				kprintf(PORT_DEBUG, "set run_stop addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			}
+			else
+				result = MOD_EX_SLAVE_FAIL; // motor is running
 		}
 		else
 			result = MOD_EX_DataVAL;
@@ -561,7 +564,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 	case MB_CTRL_NVM_INIT_ADDR:
 		if(value == 1)
 		{
-			if(state_run_stop == CMD_STOP) // only on motor not running
+			if(table_isMotorStop()) // only on motor not running
 			{
 				reset_requested_f = 1; // set flag
 

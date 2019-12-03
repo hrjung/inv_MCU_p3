@@ -190,7 +190,6 @@ uint32_t dev_start_time=0;
 uint8_t watchdog_f = 0;
 #endif
 
-extern int16_t state_run_stop;
 extern LED_status_t LED_state[]; // 3 color LED state
 
 extern uint8_t reset_enabled_f;

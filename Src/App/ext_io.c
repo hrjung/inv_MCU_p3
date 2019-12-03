@@ -367,14 +367,14 @@ void EXT_DO_setDoutPin(int do_idx, int32_t DO_config)
 	switch(DO_config)
 	{
 	case DOUT_running:
-		if(state_run_stop)
+		if(!table_isMotorStop())
 			mdout_value[do_idx] = 1;
 		else
 			mdout_value[do_idx] = 0;
 		break;
 
 	case DOUT_stop:
-		if(state_run_stop == 0)
+		if(table_isMotorStop())
 			mdout_value[do_idx] = 1;
 		else
 			mdout_value[do_idx] = 0;
@@ -533,7 +533,7 @@ int8_t EXT_AI_handleAin(void)
 		}
 		else
 		{
-			if(state_run_stop == CMD_STOP)
+			if(table_isMotorStop())
 			{
 				test_cmd = SPICMD_CTRL_RUN;
 				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN \r\n");

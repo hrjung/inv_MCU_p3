@@ -312,6 +312,8 @@ extern int8_t table_updateCommError(uint16_t err_code);
 
 extern int32_t table_getCtrllIn(void);
 
+extern int table_isMotorStop(void);
+
 #ifdef SUPPORT_PASSWORD
 extern int table_isLocked(void);
 #endif
