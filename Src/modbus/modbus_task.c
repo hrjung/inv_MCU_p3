@@ -53,7 +53,7 @@ extern uint8_t reset_requested_f;
 extern uint8_t reset_cmd_send_f;
 extern uint8_t	mb_slaveAddress;
 
-extern uint32_t time_cnt;
+extern uint32_t timer_100ms;
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 extern uint8_t p_test_enabled;

@@ -75,6 +75,7 @@ extern void HDLR_setFactoryModeFlagModbus(int8_t flag);
 #ifdef SUPPORT_PASSWORD
 extern int table_isPasswordAddrModbus(uint16_t mb_addr);
 #endif
+extern int8_t table_setValueFactoryMode(PARAM_IDX_t idx, int32_t value);
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -551,7 +552,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 
 				result = MOD_EX_NO_ERR;
-				kprintf(PORT_DEBUG, "set run_stop addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+				kprintf(PORT_DEBUG, "set fct_mode addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
 			}
 			else
 				result = MOD_EX_SLAVE_FAIL; // motor is running
@@ -586,6 +587,36 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 			result = MOD_EX_DataVAL;
 
 		break;
+	}
+
+	return result;
+}
+
+int MB_handleFactoryModeWriteRegister(uint16_t addr, uint16_t value)
+{
+	int ret, result=MOD_EX_NO_ERR;
+	uint16_t index;
+
+	modbusTx.wp = 0;
+	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+	modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+	modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+	modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+
+	ret = table_setValueFactoryMode(index, (int32_t)value);
+	if(ret == 1)
+	{
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+		kprintf(PORT_DEBUG, "s_write index=%d, value=%d, wp=%d \r\n", index, (uint16_t)value, modbusTx.wp);
+		result = MOD_EX_NO_ERR;
+	}
+	else
+		result = MOD_EX_SLAVE_FAIL;
+
+	if(result != MOD_EX_NO_ERR)
+	{
+		MB_generateErrorResp(MOD_FC06_WR_REG, result);
 	}
 
 	return result;
@@ -765,8 +796,15 @@ int MB_processModbusPacket(void) // error or response packet
 
 	case MOD_FC06_WR_REG:
 		value = (uint16_t)(((uint16_t)modbusRx.buf[4] << 8) | modbusRx.buf[5]);
-		ret_code = MB_handleWriteSingleRegister(reg_addr, value);
-		kprintf(PORT_DEBUG, " MOD_FC06_WR_REG : addr=%d, ret_code=%d \r\n", reg_addr, ret_code);
+		if(HDLR_isFactoryModeEnabled()) // factory mode
+		{
+			ret_code = MB_handleFactoryModeWriteRegister(reg_addr, value);
+		}
+		else
+		{
+			ret_code = MB_handleWriteSingleRegister(reg_addr, value);
+			kprintf(PORT_DEBUG, " MOD_FC06_WR_REG : addr=%d, ret_code=%d \r\n", reg_addr, ret_code);
+		}
 		break;
 
 	case MOD_FC16_WRM_REG:

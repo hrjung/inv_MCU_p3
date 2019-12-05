@@ -553,7 +553,7 @@ STATIC int read_nv_ser(uint8_t dport)
 	}
 
 	addr = (uint16_t)atoi(arg_v[1]);
-	if(addr%4 != 0 || addr > 0x3FF)
+	if(addr%4 != 0) // || addr > 0x3FF)
 	{
 		kprintf(dport, "\r\n address error %d", addr);
 		return -1;
@@ -581,7 +581,7 @@ STATIC int write_nv_ser(uint8_t dport)
 	}
 
 	addr = (uint16_t)atoi(arg_v[1]);
-	if(addr%4 != 0 || addr > 0x3FF)
+	if(addr%4 != 0) // || addr > 0x3FF)
 	{
 		kprintf(dport, "\r\n address error %d", addr);
 		return -1;
@@ -1048,6 +1048,16 @@ STATIC int test_ser(uint8_t dport)
     	status = table_runFunc(idx, (int32_t)value, REQ_FROM_MODBUS);
     	kprintf(dport, "\r\n idx=%d, value=%d, status=%d, ", idx, value, status);
     }
+    else if(test_case == 'G') // test DOUT
+    {
+    	uint8_t index, onoff;
+
+    	index = (uint8_t)atoi(arg_v[2]);
+    	onoff = (uint8_t)atoi(arg_v[3]);
+
+    	mdout_value[index] = onoff;
+    	kprintf(dport, "\r\n set Dout index=%d, value=%d", index, onoff);
+    }
     else if(test_case == 'I') // setting info
     {
     	// freq, ctrl_in
@@ -1079,6 +1089,26 @@ STATIC int test_ser(uint8_t dport)
     		//kprintf(dport, "\r\n update_index=%d", NVM_getSysParamUpdateIndex());
     	}
     }
+    else if(test_case == 'Q') // verify EEPROM size
+    {
+    	uint8_t status, errflag=0;
+    	uint16_t test_addr; // out of range
+    	int32_t test_val = 0x55, value=0;
+
+    	test_addr = (uint8_t)atoi(arg_v[2]);
+    	if(test_addr%4 == 0)
+    	{
+			status = NVM_write(test_addr, test_val);
+			if(status == 0) errflag++;
+
+			status = NVM_read(test_addr, &value);
+			if(status == 0 || value != test_val) errflag++;
+
+			kprintf(PORT_DEBUG, "0: err=%d\r\n", errflag);
+    	}
+    	else
+    		kprintf(PORT_DEBUG, "test_addr=%d  error\r\n", test_addr);
+    }
     else if(test_case == 'R') // send Run/Stop command to DSP
     {
     	int8_t status;
@@ -1107,16 +1137,6 @@ STATIC int test_ser(uint8_t dport)
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
     	kprintf(dport, "\r\n status overload=%d, brake=%d, gear_ratio=%d", st_overload, st_brake, gear_ratio);
     	kprintf(dport, "\r\n status di_val=%d, do_val=%d, ai_val=%d", EXT_getDIValue(), EXT_getDOValue(), EXT_getAIValue());
-    }
-    else if(test_case == 'G') // test DOUT
-    {
-    	uint8_t index, onoff;
-
-    	index = (uint8_t)atoi(arg_v[2]);
-    	onoff = (uint8_t)atoi(arg_v[3]);
-
-    	mdout_value[index] = onoff;
-    	kprintf(dport, "\r\n set Dout index=%d, value=%d", index, onoff);
     }
 #ifdef SUPPORT_PASSWORD
     else if(test_case == 'U') // lock/unock with password

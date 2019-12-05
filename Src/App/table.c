@@ -879,6 +879,22 @@ int32_t table_getInitValue(PARAM_IDX_t index)
 	return param_table[index].initValue;
 }
 
+int8_t table_setValueFactoryMode(PARAM_IDX_t idx, int32_t value)
+{
+	int8_t status;
+
+	if(table_data[idx] == value) return 1; // ignore
+
+	// request to update EEPROM
+	status = NVMQ_enqueueNfcQ(idx, value);
+	if(status == 0) return 0;
+
+	table_data[idx] = value;
+	table_nvm[idx] = value;
+
+	return 1;
+}
+
 int8_t table_runFunc(PARAM_IDX_t idx, int32_t value, int16_t opt)
 {
 #ifdef SUPPORT_UNIT_TEST

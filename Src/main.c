@@ -1275,6 +1275,8 @@ void NfcNvmTaskFunc(void const * argument)
 		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
 
+	  if(ERR_getErrorState() == TRIP_REASON_MCU_INIT) continue;
+
 	  // update system_parameter to NVM
 	  sys_index = NVM_getSysParamUpdateIndex();
 	  if(sys_index != SYSTEM_PARAM_SIZE)
