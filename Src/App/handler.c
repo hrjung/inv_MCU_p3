@@ -123,13 +123,14 @@ int8_t HDLR_handleDspError(void)
 			{
 				err_code = table_getValue(err_code_0_type);
 			}
-
+#if 0
 			// store dev_on_time, in case of power off
 			if(err_code == TRIP_REASON_VDC_UNDER)
 			{
 				status = NVM_setMotorDevCounter(device_min_cnt);
 				HDLR_saveMotorRunTime();
 			}
+#endif
 
 			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 		}
@@ -452,6 +453,7 @@ int8_t HDLR_initNVM(void)
 	else	return 1;
 }
 
+#if 0
 void HDLR_saveMotorRunTime(void)
 {
 	if(state_run_stop == CMD_RUN)
@@ -460,6 +462,7 @@ void HDLR_saveMotorRunTime(void)
 		NVM_setMotorRunTimeMinute(run_minutes);
 	}
 }
+#endif
 
 int8_t HDLR_updateTime(uint32_t cur_time)
 {
@@ -474,8 +477,10 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 		status = NVM_setDeviceOnTime(device_on_hour);
 		if(status == 0) {kprintf(PORT_DEBUG, "ERROR update On time \r\n"); errflag++;}
 
+#if 0
 		status = NVM_setMotorDevCounter(cur_time);
 		if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Dev time \r\n"); errflag++;}
+#endif
 
 		kprintf(PORT_DEBUG, "1 hour time %d\r\n", cur_time);
 	}
@@ -495,10 +500,12 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run time \r\n"); errflag++;}
 
 			motor_run_start_time = cur_time;
-			kprintf(PORT_DEBUG, "1 more hour %d\r\n", cur_time);
+			kprintf(PORT_DEBUG, "motor run 1 more hour %d\r\n", cur_time);
 
+#if 0
 			status = NVM_setMotorDevCounter(cur_time);
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Dev time at STOP\r\n"); errflag++;}
+#endif
 		}
 
 		prev_state_run_stop = state_run_stop;
@@ -507,12 +514,15 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 	{
 		if(prev_state_run_stop == CMD_RUN) // run -> stop
 		{
+#if 0
 			status = NVM_setMotorDevCounter(cur_time);
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Dev time \r\n"); errflag++;}
-
+#endif
 			run_minutes = (cur_time - motor_run_start_time)%60;
+#if 0
 			status = NVM_setMotorRunTimeMinute(run_minutes);
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run time minute\r\n"); errflag++;}
+#endif
 
 			kprintf(PORT_DEBUG, "stop run time %d, minutes=%d\r\n", cur_time, run_minutes);
 		}

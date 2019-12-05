@@ -18,8 +18,8 @@
 #include "drv_nvm.h"
 
 
-#define INTERNAL_DEV_COUNTER		0x5A0
-#define INTERNAL_RUN_REMAIN_TIME	0x5A4
+//#define INTERNAL_DEV_COUNTER		0x5A0
+//#define INTERNAL_RUN_REMAIN_TIME	0x5A4
 
 //#define TABLE_SIZE_MAX	250
 #if 0
@@ -178,6 +178,7 @@ int8_t NVM_readTime(void)
 	status = NVM_read(addr, (int32_t *)&motor_run_hour);
 	if(status==NVM_NOK) errflag++;
 
+#if 0
 	// restore device counter
 	status = NVM_read((uint16_t)INTERNAL_DEV_COUNTER, (int32_t *)&device_min_cnt);
 	if(status==NVM_NOK) errflag++;
@@ -187,6 +188,7 @@ int8_t NVM_readTime(void)
 	// run minute time
 	status = NVM_read((uint16_t)INTERNAL_RUN_REMAIN_TIME, (int32_t *)&run_minutes);
 	if(status==NVM_NOK) errflag++;
+#endif
 
 	if(errflag) status=NVM_NOK;
 
@@ -243,6 +245,7 @@ int8_t NVM_initTime(void)
 	status = NVM_setMotorRunTime(motor_run_hour);
 	if(status==NVM_NOK) errflag++;
 
+#if 0
 	device_min_cnt=0; dev_start_time=0;
 	status = NVM_setMotorDevCounter(device_min_cnt);
 	if(status==NVM_NOK) errflag++;
@@ -250,6 +253,7 @@ int8_t NVM_initTime(void)
 	run_minutes=0;
 	status = NVM_setMotorRunTimeMinute(run_minutes);
 	if(status==NVM_NOK) errflag++;
+#endif
 
 	if(errflag) status=NVM_NOK;
 
@@ -513,6 +517,7 @@ int NVM_getSysParamUpdateIndex(void)
 	return SYSTEM_PARAM_SIZE;
 }
 
+#if 0
 int8_t NVM_getMotorRunTimeMinute(int32_t *remain_time)
 {
 	uint8_t status;
@@ -542,6 +547,7 @@ int8_t NVM_setMotorDevCounter(uint32_t r_time)
 
 	return NVM_OK;
 }
+#endif
 
 int8_t NVM_isInitNvmNfc(void)
 {

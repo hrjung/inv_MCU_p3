@@ -974,6 +974,13 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	uint8_t nvm_status;
 	uint16_t index;
 
+	// expect power off, not store at NVM
+	if(table_isMotorStop() && err_code == TRIP_REASON_VDC_UNDER)
+	{
+		table_data[err_code_0_type] = (int32_t)err_code; // only let know error code
+		return 1;
+	}
+
 	for(i=3; i>=0; i--) // push to next pos
 	{
 		//printf("i=%d\n", i);
