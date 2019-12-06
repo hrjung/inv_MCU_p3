@@ -69,6 +69,7 @@ STATIC int8_t table_setAinFreqValue(PARAM_IDX_t idx, int32_t value, int16_t opti
 STATIC int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setCommValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setFactoryValue(PARAM_IDX_t index, int32_t value, int16_t option);
+STATIC int8_t table_setTimeValue(PARAM_IDX_t index, int32_t value, int16_t option);
 int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 extern void MB_UART_init(uint32_t baudrate_index);
@@ -163,9 +164,9 @@ STATIC Param_t param_table[] =
 	{ model_type,			0x60,	40060,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
 	{ motor_type_type,		0x64,	40061,	1,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
 	{ gear_ratio_type,		0x68,	40062,	1,		1,		50,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ motor_on_cnt_type,	0x6C,	40063,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
-	{ elapsed_hour_type,	0x70,	40064,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
-	{ operating_hour_type,	0x74,	40065,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_doNothing},
+	{ motor_on_cnt_type,	0x6C,	40063,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
+	{ elapsed_hour_type,	0x70,	40064,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
+	{ operating_hour_type,	0x74,	40065,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
 
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm
@@ -531,6 +532,28 @@ int8_t table_setFactoryValue(PARAM_IDX_t index, int32_t value, int16_t option)
 	int8_t status;
 
 	if(!HDLR_isFactoryModeEnabled()) return 0;  // read only in non-factory mode
+
+	if(table_data[index] == value) return 1; // ignore
+
+	if(option != REQ_FROM_TEST)
+	{
+		// request to update EEPROM
+		status = NVMQ_enqueueNfcQ(index, value);
+		if(status == 0) return 0;
+	}
+
+	table_data[index] = value;
+	table_nvm[index] = value;
+	//printf("idx=%d set value=%d\r\n", idx, value);
+
+	return 1;
+}
+
+int8_t table_setTimeValue(PARAM_IDX_t index, int32_t value, int16_t option)
+{
+	int8_t status;
+
+	if(option == REQ_FROM_MODBUS) return 1; // ignore, only set by internal
 
 	if(table_data[index] == value) return 1; // ignore
 
@@ -1094,7 +1117,9 @@ int8_t table_updateCommError(uint16_t err_code)
 	return 1;
 }
 
-
+/*
+ * 	NFC task -> mainHandler task to update table_data
+ */
 int8_t table_updatebyTableQ(void)
 {
 	int32_t value;
@@ -1110,7 +1135,7 @@ int8_t table_updatebyTableQ(void)
 		if(table_data[index] != value)
 		{
 			status = table_runFunc(index, value, REQ_FROM_NFC);
-			kprintf(PORT_DEBUG,"table_updatebyTableQ table_data[%d]=%d \r\n", index, (int)value);
+			kprintf(PORT_DEBUG,"table_updatebyTableQ table_data[%d]=%d, status=%d \r\n", index, (int)value, status);
 		}
 
 		empty = NVMQ_isEmptyTableQ();

@@ -164,18 +164,14 @@ int8_t NVM_readTime(void)
 {
 	int errflag=0;
 	int8_t status=NVM_OK;
-	uint16_t addr;
 
-	addr = table_getAddr(motor_on_cnt_type);
-	status = NVM_read(addr, (int32_t *)&motor_run_cnt);
+	status = NVM_readParam(motor_on_cnt_type, (int32_t *)&motor_run_cnt);
 	if(status==NVM_NOK) errflag++;
 
-	addr = table_getAddr(elapsed_hour_type);
-	status = NVM_read(addr, (int32_t *)&device_on_hour);
+	status = NVM_readParam(elapsed_hour_type, (int32_t *)&device_on_hour);
 	if(status==NVM_NOK) errflag++;
 
-	addr = table_getAddr(operating_hour_type);
-	status = NVM_read(addr, (int32_t *)&motor_run_hour);
+	status = NVM_readParam(operating_hour_type, (int32_t *)&motor_run_hour);
 	if(status==NVM_NOK) errflag++;
 
 #if 0
@@ -198,10 +194,9 @@ int8_t NVM_readTime(void)
 int8_t NVM_setDeviceOnTime(uint32_t on_time)
 {
 	int8_t status;
-	uint16_t addr;
 
-	addr = table_getAddr(elapsed_hour_type);
-	status = NVM_write(addr, (int32_t)on_time);
+	status = NVM_writeParam(elapsed_hour_type, (int32_t)on_time);
+	//NVMQ_enqueueTableQ(elapsed_hour_type, (int32_t)on_time);
 
 	return status;
 }
@@ -209,10 +204,9 @@ int8_t NVM_setDeviceOnTime(uint32_t on_time)
 int8_t NVM_setMotorRunTime(uint32_t run_time)
 {
 	int8_t status;
-	uint16_t addr;
 
-	addr = table_getAddr(operating_hour_type);
-	status = NVM_write(addr, (int32_t)run_time);
+	status = NVM_writeParam(operating_hour_type, (int32_t)run_time);
+	//NVMQ_enqueueTableQ(operating_hour_type, (int32_t)run_time);
 
 	return status;
 }
@@ -220,10 +214,9 @@ int8_t NVM_setMotorRunTime(uint32_t run_time)
 int8_t NVM_setMotorRunCount(uint32_t run_count)
 {
 	int8_t status;
-	uint16_t addr;
 
-	addr = table_getAddr(motor_on_cnt_type);
-	status = NVM_write(addr, (int32_t)run_count);
+	status = NVM_writeParam(motor_on_cnt_type, (int32_t)run_count);
+	//NVMQ_enqueueTableQ(motor_on_cnt_type, (int32_t)run_count);
 
 	return status;
 }

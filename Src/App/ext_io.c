@@ -69,6 +69,8 @@ int32_t EXT_getDIValue(void)
 	{
 		di_val = (int32_t)((((mdin_value[2]&0x01)<<2) | ((mdin_value[1]&0x01)<<1) | (mdin_value[0]&0x01)));
 	}
+	else
+		di_val = 7;
 
 	return (7-di_val); // low active
 }
