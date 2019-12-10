@@ -195,6 +195,8 @@ extern LED_status_t LED_state[]; // 3 color LED state
 extern uint8_t reset_enabled_f;
 extern uint8_t reset_requested_f;
 
+extern uint8_t param_init_requested_f;
+
 extern uint16_t jig_test_enabled_f;
 
 extern void gen_crc_table(void);
@@ -1293,7 +1295,7 @@ void NfcNvmTaskFunc(void const * argument)
 	  bk_cnt++;
 	  if(bk_cnt%50 == 0) // every 500ms
 	  {
-		  if(reset_requested_f || NVM_isInitNvmNfc()) // need NVM initialize ?
+		  if(param_init_requested_f || NVM_isInitNvmNfc()) // need NVM initialize ?
 		  {
 			  UTIL_setLED(LED_COLOR_B, 0);
 
@@ -1303,7 +1305,7 @@ void NfcNvmTaskFunc(void const * argument)
 			  else
 			  {
 				  NVM_clearInitNvm();
-				  reset_requested_f = 0;
+				  param_init_requested_f = 0;
 			  }
 
 			  UTIL_setLED(LED_COLOR_G, 0);

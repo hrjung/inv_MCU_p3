@@ -67,6 +67,8 @@ MODBUS_SLAVE_QUEUE modbusRx, modbusTx;
 uint8_t	mb_slaveAddress = 1;
 uint8_t reset_requested_f=0;
 
+uint8_t param_init_requested_f=0;
+
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
 
@@ -567,7 +569,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 		{
 			if(table_isMotorStop()) // only on motor not running
 			{
-				reset_requested_f = 1; // set flag
+				param_init_requested_f = 1; // set flag
 
 				modbusTx.wp = 0;
 				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;

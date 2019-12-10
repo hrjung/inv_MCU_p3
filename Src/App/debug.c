@@ -35,7 +35,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		21
+#define VERSION_MIN		22
 
 
 //#define CMDLINE_MAX_ARGS        8
