@@ -39,7 +39,7 @@ extern void UTIL_setMTDpin(uint8_t onoff);
 extern void UTIL_readDin(void);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 
-extern void UTIL_readADC(uint16_t adc_sample);
+extern void UTIL_getAdcSamples(void);
 extern void UTIL_startADC(void);
 
 extern uint8_t UTIL_isDspError(void);

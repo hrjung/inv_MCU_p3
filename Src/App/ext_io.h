@@ -46,4 +46,8 @@ extern int8_t EXT_DO_handleDout(void);
 extern void EXT_AI_needReconfig(void);
 extern int8_t EXT_AI_handleAin(void);
 
+#ifdef SUPPORT_DI_AI_CONTROL
+extern int8_t EXT_handleDAin(void);
+#endif
+
 #endif /* SRC_EXT_IO_H_ */

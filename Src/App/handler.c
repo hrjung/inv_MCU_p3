@@ -204,11 +204,11 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 		break;
 	}
 
-	if(status == 0)
-	{
-		ERR_setErrorState(TRIP_REASON_MCU_INPUT);
-		kprintf(PORT_DEBUG, "ERROR!!  RUN/STOP Flag, status=%d\r\n", status);
-	}
+//	if(status == 0)
+//	{
+//		ERR_setErrorState(TRIP_REASON_MCU_INPUT);
+//		kprintf(PORT_DEBUG, "ERROR!!  RUN/STOP Flag, status=%d\r\n", status);
+//	}
 
 	return status;
 }

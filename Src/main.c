@@ -168,9 +168,7 @@ uint8_t DSP_status_read_flag=0;
 uint8_t reset_cmd_send_f = 0;
 
 volatile int8_t ADC_ConvCpltFlag=0, ADC_error=0;
-uint16_t ain_sample_val[EXT_AIN_SAMPLE_CNT];
-uint32_t ain_sample_sum=0;
-uint16_t adc_sample;
+
 uint16_t exec_do_cnt=0;
 
 uint16_t user_io_handle_cnt=0;
@@ -1401,7 +1399,6 @@ int8_t main_SwReset(void)
 
 int8_t mainHandlerState(void)
 {
-#if 1
 	static MAIN_state_st sct_state = MAIN_IDLE_STATE; // initial state
 	int8_t status;
 	int32_t ctrl_in;
@@ -1430,10 +1427,8 @@ int8_t mainHandlerState(void)
 
 		DSP_status_read_flag = 0; // clear flag
 
-//		if(ERR_isErrorState())
-//		  sct_state = MAIN_ERROR_STATE;
-//		else
-		  sct_state = MAIN_IDLE_STATE;
+		sct_state = MAIN_IDLE_STATE;
+
 		break;
 
 	case MAIN_EXTIO_STATE:
@@ -1448,22 +1443,26 @@ int8_t mainHandlerState(void)
 
 		case CTRL_IN_Digital:
 			status = EXI_DI_handleDin();
-			if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INPUT);
+			if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
 			break;
 
 		case CTRL_IN_Analog_V:
 			status = EXT_AI_handleAin();
 			break;
 
+#ifdef SUPPORT_DI_AI_CONTROL
+		case CTRL_IN_Din_Ain:
+			status = EXT_handleDAin();
+			break;
+#endif
+
 		case CTRL_IN_Modbus: // only run/stop command
 			status = HDLR_handleRunStopFlagModbus();
 			break;
 		}
 		user_io_handle_f = 0;
-//		if(ERR_isErrorState())
-//			 sct_state = MAIN_ERROR_STATE;
-//		else
-			 sct_state = MAIN_IDLE_STATE;
+		sct_state = MAIN_IDLE_STATE;
+
 		break;
 
 	case MAIN_MODBUS_STATE:
@@ -1487,66 +1486,6 @@ int8_t mainHandlerState(void)
 
 		break;
 	}
-
-
-#else
-	int8_t status;
-	int32_t ctrl_in;
-	static int8_t prev_status;
-
-	// read DSP error flag, MCU error state, read DSP status
-	if(DSP_status_read_flag) // every DSP_STATUS_TIME_INTERVAL
-	{
-	  HDLR_handleDspError();
-
-	  HDLR_readDspStatus();
-
-	  DSP_status_read_flag = 0;
-	  //HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
-	}
-
-	// read run/stop flag in EEPROM
-	ctrl_in = table_getCtrllIn();
-	switch(ctrl_in)
-	{
-	case CTRL_IN_NFC:
-	  status = HDLR_handleRunStopFlagNFC();
-	  break;
-
-	case CTRL_IN_Digital:
-	  if(user_io_handle_f)
-	  {
-		  status = EXI_DI_handleDin();
-
-		  user_io_handle_f = 0;
-	  }
-	  break;
-
-	case CTRL_IN_Analog_V:
-	  if(user_io_handle_f)
-	  {
-		  status = EXT_AI_handleAin();
-
-		  user_io_handle_f = 0;
-	  }
-	  break;
-
-	case CTRL_IN_Modbus: // only run/stop command
-
-	  break;
-	}
-
-	// read modbus packet
-	MB_handlePacket();
-
-
-	// read nvm_q
-	if(!NVMQ_isEmptyTableQ())
-	{
-	  status = table_updatebyTableQ();
-	  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
-	}
-#endif
 
 	return 1;
 }
@@ -1731,7 +1670,6 @@ void userIoTimerCallback(void const * argument)
   /* USER CODE BEGIN userIoTimerCallback */
 	int i;
 	int32_t ctrl_in;
-	uint32_t ain_sample_sum=0;
 
 #ifndef SUPPORT_UNIT_TEST
 	// set DTM pin to check DSP error
@@ -1747,17 +1685,26 @@ void userIoTimerCallback(void const * argument)
 		// read ADC
 		if(ADC_ConvCpltFlag)
 		{
-			for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sample_val[i] = (ain_sample_val[i]&0x0FFF);
-			ain_sample_sum = 0;
-			for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sample_sum += (uint32_t)ain_sample_val[i];
-			adc_sample = (uint16_t)(ain_sample_sum/EXT_AIN_SAMPLE_CNT);
-
-			UTIL_readADC(adc_sample);
+			UTIL_getAdcSamples();
 
 			ADC_ConvCpltFlag=0;
 			UTIL_startADC();
 		}
 	}
+#ifdef SUPPORT_DI_AI_CONTROL
+	else if(ctrl_in == CTRL_IN_Din_Ain) // read both DI, AI
+	{
+		UTIL_readDin();
+
+		if(ADC_ConvCpltFlag)
+		{
+			UTIL_getAdcSamples();
+
+			ADC_ConvCpltFlag=0;
+			UTIL_startADC();
+		}
+	}
+#endif
 	else
 		; // do nothing
 

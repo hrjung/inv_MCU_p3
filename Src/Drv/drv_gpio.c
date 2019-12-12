@@ -46,7 +46,11 @@ extern ADC_HandleTypeDef hadc1;
 
 extern uint8_t mdin_value[];
 
-extern uint16_t ain_sample_val[];
+uint16_t ain_sample_val[EXT_AIN_SAMPLE_CNT];
+//uint32_t ain_sample_sum=0;
+//uint16_t adc_sample;
+
+//extern uint16_t ain_sample_val[];
 extern uint16_t adc_value;
 
 
@@ -335,6 +339,20 @@ void UTIL_readADC(uint16_t adc_sample)
 
 	adc_value = (uint16_t)(ain_sum/(EXT_AIN_SAMPLE_CNT-2));
 
+}
+
+void UTIL_getAdcSamples(void)
+{
+	int i;
+	uint16_t adc_sample=0;
+	uint32_t ain_sample_sum=0;
+
+	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sample_val[i] = (ain_sample_val[i]&0x0FFF);
+	ain_sample_sum = 0;
+	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++) ain_sample_sum += (uint32_t)ain_sample_val[i];
+	adc_sample = (uint16_t)(ain_sample_sum/EXT_AIN_SAMPLE_CNT);
+
+	UTIL_readADC(adc_sample);
 }
 
 void UTIL_setAOUT(uint16_t volt)

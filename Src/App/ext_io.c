@@ -570,3 +570,39 @@ int8_t EXT_AI_handleAin(void)
 
 	return 1;
 }
+
+#ifdef SUPPORT_DI_AI_CONTROL
+int8_t EXT_handleDAin(void)
+{
+	uint16_t value;
+	int32_t freq, diff=0;
+	uint16_t dummy[3] = {0,0,0};
+	int8_t status;
+
+	// read config, can be updated during running
+	EXT_AI_setConfig();
+
+	// read AI value as 12bit ADC
+	value = EXT_AI_readADC();
+
+	// convert to freq value
+	freq = EXT_AI_getFreq(value);
+
+	diff = labs(prev_adc_cmd - freq);
+	if(diff >= F_CMD_DIFF_HYSTERISIS) // over 1Hz
+	{
+		test_cmd = SPICMD_PARAM_W;
+		kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
+#ifndef SUPPORT_UNIT_TEST
+		status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
+		if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+#endif
+		else // if error, not update
+			prev_adc_cmd = freq;
+	}
+
+	EXI_DI_handleDin();
+
+	return 1;
+}
+#endif
