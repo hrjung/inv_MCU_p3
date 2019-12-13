@@ -27,10 +27,11 @@ STATIC DIN_PIN_NUM_t m_din = {
 		EXT_DIN_COUNT,
 };
 
-uint8_t mdin_value[EXT_DIN_COUNT]={0,0,0}; // actual DI pin value
+uint8_t mdin_value[EXT_DIN_COUNT]={EXT_DI_INACTIVE,EXT_DI_INACTIVE,EXT_DI_INACTIVE}; // actual DI pin value
 COMM_CMD_t test_cmd=0;
-uint8_t prev_emergency=0, prev_trip=0, prev_run=0, prev_dir=0, prev_step=0;
-uint8_t step_cmd=0;
+uint8_t prev_emergency=EXT_DI_INACTIVE, prev_trip=EXT_DI_INACTIVE;
+uint8_t prev_run=EXT_DI_INACTIVE, prev_dir=EXT_DI_INACTIVE;
+uint8_t prev_step=0, step_cmd=0;
 
 uint8_t mdout_value[EXT_DOUT_COUNT]={0,0};
 
@@ -57,15 +58,21 @@ extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 void EXT_printDIConfig(void)
 {
-	kprintf(PORT_DEBUG, "Din config run=%d, dir=%d, trip=%d, emerg=%d\r\n", m_din.run_pin, m_din.dir_pin, m_din.trip_pin, m_din.emergency_pin);
-	kprintf(PORT_DEBUG, "Din config bit_L=%d, bit_M=%d, bit_H=%d\r\n", m_din.bit_L, m_din.bit_M, m_din.bit_H);
+	kprintf(PORT_DEBUG, "\r\n Din config run=%d, dir=%d, trip=%d, emerg=%d", m_din.run_pin, m_din.dir_pin, m_din.trip_pin, m_din.emergency_pin);
+	kprintf(PORT_DEBUG, "\r\n Din config bit_L=%d, bit_M=%d, bit_H=%d", m_din.bit_L, m_din.bit_M, m_din.bit_H);
 }
 
 int32_t EXT_getDIValue(void)
 {
 	int32_t di_val=0;
+	int32_t ctrl_in=0;
 
-	if(table_getCtrllIn() == CTRL_IN_Digital)
+	ctrl_in = table_getCtrllIn();
+	if(ctrl_in == CTRL_IN_Digital
+#ifdef SUPPORT_DI_AI_CONTROL
+		|| ctrl_in == CTRL_IN_Din_Ain
+#endif
+	)
 	{
 		di_val = (int32_t)((((mdin_value[2]&0x01)<<2) | ((mdin_value[1]&0x01)<<1) | (mdin_value[0]&0x01)));
 	}
@@ -79,7 +86,7 @@ int32_t EXT_getDOValue(void)
 {
 	int32_t do_val=0;
 
-	do_val = (int32_t)(((mdout_value[1]&0x01)<<1) | (mdin_value[0]&0x01));
+	do_val = (int32_t)(((mdout_value[1]&0x01)<<1) | (mdout_value[0]&0x01));
 
 	return do_val;
 }
@@ -123,24 +130,24 @@ uint8_t EXT_DI_convertMultiStep(void)
 
 	if(m_din.bit_L != EXT_DIN_COUNT)
 	{
-		low = mdin_value[m_din.bit_L]&0x01;
+		low = (uint8_t)(mdin_value[m_din.bit_L] == EXT_DI_ACTIVE);
 	}
 
 	if(m_din.bit_M != EXT_DIN_COUNT)
 	{
-		mid = mdin_value[m_din.bit_M]&0x01;
+		mid = (uint8_t)(mdin_value[m_din.bit_M] == EXT_DI_ACTIVE);
 	}
 
 	if(m_din.bit_H != EXT_DIN_COUNT)
 	{
-		high = mdin_value[m_din.bit_H]&0x01;
+		high = (uint8_t)(mdin_value[m_din.bit_H] == EXT_DI_ACTIVE);
 	}
 
 	step = ((high<<2)|(mid<<1)|low)&0x07;
 
 	//printf("step = %d, high:mid:low = %d:%d:%d\n", step, high, mid, low);
 
-	return (7-step); // low active
+	return step; // low active
 }
 
 // same setting for 2 or more pin is not allowed, last one is only set
@@ -195,6 +202,8 @@ int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option
 
 	EXT_DI_updateMultiDinPinIndex(index, func_set); // update m_din.pin_num
 
+	kprintf(PORT_DEBUG, "set di_pin %d as %d\r\n", index, func_set);
+
 	return 1;
 }
 
@@ -247,12 +256,18 @@ int8_t EXI_DI_handleDin(void)
 	}
 
 	ctrl_in = table_getCtrllIn();
-	if(ctrl_in == CTRL_IN_Digital)
+	if(ctrl_in == CTRL_IN_Digital
+#ifdef SUPPORT_DI_AI_CONTROL
+		|| ctrl_in == CTRL_IN_Din_Ain
+#endif
+			)
 	{
 		// handle run/stop
 		if(m_din.run_pin != EXT_DIN_COUNT)
 		{
-			if(mdin_value[m_din.run_pin] == EXT_DI_INACTIVE && prev_run == EXT_DI_ACTIVE && state_run_stop == CMD_RUN)
+			if(mdin_value[m_din.run_pin] == EXT_DI_INACTIVE
+				&& prev_run == EXT_DI_ACTIVE
+				&& state_run_stop == CMD_RUN) //RUN -> STOP
 			{
 				// send STOP cmd
 				test_cmd = SPICMD_CTRL_STOP;
@@ -265,7 +280,9 @@ int8_t EXI_DI_handleDin(void)
 #endif
 					prev_run = mdin_value[m_din.run_pin];
 			}
-			else if(mdin_value[m_din.run_pin] == EXT_DI_ACTIVE && prev_run == EXT_DI_INACTIVE && state_run_stop == CMD_STOP)
+			else if(mdin_value[m_din.run_pin] == EXT_DI_ACTIVE
+					&& prev_run == EXT_DI_INACTIVE
+					&& state_run_stop == CMD_STOP) // STOP -> RUN
 			{
 				// send run cmd
 				test_cmd = SPICMD_CTRL_RUN;
@@ -289,7 +306,9 @@ int8_t EXI_DI_handleDin(void)
 		if(m_din.dir_pin != EXT_DIN_COUNT)
 		{
 			dir_ctrl = table_getValue(dir_domain_type);
-			if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE && prev_dir == EXT_DI_ACTIVE && state_direction != CMD_DIR_F) // forward
+			if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE
+				&& prev_dir == EXT_DI_ACTIVE
+				&& state_direction != CMD_DIR_F) // reverse -> forward
 			{
 				// send FWD cmd
 				if(dir_ctrl != DIR_REVERSE_ONLY)
@@ -307,7 +326,9 @@ int8_t EXI_DI_handleDin(void)
 				}
 
 			}
-			else if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE && prev_dir == EXT_DI_INACTIVE && state_direction != CMD_DIR_R)	// reverse
+			else if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE
+					&& prev_dir == EXT_DI_INACTIVE
+					&& state_direction != CMD_DIR_R)	// // forward -> reverse
 			{
 				// send RVS cmd
 				if(dir_ctrl != DIR_FORWARD_ONLY)
@@ -326,26 +347,30 @@ int8_t EXI_DI_handleDin(void)
 			}
 		}
 
-		// handle multi-step freq
-		if(EXT_DI_isMultiStepValid())
-		{
-			step = EXT_DI_convertMultiStep();
-			if(step != prev_step)
-			{
-				test_cmd = SPICMD_PARAM_W;
-#ifndef SUPPORT_UNIT_TEST
-				freq_step = table_getValue(multi_val_0_type+step);
-				status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
-				kprintf(PORT_DEBUG, "send multistep=%d, freq=%d  \r\n", step, freq_step);
-				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
-				else
+#ifdef SUPPORT_DI_AI_CONTROL
+		if(ctrl_in == CTRL_IN_Digital) // only DI control
 #endif
-					prev_step = step;
+		{
+			// handle multi-step freq
+			if(EXT_DI_isMultiStepValid())
+			{
+				step = EXT_DI_convertMultiStep();
+				if(step != prev_step)
+				{
+					test_cmd = SPICMD_PARAM_W;
+	#ifndef SUPPORT_UNIT_TEST
+					freq_step = table_getValue(multi_val_0_type+step);
+					status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
+					kprintf(PORT_DEBUG, "send multistep=%d, freq=%d  \r\n", step, freq_step);
+					if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
+					else
+	#endif
+						prev_step = step;
 
-				step_cmd = step; // for test
+					step_cmd = step; // for test
+				}
 			}
 		}
-
 	}
 
 	return 1;
@@ -572,11 +597,11 @@ int8_t EXT_AI_handleAin(void)
 }
 
 #ifdef SUPPORT_DI_AI_CONTROL
-int8_t EXT_handleDAin(void)
+int8_t EXT_handleDAin(void) // accept both DI, AI as control
 {
 	uint16_t value;
 	int32_t freq, diff=0;
-	uint16_t dummy[3] = {0,0,0};
+//	uint16_t dummy[3] = {0,0,0};
 	int8_t status;
 
 	// read config, can be updated during running
@@ -591,6 +616,8 @@ int8_t EXT_handleDAin(void)
 	diff = labs(prev_adc_cmd - freq);
 	if(diff >= F_CMD_DIFF_HYSTERISIS) // over 1Hz
 	{
+		if(freq == 0) freq = (int32_t)(freq_min*10.0 + 0.05); // set minumum freq value
+
 		test_cmd = SPICMD_PARAM_W;
 		kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
 #ifndef SUPPORT_UNIT_TEST

@@ -285,6 +285,7 @@ extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 extern uint32_t table_calcCRC(void);
+extern int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 extern uint8_t p_test_enabled;
@@ -612,6 +613,7 @@ STATIC int din_ser(uint8_t dport)
 	for(i=0; i<20; i++) {UTIL_readDin(); osDelay(10);}
 
 	kprintf(dport, "\r\n set Din mdin %d, %d, %d", (mdin_value[0]==EXT_DI_ACTIVE), (mdin_value[1]==EXT_DI_ACTIVE), (mdin_value[2]==EXT_DI_ACTIVE));
+	EXT_printDIConfig();
 
 	return 0;
 }
@@ -942,9 +944,15 @@ STATIC int test_ser(uint8_t dport)
     else if(test_case == 7)
     {
 #if 1
+    	uint32_t crtrl_in=0;
+    	int8_t status=0;
+
+    	crtrl_in = (int32_t)atoi(arg_v[2]);
+    	status = table_setCtrlIn(ctrl_in_type, crtrl_in, REQ_FROM_MODBUS);
+    	kprintf(dport, "\r\n set command crtrl_in = %d, status=%d", crtrl_in, status);
     	// for test motor run time, set dummy status value from DSP status
-    	test_run_stop_f = (int16_t)atoi(arg_v[2]);
-    	kprintf(dport, "\r\n set test run_state_f = %d", test_run_stop_f);
+//    	test_run_stop_f = (int16_t)atoi(arg_v[2]);
+//    	kprintf(dport, "\r\n set test run_state_f = %d", test_run_stop_f);
 #else
 		uint8_t txBuf[5];
 		HAL_StatusTypeDef status;
@@ -1027,7 +1035,8 @@ STATIC int test_ser(uint8_t dport)
     	//test_DinConfig();
     	EXT_printDIConfig();
 
-    	kprintf(dport, "\r\n Din mdin %d, %d, %d", mdin_value[0], mdin_value[1], mdin_value[2]);
+    	kprintf(dport, "\r\n Din mdin %d, %d, %d", \
+    			(mdin_value[0]==EXT_DI_ACTIVE), (mdin_value[1]==EXT_DI_ACTIVE), (mdin_value[2]==EXT_DI_ACTIVE));
     	kprintf(dport, "\r\n prev_run=%d, run_stop=%d, step=%d", prev_run, state_run_stop, step_cmd);
     }
     else if(test_case == 'E') // show error data

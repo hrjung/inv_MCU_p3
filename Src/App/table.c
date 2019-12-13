@@ -59,7 +59,7 @@ int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
-STATIC int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
+int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
 #ifdef SUPPORT_PASSWORD
 STATIC int8_t table_setLockValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 #endif
@@ -109,7 +109,11 @@ STATIC Param_t param_table[] =
 	{ acc_base_set_type,	0x160,	40124,	0,		0,		1,		1, 	1, 		0, 	acc_base_set_dsp, 	table_setValue,	},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
+#ifdef SUPPORT_DI_AI_CONTROL
+	{ ctrl_in_type,			0x200,	40200,	0,		0,		4,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
+#else
 	{ ctrl_in_type,			0x200,	40200,	0,		0,		3,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
+#endif
 	{ energy_save_type,		0x204,	40201,	0,		0,		1,		1, 	1, 		0, 	energy_save_dsp,	table_setValue	},
 	{ pwm_freq_type,		0x208,	40202,	0,		0,		3,		1, 	1, 		0, 	pwm_freq_dsp,		table_setValue	},
 	{ brake_type_type,		0x20C,	40203,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
