@@ -191,7 +191,7 @@ uint8_t watchdog_f = 0;
 extern LED_status_t LED_state[]; // 3 color LED state
 
 extern uint8_t reset_enabled_f;
-extern uint8_t reset_requested_f;
+//extern uint8_t reset_requested_f;
 
 extern uint8_t param_init_requested_f;
 
@@ -1303,7 +1303,7 @@ void NfcNvmTaskFunc(void const * argument)
 				  kputs(PORT_DEBUG, "HDLR_initNVM ERROR\r\n");
 			  else
 			  {
-				  NVM_clearInitNvm();
+				  NVM_clearInitParamCmd();
 				  param_init_requested_f = 0;
 			  }
 
@@ -1315,6 +1315,7 @@ void NfcNvmTaskFunc(void const * argument)
 		  if(HDLR_isBackupEnabled())
 		  {
 			  nvm_backup = HDLR_getBackupFlag();
+			  kprintf(PORT_DEBUG, "HDLR_backupParameter cmd=%d\r\n", nvm_backup);
 			  if(nvm_backup == MB_BACKUP_SAVE) // backup
 			  {
 				  status = HDLR_backupParameter();
@@ -1326,11 +1327,6 @@ void NfcNvmTaskFunc(void const * argument)
 				  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
 
 				  NVM_setCRC(); // set new CRC
-
-				  // update table data
-				  status = HDLR_updateParamNVM(); // notify to update table data
-				  if(status == 0) kputs(PORT_DEBUG, "restore HDLR_updateParamNVM ERROR\r\n");
-
 			  }
 
 			  UTIL_setLED(LED_COLOR_G, 0);

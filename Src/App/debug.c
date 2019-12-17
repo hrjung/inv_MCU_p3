@@ -258,8 +258,9 @@ extern int32_t table_data[];
 extern int32_t sys_data[];
 
 extern uint8_t reset_cmd_send_f;
-
 extern uint8_t reset_requested_f;
+
+extern uint8_t param_init_requested_f;
 
 #ifdef SUPPORT_TASK_WATCHDOG
 extern uint8_t watchdog_f;
@@ -494,7 +495,7 @@ STATIC int init_param_ser(uint8_t dport)
 {
 	kputs(dport, "\r\n\r\n--- going to initialize EEPROM, please make sure motor is stopped");
 
-	reset_requested_f = 1;
+	param_init_requested_f = 1;
 	return 0;
 }
 

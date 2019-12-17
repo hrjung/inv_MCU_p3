@@ -47,11 +47,6 @@ extern void NVM_clearNfcStatus(void);
 extern int8_t NVM_getRunStopFlag(int32_t *run_stop);
 extern void NVM_clearRunStopFlag(void);
 
-#ifdef SUPPORT_PARAMETER_BACKUP
-extern int8_t NVM_getBackupCmd(void);
-extern void NVM_clearBackupCmd(void);
-#endif
-
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 extern int32_t NVM_getSystemParamValue(uint16_t index);
 extern void NVM_clearSysParamUpdateFlag(uint16_t index);
@@ -66,7 +61,12 @@ extern void NVM_setCRC(void);
 
 extern int NVM_getSysParamUpdateIndex(void);
 
-extern int8_t NVM_isInitNvmNfc(void);
-extern void NVM_clearInitNvm(void);
+extern void NVM_getCommandParam(void);
+extern uint8_t NVM_isInitNvmNfc(void);
+extern void NVM_clearInitParamCmd(void);
+
+extern uint8_t NVM_isBackupCmd(void);
+extern int8_t NVM_getBackupCmdNfc(void);
+extern void NVM_clearBackupCmd(void);
 
 #endif /* SRC_DRV_NVM_H_ */

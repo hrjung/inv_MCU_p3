@@ -68,12 +68,9 @@ STATIC Param_sys_t sys_table[] =
 		{ SYSTEM_PARAM_NFC_TRYED, 			420, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_ON_MONITORING, 		424, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_RUN1_STOP2, 			428, 	NO_CHANGE,		0},
-#ifdef SUPPORT_INIT_PARAM
 		{ SYSTEM_PARAM_INIT_NVM, 			432, 	NO_CHANGE,		0},
-#endif
-#ifdef SUPPORT_PARAMETER_BACKUP
 		{ SYSTEM_PARAM_BACKUP_CMD, 			436, 	NO_CHANGE,		0},
-#endif
+
 };
 
 int32_t sys_data[SYSTEM_PARAM_SIZE] = {0,0,0,0,0, 0,0,0,0};
@@ -437,34 +434,6 @@ void NVM_clearRunStopFlag(void)
 	}
 }
 
-#ifdef SUPPORT_PARAMETER_BACKUP
-int8_t NVM_getBackupCmd(void)
-{
-	int32_t bk_cmd=0;
-	uint8_t status;
-
-	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, &bk_cmd);
-	if(status!=NVM_OK) return NVM_NOK;
-
-	sys_data[SYSTEM_PARAM_BACKUP_CMD] = bk_cmd;
-
-	return NVM_OK;
-}
-
-void NVM_clearBackupCmd(void)
-{
-	uint8_t status;
-
-	if(sys_data[SYSTEM_PARAM_BACKUP_CMD] != 0)
-	{
-		sys_data[SYSTEM_PARAM_BACKUP_CMD] = 0;
-		sys_table[SYSTEM_PARAM_BACKUP_CMD].need_update = WRITE_TO_NVM;
-		status = NVM_write(sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, sys_data[SYSTEM_PARAM_BACKUP_CMD]);
-		if(status == 1)
-			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_BACKUP_CMD);
-	}
-}
-#endif
 
 int8_t NVM_verifyCRC(uint32_t crc32_calc)
 {
@@ -544,21 +513,39 @@ int8_t NVM_setMotorDevCounter(uint32_t r_time)
 }
 #endif
 
-int8_t NVM_isInitNvmNfc(void)
+
+uint8_t NVM_isInitNvmNfc(void)
 {
-	int32_t init_nvm=0;
+	return (uint8_t)(sys_data[SYSTEM_PARAM_INIT_NVM] == 1);
+}
+
+uint8_t NVM_isBackupCmd(void)
+{
+	return (uint8_t)(sys_data[SYSTEM_PARAM_BACKUP_CMD] != 0);
+}
+
+int8_t NVM_getBackupCmdNfc(void)
+{
+	return (int8_t)sys_data[SYSTEM_PARAM_BACKUP_CMD];
+}
+
+void NVM_getCommandParam(void)
+{
+	int32_t init_nvm=0, bk_cmd=0;
 	uint8_t status;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_INIT_NVM].addr, &init_nvm);
-	if(status!=NVM_OK) return 0; // default not monitoring
+	if(status == NVM_OK)
+		sys_data[SYSTEM_PARAM_INIT_NVM] = init_nvm;
 
-	sys_data[SYSTEM_PARAM_INIT_NVM] = init_nvm;
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, &bk_cmd);
+	if(status == NVM_OK)
+		sys_data[SYSTEM_PARAM_BACKUP_CMD] = bk_cmd;
 
-	return (int8_t)init_nvm;
 }
 
 
-void NVM_clearInitNvm(void)
+void NVM_clearInitParamCmd(void)
 {
 	uint8_t status;
 
@@ -569,6 +556,20 @@ void NVM_clearInitNvm(void)
 		status = NVM_write(sys_table[SYSTEM_PARAM_INIT_NVM].addr, sys_data[SYSTEM_PARAM_INIT_NVM]);
 		if(status == 1)
 			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_INIT_NVM);
+	}
+}
+
+void NVM_clearBackupCmd(void)
+{
+	uint8_t status;
+
+	if(sys_data[SYSTEM_PARAM_BACKUP_CMD] != 0)
+	{
+		sys_data[SYSTEM_PARAM_BACKUP_CMD] = 0;
+		sys_table[SYSTEM_PARAM_BACKUP_CMD].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, sys_data[SYSTEM_PARAM_BACKUP_CMD]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_BACKUP_CMD);
 	}
 }
 

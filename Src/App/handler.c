@@ -364,9 +364,10 @@ int8_t HDLR_updatebyNfc(void)
 
 	kprintf(PORT_DEBUG, "HDLR_updatebyNfc\r\n");
 
-//	// CRC is updated by NFC App
-//	status = NVM_setCRC();
-//	if(status == 0) errflag++;
+	NVM_getCommandParam(); // read command parameter
+
+//	CRC is updated by NFC App
+//	NVM_setCRC();
 
 	// clear NFC tag flag
 	NVM_clearNfcStatus();
@@ -578,12 +579,19 @@ void HDLR_clearBackupFlagModbus(void)
 
 int8_t HDLR_getBackupFlag(void)
 {
-	return mb_backup_mode_f;
+	int8_t bk_cmd=0;
+
+	if(mb_backup_mode_f != 0)
+		return mb_backup_mode_f;
+	else
+		bk_cmd = NVM_getBackupCmdNfc();
+
+	return bk_cmd;
 }
 
 int8_t HDLR_isBackupEnabled(void)
 {
-	return (mb_backup_mode_f != 0 || NVM_getBackupCmd() != 0);
+	return (mb_backup_mode_f != 0 || NVM_isBackupCmd() != 0);
 }
 
 int8_t HDLR_setBackupAvailableFlag(int32_t flag)
@@ -592,7 +600,7 @@ int8_t HDLR_setBackupAvailableFlag(int32_t flag)
 	int32_t addr=0;
 
 	addr = NVM_BACKUP_FLAG_ADDR;
-	nvm_status = NVM_read(addr, &flag);
+	nvm_status = NVM_write(addr, flag);
 	if(nvm_status == 0) return 0;
 
 	return 1;
@@ -632,10 +640,11 @@ int8_t HDLR_backupParameter(void)
 
 		osDelay(5);
 	}
-	kprintf(PORT_DEBUG,"NVM backup finished err=%d\r\n", errflag);
 
 	nvm_status = HDLR_setBackupAvailableFlag(NVM_BACKUP_AVAILABLE_F);
 	if(nvm_status == 0) {kprintf(PORT_DEBUG,"set NVM backup flag error\r\n"); errflag++;}
+
+	kprintf(PORT_DEBUG,"NVM backup finished err=%d\r\n", errflag);
 
 	if(errflag) return 0;
 	else	return 1;
@@ -646,18 +655,27 @@ int8_t HDLR_restoreParameter(void)
 {
 	PARAM_IDX_t idx;
 	int8_t nvm_status;
-	int32_t s_addr=0, t_addr=0, value=0;
+	int32_t s_addr=0, value=0;
 	int16_t errflag=0;
 
 	for(idx=value_type; idx <= baudrate_type; idx++)
 	{
 		s_addr = NVM_BACKUP_START_ADDR + idx*4;
 		nvm_status = NVM_read(s_addr, &value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR backup NVM read error idx=0x%x\r\n", idx); errflag++;}
+		if(nvm_status == 0)
+		{
+			kprintf(PORT_DEBUG,"ERROR backup NVM read error idx=0x%x\r\n", idx);
+			errflag++;
+			continue;
+		}
 
-		t_addr = table_getAddr(idx);
-		nvm_status = NVM_write(t_addr, value);
+		if(value == table_getValue(idx)) continue; // skip same value
+
+		nvm_status = NVM_writeParam(idx, value);
 		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR backup NVM write error idx=0x%x\r\n", idx); errflag++;}
+
+		nvm_status = NVMQ_enqueueTableQ(idx, value); // let table updated
+		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR backup NVM enqueue error idx=0x%x\r\n", idx); errflag++;}
 
 		osDelay(3);
 	}

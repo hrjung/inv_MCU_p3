@@ -67,9 +67,8 @@ MODBUS_SLAVE_QUEUE modbusRx, modbusTx;
 uint8_t	mb_slaveAddress = 1;
 uint8_t reset_requested_f=0;
 
-#ifdef SUPPORT_INIT_PARAM
 uint8_t param_init_requested_f=0;
-#endif
+
 
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
@@ -468,7 +467,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 	int result=MOD_EX_NO_ERR;
 
 	// only accept at Modbus control enable
-	if(table_getCtrllIn() == CTRL_IN_Modbus) return MOD_EX_SLAVE_FAIL;
+	if(table_getCtrllIn() != CTRL_IN_Modbus) return MOD_EX_SLAVE_FAIL;
 
 	switch(addr)
 	{
@@ -498,7 +497,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 		break;
 
 	case MB_CTRL_RESET_ADDR:
-		if(value == 1 && table_getCtrllIn() == CTRL_IN_Modbus) // only accept at Modbus control enable
+		if(value == 1) // only accept at Modbus control enable
 		{
 			if(table_isMotorStop()) // only on motor not running
 			{
