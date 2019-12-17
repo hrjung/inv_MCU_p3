@@ -950,6 +950,7 @@ STATIC int test_ser(uint8_t dport)
     	crtrl_in = (int32_t)atoi(arg_v[2]);
     	status = table_setCtrlIn(ctrl_in_type, crtrl_in, REQ_FROM_MODBUS);
     	kprintf(dport, "\r\n set command crtrl_in = %d, status=%d", crtrl_in, status);
+
     	// for test motor run time, set dummy status value from DSP status
 //    	test_run_stop_f = (int16_t)atoi(arg_v[2]);
 //    	kprintf(dport, "\r\n set test run_state_f = %d", test_run_stop_f);

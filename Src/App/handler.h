@@ -9,6 +9,9 @@
 #define SRC_HANDLER_H_
 
 
+#define RUN_STOP_FLAG_IDLE		0
+#define RUN_STOP_FLAG_RUN		1
+#define RUN_STOP_FLAG_STOP		2
 
 // mainhandler task function
 extern int8_t HDLR_handleDspError(void);

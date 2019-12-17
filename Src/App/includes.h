@@ -23,7 +23,7 @@
 
 #define SUPPORT_INIT_PARAM
 
-#define SUPPORT_DI_AI_CONTROL
+//#define SUPPORT_DI_AI_CONTROL
 
 //#define SUPPORT_UNIT_TEST
 

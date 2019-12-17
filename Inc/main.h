@@ -96,10 +96,10 @@ void Error_Handler(void);
 #define Modbus_RTS_GPIO_Port GPIOB
 #define R_LED_Pin GPIO_PIN_6
 #define R_LED_GPIO_Port GPIOC
-#define G_LED_Pin GPIO_PIN_7
-#define G_LED_GPIO_Port GPIOC
-#define B_LED_Pin GPIO_PIN_8
+#define B_LED_Pin GPIO_PIN_7
 #define B_LED_GPIO_Port GPIOC
+#define G_LED_Pin GPIO_PIN_8
+#define G_LED_GPIO_Port GPIOC
 #define DI_1_Pin GPIO_PIN_9
 #define DI_1_GPIO_Port GPIOC
 #define STATUS_MCU_Pin GPIO_PIN_8

@@ -15,12 +15,10 @@
 #include "drv_nvm.h"
 #include "nvm_queue.h"
 #include "error.h"
+#include "handler.h"
 
 #include "drv_gpio.h"
 
-#define RUN_STOP_FLAG_IDLE		0
-#define RUN_STOP_FLAG_RUN		1
-#define RUN_STOP_FLAG_STOP		2
 
 int8_t mb_run_stop_f=0;
 int8_t mb_factory_mode_f=0; // flag for factory mode enabled/disabled
@@ -377,6 +375,7 @@ int8_t HDLR_updatebyNfc(void)
 	else	return 1;
 }
 
+#ifdef SUPPORT_INIT_PARAM
 int8_t HDLR_initNVM(void)
 {
 	PARAM_IDX_t index=value_type;
@@ -453,6 +452,7 @@ int8_t HDLR_initNVM(void)
 	if(errflag) return 0;
 	else	return 1;
 }
+#endif
 
 #if 0
 void HDLR_saveMotorRunTime(void)

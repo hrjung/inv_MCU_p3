@@ -37,14 +37,14 @@
 #define MB_BACKUP_RESTORE		2
 
 // special purpose parameter for PC application
-#define MB_CTRL_RESET_ADDR			(40090)
-#define MB_CTRL_NVM_INIT_ADDR		(40091)
-#define MB_CTRL_FACTORY_MODE_ADDR	(40092)
-#define MB_CTRL_BACKUP_FLAG_ADDR	(40093)
-#define MB_CTRL_RUN_STOP_ADDR		(40095)
+#define MB_CTRL_RESET_ADDR			(40090)	// inverter reset command
+#define MB_CTRL_NVM_INIT_ADDR		(40091) // EEPROM initialize command
+#define MB_CTRL_FACTORY_MODE_ADDR	(40092) // enter into factory mode to write RO inverter parameter
+#define MB_CTRL_BACKUP_FLAG_ADDR	(40093) // backup parameter settings
+#define MB_CTRL_RUN_STOP_ADDR		(40095) // inverter run/stop command
 #define MB_CTRL_CONN_CHECK_ADDR		(40096) // connection check command
 
-// normal parameter
+// normal parameter address range
 #define MB_DRIVER_START_ADDR		(40100)
 #define MB_DRIVER_END_ADDR			(40124)
 

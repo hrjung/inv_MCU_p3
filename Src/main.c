@@ -1052,14 +1052,14 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, AUX_OUT_Pin|Modbus_RTS_Pin|MTD1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, R_LED_Pin|G_LED_Pin|B_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, R_LED_Pin|B_LED_Pin|G_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, STATUS_MCU_Pin|TH_MCU_1_Pin|TH_MCU_2_Pin|MCU_nSCS_OUT3_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : DO_2_Pin R_LED_Pin G_LED_Pin B_LED_Pin 
+  /*Configure GPIO pins : DO_2_Pin R_LED_Pin B_LED_Pin G_LED_Pin 
                            DO_1_Pin */
-  GPIO_InitStruct.Pin = DO_2_Pin|R_LED_Pin|G_LED_Pin|B_LED_Pin 
+  GPIO_InitStruct.Pin = DO_2_Pin|R_LED_Pin|B_LED_Pin|G_LED_Pin 
                           |DO_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1293,6 +1293,7 @@ void NfcNvmTaskFunc(void const * argument)
 	  bk_cnt++;
 	  if(bk_cnt%50 == 0) // every 500ms
 	  {
+#ifdef SUPPORT_INIT_PARAM
 		  if(param_init_requested_f || NVM_isInitNvmNfc()) // need NVM initialize ?
 		  {
 			  UTIL_setLED(LED_COLOR_B, 0);
@@ -1308,6 +1309,8 @@ void NfcNvmTaskFunc(void const * argument)
 
 			  UTIL_setLED(LED_COLOR_G, 0);
 		  }
+#endif
+
 #ifdef SUPPORT_PARAMETER_BACKUP
 		  if(HDLR_isBackupEnabled())
 		  {

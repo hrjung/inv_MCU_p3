@@ -67,7 +67,9 @@ MODBUS_SLAVE_QUEUE modbusRx, modbusTx;
 uint8_t	mb_slaveAddress = 1;
 uint8_t reset_requested_f=0;
 
+#ifdef SUPPORT_INIT_PARAM
 uint8_t param_init_requested_f=0;
+#endif
 
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
 MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
@@ -465,12 +467,15 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 {
 	int result=MOD_EX_NO_ERR;
 
+	// only accept at Modbus control enable
+	if(table_getCtrllIn() == CTRL_IN_Modbus) return MOD_EX_SLAVE_FAIL;
+
 	switch(addr)
 	{
 	case MB_CTRL_RUN_STOP_ADDR:
 		if(!ERR_isErrorState())
 		{
-			if(value == 1 || value == 2)
+			if(value == RUN_STOP_FLAG_RUN || value == RUN_STOP_FLAG_STOP)
 			{
 				HDLR_setRunStopFlagModbus((int8_t)value);
 				modbusTx.wp = 0;
@@ -493,7 +498,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 		break;
 
 	case MB_CTRL_RESET_ADDR:
-		if(value == 1)
+		if(value == 1 && table_getCtrllIn() == CTRL_IN_Modbus) // only accept at Modbus control enable
 		{
 			if(table_isMotorStop()) // only on motor not running
 			{
@@ -564,6 +569,7 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 
 		break;
 
+#ifdef SUPPORT_INIT_PARAM
 	case MB_CTRL_NVM_INIT_ADDR:
 		if(value == 1)
 		{
@@ -588,6 +594,11 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 		else
 			result = MOD_EX_DataVAL;
 
+		break;
+#endif
+
+	default:
+		result = MOD_EX_SLAVE_FAIL;
 		break;
 	}
 
@@ -639,7 +650,12 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	if(addr == MB_CTRL_RUN_STOP_ADDR
 		|| addr == MB_CTRL_RESET_ADDR		// device reset
 		|| addr == MB_CTRL_FACTORY_MODE_ADDR  // go into factory mode
+#ifdef SUPPORT_PARAMETER_BACKUP
+		|| addr == MB_CTRL_BACKUP_FLAG_ADDR
+#endif
+#ifdef SUPPORT_INIT_PARAM
 		|| addr == MB_CTRL_NVM_INIT_ADDR	// initialize NVM
+#endif
 		)
 	{
 		result = MB_handleFlagRegister(addr, value);
