@@ -234,6 +234,7 @@ extern int16_t st_overload;
 extern int16_t st_brake;
 extern uint8_t prev_run;
 extern uint8_t step_cmd;
+extern uint8_t prev_emergency, prev_trip;
 
 extern int16_t gear_ratio;
 extern uint32_t motor_run_cnt;
@@ -1039,7 +1040,8 @@ STATIC int test_ser(uint8_t dport)
 
     	kprintf(dport, "\r\n Din mdin %d, %d, %d", \
     			(mdin_value[0]==EXT_DI_ACTIVE), (mdin_value[1]==EXT_DI_ACTIVE), (mdin_value[2]==EXT_DI_ACTIVE));
-    	kprintf(dport, "\r\n prev_run=%d, run_stop=%d, step=%d", prev_run, state_run_stop, step_cmd);
+    	kprintf(dport, "\r\n prev_run=%d, run_stop=%d, step=%d prev_emerg=%d, prev_trip=%d",
+    			prev_run, state_run_stop, step_cmd, prev_emergency, prev_trip);
     }
     else if(test_case == 'E') // show error data
     {

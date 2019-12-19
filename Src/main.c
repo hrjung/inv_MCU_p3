@@ -1433,6 +1433,8 @@ int8_t mainHandlerState(void)
 	case MAIN_EXTIO_STATE:
 		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; break;}
 
+		EXI_DI_handleEmergency(); // handle trip/emergency DI
+
 		ctrl_in = table_getCtrllIn();
 		switch(ctrl_in)
 		{
@@ -1441,8 +1443,7 @@ int8_t mainHandlerState(void)
 			break;
 
 		case CTRL_IN_Digital:
-			status = EXI_DI_handleDin();
-			if(status == 0) ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
+			status = EXI_DI_handleDin(ctrl_in);
 			break;
 
 		case CTRL_IN_Analog_V:
@@ -1451,7 +1452,7 @@ int8_t mainHandlerState(void)
 
 #ifdef SUPPORT_DI_AI_CONTROL
 		case CTRL_IN_Din_Ain:
-			status = EXT_handleDAin();
+			status = EXT_handleDAin(ctrl_in);
 			break;
 #endif
 
@@ -1674,12 +1675,15 @@ void userIoTimerCallback(void const * argument)
 	// set DTM pin to check DSP error
 	UTIL_readDspErrorPin();
 
+	UTIL_readDin();
+
 	ctrl_in = table_getCtrllIn();
-	if(ctrl_in == CTRL_IN_Digital) // UIO_UPDATE_TIME_INTERVAL 10ms
-	{
-		UTIL_readDin();
-	}
-	else if(ctrl_in == CTRL_IN_Analog_V)
+
+	if(ctrl_in == CTRL_IN_Analog_V
+#ifdef SUPPORT_DI_AI_CONTROL
+		|| ctrl_in == CTRL_IN_Din_Ain
+#endif
+	)
 	{
 		// read ADC
 		if(ADC_ConvCpltFlag)
@@ -1690,20 +1694,6 @@ void userIoTimerCallback(void const * argument)
 			UTIL_startADC();
 		}
 	}
-#ifdef SUPPORT_DI_AI_CONTROL
-	else if(ctrl_in == CTRL_IN_Din_Ain) // read both DI, AI
-	{
-		UTIL_readDin();
-
-		if(ADC_ConvCpltFlag)
-		{
-			UTIL_getAdcSamples();
-
-			ADC_ConvCpltFlag=0;
-			UTIL_startADC();
-		}
-	}
-#endif
 	else
 		; // do nothing
 

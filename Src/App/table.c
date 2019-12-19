@@ -511,6 +511,7 @@ int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t status=1;
 
+	//value = 2; // TODO: NFC app bug
 	status = table_setValue(idx, value, option);
 
 	if(status)
@@ -1156,23 +1157,22 @@ void table_initParam(void)
 	PARAM_IDX_t idx;
 	int index;
 
-	switch(table_data[ctrl_in_type])
+	// initialize DIN for ext_trip or emergency_stop
+	for(idx=multi_Din_0_type; idx<=multi_Din_2_type; idx++)
 	{
-	case CTRL_IN_Digital:
-		// initialize DIN
-		for(idx=multi_Din_0_type; idx<=multi_Din_2_type; idx++)
-		{
-			index = (int)(idx - multi_Din_0_type);
-			EXT_DI_setupMultiFuncDin(index, (DIN_config_t)table_data[idx], REQ_FROM_TEST);
-		}
-		break;
+		index = (int)(idx - multi_Din_0_type);
+		EXT_DI_setupMultiFuncDin(index, (DIN_config_t)table_data[idx], REQ_FROM_TEST);
+	}
 
-	case CTRL_IN_Analog_V:
+	if(table_data[ctrl_in_type] == CTRL_IN_Analog_V
+#ifdef SUPPORT_DI_AI_CONTROL
+		|| table_data[ctrl_in_type] == CTRL_IN_Analog_V
+#endif
+	)
+	{
 		// initialize AIN
 		EXT_AI_needReconfig();
 		UTIL_startADC(); // start ADC
-
-		break;
 	}
 
 	// set dir_domain_type
