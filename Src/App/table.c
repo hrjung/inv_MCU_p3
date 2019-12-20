@@ -56,6 +56,7 @@ uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 STATIC int8_t table_doNothing(PARAM_IDX_t idx, int32_t value, int16_t option);
 int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
 int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
+int8_t table_setMultiFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
@@ -83,14 +84,14 @@ extern int8_t HDLR_isFactoryModeEnabled(void);
 STATIC Param_t param_table[] =
 {   //    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
 	{ value_type,			0x100,	40100,	200,	100,	800,	1, 	10,		1, 	value_dsp,			table_setFreqValue, },
-	{ multi_val_0_type,		0x104,	40101,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_1_type,		0x108,	40102,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_2_type,		0x10C,	40103,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_3_type,		0x110,	40104,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_4_type,		0x114,	40105,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_5_type,		0x118,	40106,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_6_type,		0x11C,	40107,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
-	{ multi_val_7_type,		0x120,	40108,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setFreqValue, },
+	{ multi_val_0_type,		0x104,	40101,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_1_type,		0x108,	40102,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_2_type,		0x10C,	40103,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_3_type,		0x110,	40104,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_4_type,		0x114,	40105,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_5_type,		0x118,	40106,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_6_type,		0x11C,	40107,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_7_type,		0x120,	40108,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
 	{ freq_min_type,		0x124,	40109,	100,	100,	800,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
 	{ freq_max_type,		0x128,	40110,	800,	100,	800,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
 	{ accel_time_type,		0x12C,	40111,	100,	10,		6000,	1, 	10, 	1, 	accel_time_dsp,		table_setValue,},
@@ -320,6 +321,24 @@ int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 	return status;
 }
 
+int8_t table_setMultiFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
+{
+	int8_t status;
+
+	// check validity
+	if(table_checkFreqValidity(idx, value) == 0) return 0;
+
+	status = table_setValueAPI(idx, value, option);
+	if(status == 0) return 0;
+
+	if(table_data[ctrl_in_type] == CTRL_IN_Digital)
+	{
+		status = EXI_DI_setMultiFreqValue();
+	}
+
+	return status;
+}
+
 int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t result;
@@ -481,6 +500,9 @@ int8_t table_setDinValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 	index = (int)(idx - multi_Din_0_type);
 	status = EXT_DI_setupMultiFuncDin(index, (DIN_config_t)value, option);
+
+	if(table_data[ctrl_in_type] == CTRL_IN_Digital)
+		EXI_DI_getStepValue(EXT_DI_INITIALIZE);
 
 	return status;
 }
@@ -1163,6 +1185,9 @@ void table_initParam(void)
 		index = (int)(idx - multi_Din_0_type);
 		EXT_DI_setupMultiFuncDin(index, (DIN_config_t)table_data[idx], REQ_FROM_TEST);
 	}
+
+	if(table_data[ctrl_in_type] == CTRL_IN_Digital)
+		EXI_DI_getStepValue(EXT_DI_INITIALIZE);
 
 	if(table_data[ctrl_in_type] == CTRL_IN_Analog_V
 #ifdef SUPPORT_DI_AI_CONTROL

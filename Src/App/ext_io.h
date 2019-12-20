@@ -21,6 +21,9 @@
 #define EXT_DI_ACTIVE		0
 #define EXT_DI_INACTIVE		1
 
+#define EXT_DI_NORMAL		0
+#define EXT_DI_INITIALIZE	1
+
 typedef struct {
 	uint8_t bit_L; 		// pin_number for bit_L, can be 0, 1, 2, ..  (EXT_DIN_COUNT for not assigned)
 	uint8_t bit_M;
@@ -37,6 +40,8 @@ extern int32_t EXT_getDOValue(void);
 extern int32_t EXT_getAIValue(void);
 
 //extern void EXT_DI_updateMultiDinPinIndex(uint8_t index, DIN_config_t func_set);
+extern int8_t EXI_DI_setMultiFreqValue(void);
+extern int32_t EXI_DI_getStepValue(int8_t flag);
 extern int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option);
 extern uint8_t EXT_DI_convertMultiStep(void);
 extern int8_t EXI_DI_handleEmergency(void);

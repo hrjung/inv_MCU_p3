@@ -31,8 +31,9 @@ uint8_t mdin_value[EXT_DIN_COUNT]={EXT_DI_INACTIVE,EXT_DI_INACTIVE,EXT_DI_INACTI
 COMM_CMD_t test_cmd=0;
 uint8_t prev_emergency=EXT_DI_INACTIVE, prev_trip=EXT_DI_INACTIVE;
 uint8_t prev_run=EXT_DI_INACTIVE, prev_dir=EXT_DI_INACTIVE;
-uint8_t prev_step=0, step_cmd=0;
+uint8_t step_cmd=0;
 
+static int32_t di_freq_val=0;
 uint8_t mdout_value[EXT_DOUT_COUNT]={0,0};
 
 uint16_t adc_value=0; // analog input value
@@ -49,17 +50,20 @@ extern int16_t st_brake;
 
 extern uint32_t timer_100ms;
 
+extern int32_t table_getValue(PARAM_IDX_t index);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
-
-//extern int8_t COMM_setMultiStepFreq(PARAM_IDX_t table_idx, uint16_t *buf);
-//extern int8_t COMM_setAnalogFreq(int32_t freq, uint16_t *buf);
 
 
 void EXT_printDIConfig(void)
 {
 	kprintf(PORT_DEBUG, "\r\n Din config run=%d, dir=%d, trip=%d, emerg=%d", m_din.run_pin, m_din.dir_pin, m_din.trip_pin, m_din.emergency_pin);
 	kprintf(PORT_DEBUG, "\r\n Din config bit_L=%d, bit_M=%d, bit_H=%d", m_din.bit_L, m_din.bit_M, m_din.bit_H);
+	kprintf(PORT_DEBUG, "\r\n Din mdin %d, %d, %d", \
+			(mdin_value[0]==EXT_DI_ACTIVE), (mdin_value[1]==EXT_DI_ACTIVE), (mdin_value[2]==EXT_DI_ACTIVE));
+	kprintf(PORT_DEBUG, "\r\n prev_run=%d, run_stop=%d, step=%d di_freq=%d",
+			prev_run, state_run_stop, step_cmd, di_freq_val);
+	//kprintf(PORT_DEBUG, "\r\n prev_emerg=%d, prev_trip=%d", prev_emergency, prev_trip);
 }
 
 int32_t EXT_getDIValue(void)
@@ -121,12 +125,6 @@ uint8_t EXT_DI_convertMultiStep(void)
 {
 	uint8_t low=0, mid=0, high=0;
 	uint8_t step=0;
-
-	if(EXT_DI_isMultiStepValid() == 0) // no multi-step setting
-	{
-		//printf("L:%d, M:%d, H:%d\n", m_din.bit_L, m_din.bit_M, m_din.bit_H);
-		return 0; // 0 is not valid multi-step
-	}
 
 	if(m_din.bit_L != EXT_DIN_COUNT)
 	{
@@ -240,6 +238,57 @@ int8_t EXI_DI_handleEmergency(void)
 	return 1;
 }
 
+int8_t EXI_DI_setMultiFreqValue(void)
+{
+	int8_t status=1;
+	uint8_t step=0;
+	int32_t freq_value=0;
+
+	if(EXT_DI_isMultiStepValid())
+	{
+		step = EXT_DI_convertMultiStep();
+		freq_value = table_getValue(multi_val_0_type+step);
+		step_cmd = step; // for test
+
+		if(di_freq_val != freq_value)
+		{
+			status = table_setFreqValue(value_type, freq_value, REQ_FROM_EXTIO);
+			kprintf(PORT_DEBUG, "table_setMultiFreqValue di_freq_val = %d \r\n", freq_value);
+			if(status == 0) { kprintf(PORT_DEBUG, "table_setMultiFreqValue error! \r\n"); }
+			else
+				di_freq_val = freq_value;
+		}
+	}
+
+	return status;
+}
+
+int32_t EXI_DI_getStepValue(int8_t flag)
+{
+	int8_t status;
+	uint8_t step=0;
+	int32_t freq_value=0;
+
+	if(EXT_DI_isMultiStepValid())
+	{
+		step = EXT_DI_convertMultiStep();
+		freq_value = table_getValue(multi_val_0_type+step);
+		step_cmd = step; // for test
+	}
+	else
+		freq_value = table_getValue(value_type); // if no multi-step is assigned, use value_type
+
+	if(flag == EXT_DI_INITIALIZE)
+	{
+		di_freq_val = freq_value;
+		status = table_setFreqValue(value_type, di_freq_val, REQ_FROM_EXTIO);
+		kprintf(PORT_DEBUG, "EXI_DI_getStepValue di_freq_val = %d \r\n", di_freq_val);
+		if(status == 0) { kprintf(PORT_DEBUG, "EXT_DI_INITIALIZE set multistep error! \r\n"); }
+	}
+
+	return freq_value;
+}
+
 int8_t EXI_DI_handleDin(int32_t ctrl_in)
 {
 	int32_t dir_ctrl;
@@ -253,23 +302,17 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 #endif
 	{
 		// handle multi-step freq
-		if(EXT_DI_isMultiStepValid())
+		freq_step = EXI_DI_getStepValue(EXT_DI_NORMAL);
+		if(di_freq_val != freq_step)
 		{
-			step = EXT_DI_convertMultiStep();
-			if(step != prev_step)
-			{
-				test_cmd = SPICMD_PARAM_W;
+			test_cmd = SPICMD_PARAM_W;
 #ifndef SUPPORT_UNIT_TEST
-				freq_step = table_getValue(multi_val_0_type+step);
-				status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
-				kprintf(PORT_DEBUG, "send multistep=%d, freq=%d  \r\n", step, freq_step);
-				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
-				else
+			status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
+			kprintf(PORT_DEBUG, "send multistep=%d, freq=%d  \r\n", step, freq_step);
+			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
+			else
 #endif
-					prev_step = step;
-
-				step_cmd = step; // for test
-			}
+				di_freq_val = freq_step;
 		}
 	}
 
