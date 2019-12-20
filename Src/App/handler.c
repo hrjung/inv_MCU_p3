@@ -158,6 +158,22 @@ int8_t HDLR_readDspStatus(void)
 	 return 1;
 }
 
+int8_t HDLR_restoreRunStopFlagNFC(void)
+{
+	int8_t status;
+	int32_t run_stop=0;
+
+	status = NVM_getRunStopFlag(&run_stop);
+	if(status == 0) return 0;
+
+	if(run_stop != RUN_STOP_FLAG_IDLE)
+	{
+		NVM_clearRunStopFlag();
+	}
+
+	return 1;
+}
+
 int8_t HDLR_handleRunStopFlagNFC(void)
 {
 	int8_t status;

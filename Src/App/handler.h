@@ -16,6 +16,7 @@
 // mainhandler task function
 extern int8_t HDLR_handleDspError(void);
 extern int8_t HDLR_readDspStatus(void);
+extern int8_t HDLR_restoreRunStopFlagNFC(void);
 extern int8_t HDLR_handleRunStopFlagNFC(void);
 extern int8_t HDLR_handleRunStopFlagModbus(void);
 

@@ -453,7 +453,11 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 	status = table_setValue(idx, value, option);
 	if(status == 0) return 0;
 
-	if(value == CTRL_IN_Analog_V)
+	if(value == CTRL_IN_Analog_V
+#ifdef SUPPORT_DI_AI_CONTROL
+		|| value == CTRL_IN_Din_Ain
+#endif
+	)
 	{
 		UTIL_startADC();
 	}
@@ -1191,7 +1195,7 @@ void table_initParam(void)
 
 	if(table_data[ctrl_in_type] == CTRL_IN_Analog_V
 #ifdef SUPPORT_DI_AI_CONTROL
-		|| table_data[ctrl_in_type] == CTRL_IN_Analog_V
+		|| table_data[ctrl_in_type] == CTRL_IN_Din_Ain
 #endif
 	)
 	{

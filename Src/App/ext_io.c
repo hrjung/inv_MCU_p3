@@ -200,7 +200,7 @@ int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option
 
 	EXT_DI_updateMultiDinPinIndex(index, func_set); // update m_din.pin_num
 
-	kprintf(PORT_DEBUG, "set di_pin %d as %d\r\n", index, func_set);
+	//kprintf(PORT_DEBUG, "set di_pin %d as %d\r\n", index, func_set);
 
 	return 1;
 }
@@ -630,7 +630,6 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 {
 	uint16_t value;
 	int32_t freq, diff=0;
-//	uint16_t dummy[3] = {0,0,0};
 	int8_t status;
 
 	// read config, can be updated during running

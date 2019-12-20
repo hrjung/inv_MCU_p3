@@ -1436,6 +1436,12 @@ int8_t mainHandlerState(void)
 		EXI_DI_handleEmergency(); // handle trip/emergency DI
 
 		ctrl_in = table_getCtrllIn();
+
+		if(ctrl_in != CTRL_IN_NFC) // if run/stop from NFC, restore to idle
+		{
+			HDLR_restoreRunStopFlagNFC();
+		}
+
 		switch(ctrl_in)
 		{
 		case CTRL_IN_NFC:
@@ -1668,7 +1674,6 @@ void YstcUpdateTimerCallback(void const * argument)
 void userIoTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN userIoTimerCallback */
-	int i;
 	int32_t ctrl_in;
 
 #ifndef SUPPORT_UNIT_TEST
