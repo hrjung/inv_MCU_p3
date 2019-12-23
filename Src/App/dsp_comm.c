@@ -468,6 +468,7 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index), REQ_FROM_DSP);
 		table_setExtStatusValue();
 
+		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST status1=0x%x status2=0x%x\r\n",status1, status2);
 #ifdef SUPPORT_NFC_OLD
 		// update EEPROM while NFC tagged
 		if(NVM_isNfcMonitoring())

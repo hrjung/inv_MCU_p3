@@ -146,7 +146,7 @@ int8_t HDLR_readDspStatus(void)
 	uint16_t dummy[] = {0,0,0};
 	int8_t status;
 
-	 if(ERR_isErrorState() == 0) // no error
+	 if(!ERR_isCommError()) // no comm error
 	 {
 		status = COMM_sendMessage(SPICMD_REQ_ST, dummy);
 		if(status == COMM_FAILED)
