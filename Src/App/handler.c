@@ -29,6 +29,8 @@ int8_t err_state_f=0;
 uint32_t motor_run_cnt=0;
 uint32_t motor_run_start_time=0;
 
+uint8_t stopping_enabled = 0; // set 1 from sending STOP command till state updated to STOP
+
 extern int16_t state_run_stop;
 
 extern uint32_t motor_on_cnt;
@@ -53,6 +55,15 @@ extern void main_kickWatchdogNFC(void);
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 #endif
 
+void HDLR_setStopFlag(uint8_t flag)
+{
+	stopping_enabled = flag;
+}
+
+int HDLR_isStopInProgress(void)
+{
+	return (stopping_enabled && state_run_stop == CMD_RUN);
+}
 
 void HDLR_setRunStopFlagModbus(int8_t flag)
 {
@@ -237,6 +248,7 @@ int8_t HDLR_handleRunStopFlagModbus(void)
 	switch(run_stop)
 	{
 	case RUN_STOP_FLAG_RUN:
+		HDLR_setStopFlag(0); // clear stop
 		// send run to DSP
 		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
 		// clear flag to idle
@@ -249,6 +261,7 @@ int8_t HDLR_handleRunStopFlagModbus(void)
 		break;
 
 	case RUN_STOP_FLAG_STOP:
+		HDLR_setStopFlag(1); // start stop
 		// send stop to DSP
 		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
 		// clear flag to idle

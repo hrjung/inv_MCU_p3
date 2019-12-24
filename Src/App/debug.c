@@ -266,7 +266,8 @@ extern uint8_t watchdog_f;
 
 //extern void set_AO_duty(uint8_t bool_use, uint32_t in);
 //extern void set_DO_duty(uint8_t bool_use, uint8_t in);
-extern void EXT_printDIConfig(void);
+extern void EXT_DI_printStatus(void);
+extern void EXT_DI_printConfig(void);
 extern uint16_t EXT_AI_readADC(void);
 extern int32_t EXT_AI_getFreq(uint16_t adc_val);
 extern int32_t EXT_getAIValue(void);
@@ -611,7 +612,7 @@ STATIC int din_ser(uint8_t dport)
 
 	for(i=0; i<20; i++) {UTIL_readDin(); osDelay(10);}
 
-	EXT_printDIConfig();
+	EXT_DI_printConfig();
 
 	return 0;
 }
@@ -1032,7 +1033,8 @@ STATIC int test_ser(uint8_t dport)
     else if(test_case == 'D') // show Din value
     {
     	//test_DinConfig();
-    	EXT_printDIConfig();
+    	EXT_DI_printConfig();
+    	EXT_DI_printStatus();
     }
     else if(test_case == 'E') // show error data
     {

@@ -466,8 +466,8 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 {
 	int result=MOD_EX_NO_ERR;
 
-	// only accept at Modbus control enable
-	if(table_getCtrllIn() != CTRL_IN_Modbus) return MOD_EX_SLAVE_FAIL;
+	// only accept at Modbus control enable, except reset command
+	if(table_getCtrllIn() != CTRL_IN_Modbus && addr != MB_CTRL_RESET_ADDR) return MOD_EX_SLAVE_FAIL;
 
 	switch(addr)
 	{

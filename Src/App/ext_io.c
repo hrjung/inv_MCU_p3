@@ -55,14 +55,14 @@ extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 
-void EXT_printDIConfig(void)
+void EXT_DI_printConfig(void)
 {
 	kprintf(PORT_DEBUG, "\r\n Din config run=%d, dir=%d, trip=%d, emerg=%d", m_din.run_pin, m_din.dir_pin, m_din.trip_pin, m_din.emergency_pin);
 	kprintf(PORT_DEBUG, "\r\n Din config bit_L=%d, bit_M=%d, bit_H=%d", m_din.bit_L, m_din.bit_M, m_din.bit_H);
 	kprintf(PORT_DEBUG, "\r\n Din mdin %d, %d, %d", \
 			(mdin_value[0]==EXT_DI_ACTIVE), (mdin_value[1]==EXT_DI_ACTIVE), (mdin_value[2]==EXT_DI_ACTIVE));
-	kprintf(PORT_DEBUG, "\r\n prev_run=%d, run_stop=%d, step=%d di_freq=%d",
-			prev_run, state_run_stop, step_cmd, di_freq_val);
+//	kprintf(PORT_DEBUG, "\r\n prev_run=%d, run_stop=%d, step=%d di_freq=%d",
+//			prev_run, state_run_stop, step_cmd, di_freq_val);
 	//kprintf(PORT_DEBUG, "\r\n prev_emerg=%d, prev_trip=%d", prev_emergency, prev_trip);
 }
 
@@ -106,6 +106,7 @@ int32_t EXT_getAIValue(void)
 
 	return ai_val;
 }
+
 
 int EXT_DI_isMultiStepValid(void)
 {
@@ -280,6 +281,7 @@ int32_t EXI_DI_getStepValue(int8_t flag)
 
 	if(flag == EXT_DI_INITIALIZE)
 	{
+		HDLR_setStopFlag(0); // stop state
 		di_freq_val = freq_value;
 		status = table_setFreqValue(value_type, di_freq_val, REQ_FROM_EXTIO);
 		kprintf(PORT_DEBUG, "EXI_DI_getStepValue di_freq_val = %d \r\n", di_freq_val);
@@ -287,6 +289,20 @@ int32_t EXI_DI_getStepValue(int8_t flag)
 	}
 
 	return freq_value;
+}
+
+void EXT_DI_printStatus(void)
+{
+	if(m_din.run_pin != EXT_DIN_COUNT)
+	{
+		kprintf(PORT_DEBUG, "\r\n RUN pin pin=%d, prev_run=%d, run_stop=%d ",
+				mdin_value[m_din.run_pin], prev_run, state_run_stop);
+	}
+	if(m_din.dir_pin != EXT_DIN_COUNT)
+	{
+		kprintf(PORT_DEBUG, "\r\n DIR pin pin=%d, prev_run=%d, direction=%d ",
+				mdin_value[m_din.dir_pin], prev_dir, state_direction);
+	}
 }
 
 int8_t EXI_DI_handleDin(int32_t ctrl_in)
@@ -301,18 +317,21 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 	if(ctrl_in == CTRL_IN_Digital) // only DI control
 #endif
 	{
-		// handle multi-step freq
-		freq_step = EXI_DI_getStepValue(EXT_DI_NORMAL);
-		if(di_freq_val != freq_step)
+		if(!HDLR_isStopInProgress()) // block multistep command till stop completed
 		{
-			test_cmd = SPICMD_PARAM_W;
+			// handle multi-step freq
+			freq_step = EXI_DI_getStepValue(EXT_DI_NORMAL);
+			if(di_freq_val != freq_step)
+			{
+				test_cmd = SPICMD_PARAM_W;
 #ifndef SUPPORT_UNIT_TEST
-			status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
-			kprintf(PORT_DEBUG, "send multistep=%d, freq=%d  \r\n", step, freq_step);
-			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
-			else
+				status = table_setFreqValue(value_type, freq_step, REQ_FROM_EXTIO);
+				kprintf(PORT_DEBUG, "send multistep=%d, freq=%d  \r\n", step, freq_step);
+				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO set multistep error! \r\n"); }
+				else
 #endif
-				di_freq_val = freq_step;
+					di_freq_val = freq_step;
+			}
 		}
 	}
 
@@ -331,9 +350,10 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 			// send stop to DSP
 			status = COMM_sendMessage(test_cmd, dummy);
 			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
-			else
+
 #endif
-				prev_run = mdin_value[m_din.run_pin];
+			HDLR_setStopFlag(1); // start stop
+			prev_run = mdin_value[m_din.run_pin];
 		}
 		else if(mdin_value[m_din.run_pin] == EXT_DI_ACTIVE
 				&& prev_run == EXT_DI_INACTIVE
@@ -346,10 +366,10 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 			// send run to DSP
 			status = COMM_sendMessage(test_cmd, dummy);
 			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
-			else
 #endif
 			{
 				//HDLR_setStartRunTime(); // set Run start time, count
+				HDLR_setStopFlag(0);
 				prev_run = mdin_value[m_din.run_pin];
 			}
 		}

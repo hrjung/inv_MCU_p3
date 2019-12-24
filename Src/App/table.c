@@ -55,6 +55,7 @@ uint8_t table_getWriteOnRunning(PARAM_IDX_t index);
 
 STATIC int8_t table_doNothing(PARAM_IDX_t idx, int32_t value, int16_t option);
 int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t opt);
+int8_t table_setCommandFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 int8_t table_setMultiFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setValueMin(PARAM_IDX_t idx, int32_t value, int16_t opt);
@@ -79,11 +80,12 @@ extern void MB_setSlaveAddress(uint8_t addr);
 extern void UTIL_startADC(void);
 extern void UTIL_stopADC(void);
 
+extern void EXT_DI_initStopFlag(void);
 extern int8_t HDLR_isFactoryModeEnabled(void);
 
 STATIC Param_t param_table[] =
 {   //    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
-	{ value_type,			0x100,	40100,	200,	100,	800,	1, 	10,		1, 	value_dsp,			table_setFreqValue, },
+	{ value_type,			0x100,	40100,	200,	100,	800,	1, 	10,		1, 	value_dsp,			table_setCommandFreqValue, },
 	{ multi_val_0_type,		0x104,	40101,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
 	{ multi_val_1_type,		0x108,	40102,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
 	{ multi_val_2_type,		0x10C,	40103,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
@@ -309,6 +311,20 @@ int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 	return status;
 }
 
+int8_t table_setCommandFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
+{
+	int8_t status;
+
+	// check validity
+	if(table_checkFreqValidity(idx, value) == 0) return 0;
+
+	if(idx == value_type && HDLR_isStopInProgress()) return 0; // not set freq during stopping
+
+	status = table_setValueAPI(idx, value, option);
+
+	return status;
+}
+
 int8_t table_setFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t status;
@@ -452,6 +468,16 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 
 	status = table_setValue(idx, value, option);
 	if(status == 0) return 0;
+
+
+	if(value == CTRL_IN_Digital
+#ifdef SUPPORT_DI_AI_CONTROL
+		|| value == CTRL_IN_Din_Ain
+#endif
+	)
+	{
+		HDLR_setStopFlag(0); // init stop
+	}
 
 	if(value == CTRL_IN_Analog_V
 #ifdef SUPPORT_DI_AI_CONTROL
