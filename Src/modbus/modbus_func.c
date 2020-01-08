@@ -71,7 +71,7 @@ uint8_t param_init_requested_f=0;
 
 
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
-MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
+MODBUS_addr_st mb_device, mb_err, mb_status;
 
 extern void HDLR_setRunStopFlagModbus(int8_t flag);
 extern void HDLR_setFactoryModeFlagModbus(int8_t flag);
@@ -216,25 +216,6 @@ void MB_initAddrMap(void)
 
 	//printf("\r\n st_addr=%d, end_addr=%d", mb_ext_io.start, mb_ext_io.end);
 
-	// motor parameter
-	mb_motor.start = MB_MOTOR_START_ADDR;
-	mb_motor.end = MB_MOTOR_END_ADDR;
-	mb_motor.start_index = Rs_type;
-	count = MB_MOTOR_END_ADDR - MB_MOTOR_START_ADDR + 1;
-	for(i=0; i<count; i++)
-	{
-		mb_motor.map[i].valid = 1;
-		mb_motor.map[i].rd_only = 1; // read_only
-		mb_motor.map[i].conv_index = mb_motor.start_index + i;
-	}
-	// clear else
-	for(i=count; i<MODBUS_ADDR_MAP_SIZE; i++)
-	{
-		mb_motor.map[i].valid = 0;
-		mb_motor.map[i].rd_only = 0;
-		mb_motor.map[i].conv_index = PARAM_TABLE_SIZE;
-	}
-
 	// device setting
 	mb_device.start = MB_DEVICE_START_ADDR;
 	mb_device.end = MB_DEVICE_END_ADDR;
@@ -257,7 +238,7 @@ void MB_initAddrMap(void)
 	// error map
 	mb_err.start = MB_ERROR_START_ADDR;
 	mb_err.end = MB_ERROR_END_ADDR;
-	mb_err.start_index = err_date_0_type;
+	mb_err.start_index = err_code_1_type;
 	count = MB_ERROR_END_ADDR - MB_ERROR_START_ADDR + 1;
 	for(i=0; i<count; i++)
 	{
@@ -353,11 +334,9 @@ uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count, int8_t *type)
 
 	else if(addr >= mb_err.start && addr <= mb_err.end) {mb_addr = &mb_err; find_f = 5;}
 
-	else if(addr >= mb_motor.start && addr <= mb_motor.end) {mb_addr = &mb_motor; find_f = 6;}
+	else if(addr >= mb_device.start && addr <= mb_device.end) {mb_addr = &mb_device; find_f = 6;}
 
-	else if(addr >= mb_device.start && addr <= mb_device.end) {mb_addr = &mb_device; find_f = 7;}
-
-	else if(addr >= mb_status.start && addr <= mb_status.end) {mb_addr = &mb_status; find_f = 8;}
+	else if(addr >= mb_status.start && addr <= mb_status.end) {mb_addr = &mb_status; find_f = 7;}
 
 	else return MODBUS_ADDR_MAP_ERR;
 
@@ -665,7 +644,7 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	index = MB_convModbusAddr(addr, 1, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC06_ERR; }
 
-	if(type == 8) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : status read only
+	if(type == 7) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : status read only
 
 	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : read only
 
@@ -760,7 +739,7 @@ int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 	index = MB_convModbusAddr(addr, count, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC16_ERR; }
 
-	if(type == 8) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : status read only
+	if(type == 7) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : status read only
 
 	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : read only
 

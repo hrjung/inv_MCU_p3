@@ -14,7 +14,7 @@
 #include "drv_gpio.h"
 
 
-int32_t err_cnt=0;
+//int32_t err_cnt=0;
 
 STATIC uint8_t err_state=TRIP_REASON_NONE;
 

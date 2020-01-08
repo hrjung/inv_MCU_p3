@@ -131,7 +131,7 @@ int8_t HDLR_handleDspError(void)
 			status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
 			if(status == COMM_SUCCESS)
 			{
-				err_code = table_getValue(err_code_0_type);
+				err_code = table_getValue(err_code_1_type);
 			}
 #if 0
 			// store dev_on_time, in case of power off
@@ -440,7 +440,7 @@ int8_t HDLR_initNVM(void)
 	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 
 	// initialize error, status
-	for(index=err_date_0_type; index<PARAM_TABLE_SIZE; index++)
+	for(index=err_code_1_type; index<PARAM_TABLE_SIZE; index++)
 	{
 		init_value = table_getInitValue(index);
 		status = NVM_writeParam((PARAM_IDX_t)index, init_value);

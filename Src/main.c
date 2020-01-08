@@ -1534,6 +1534,12 @@ void mainHandlerTaskFunc(void const * argument)
 #ifndef SUPPORT_UNIT_TEST
   nv_status = table_initNVM();
   if(nv_status == 0)
+  {
+	  kprintf(PORT_DEBUG, "nv_status = %d error!\r\n", nv_status);
+	  nv_status = table_initNVM(); // try again
+  }
+
+  if(nv_status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
 
   com_status = COMM_sendMotorType();

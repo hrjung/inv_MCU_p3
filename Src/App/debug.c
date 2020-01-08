@@ -822,6 +822,7 @@ void test_DinConfig(void)
 	// DI0 : run/stop
 	t_status = table_runFunc(multi_Din_0_type, (int32_t)DIN_run, REQ_FROM_MODBUS);
 	if(t_status == 0) err_flag++;
+
 	// DI1 : Freq_low
 	t_status = table_runFunc(multi_Din_1_type, (int32_t)DIN_freq_low, REQ_FROM_MODBUS);
 	if(t_status == 0) err_flag++;
@@ -1038,13 +1039,13 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 'E') // show error data
     {
-    	int i, idx[5] = {err_date_0_type, err_date_1_type, err_date_2_type, err_date_3_type, err_date_4_type};
+    	int i, idx[5] = {err_code_1_type, err_code_2_type, err_code_3_type, err_code_4_type, err_code_5_type};
 
     	kprintf(dport, " error code = %d", (int)ERR_getErrorState());
     	for(i=0; i<5; i++)
     	{
-    		kprintf(dport, "\r\n err=%d, date=%d, code=%d, status=%d current=%d, freq=%d", \
-    				i, table_data[idx[i]], table_data[idx[i]+1], table_data[idx[i]+2], table_data[idx[i]+3], table_data[idx[i]+4]);
+    		kprintf(dport, "\r\n [%d] err_code=%d, status=%d, current=%d, freq=%d", \
+    				i+1, table_data[idx[i]], table_data[idx[i]+1], table_data[idx[i]+2], table_data[idx[i]+3]);
     	}
     }
     else if(test_case == 'F') // run parameter function of each parameter
@@ -1143,6 +1144,9 @@ STATIC int test_ser(uint8_t dport)
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
     	kprintf(dport, "\r\n status overload=%d, brake=%d, gear_ratio=%d", st_overload, st_brake, gear_ratio);
     	kprintf(dport, "\r\n status di_val=%d, do_val=%d, ai_val=%d", EXT_getDIValue(), EXT_getDOValue(), EXT_getAIValue());
+    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d", \
+    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour);
+    	kprintf(dport, "\r\n r_start=%d, minutes=%d", motor_run_start_time, run_minutes);
     }
 #ifdef SUPPORT_PASSWORD
     else if(test_case == 'U') // lock/unock with password
@@ -1171,9 +1175,7 @@ STATIC int test_ser(uint8_t dport)
 #endif
     else if(test_case == 'T') // show time info
     {
-    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d", \
-    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour);
-    	kprintf(dport, "\r\n r_start=%d, minutes=%d", motor_run_start_time, run_minutes);
+
     }
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
     else if(test_case == 'P') // Production test start

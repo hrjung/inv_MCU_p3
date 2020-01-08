@@ -295,7 +295,7 @@ int8_t NVM_initError(void)
 	uint16_t addr;
 	int32_t value=0;
 
-	for(i=err_date_0_type; i<=err_freq_4_type; i++)
+	for(i=err_code_1_type; i<=err_freq_5_type; i++)
 	{
 		addr = table_getAddr((PARAM_IDX_t)i);
 		status = NVM_write(addr, value); // clear all flag

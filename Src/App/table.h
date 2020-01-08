@@ -16,35 +16,27 @@
 
 typedef enum{
 	value_type,
-	multi_val_0_type,
-	multi_val_1_type,
-	multi_val_2_type,
-	multi_val_3_type,
-	multi_val_4_type,
-	multi_val_5_type,
-	multi_val_6_type,
-	multi_val_7_type,
 	freq_min_type,
 	freq_max_type,
 	accel_time_type,
 	decel_time_type,
-	dir_cmd_type,
-	jmp_enable0_type,
-	jmp_enable1_type,
-	jmp_enable2_type,
-	jmp_low0_type,
-	jmp_low1_type,
-	jmp_low2_type,
-	jmp_high0_type,
-	jmp_high1_type,
-	jmp_high2_type,
-	dir_domain_type,
 	acc_base_set_type,
+	dir_cmd_type,
+	dir_domain_type,
 
 	ctrl_in_type,
 	energy_save_type,
 	pwm_freq_type,
-	//foc_torque_limit_type,
+	input_voltage_type,
+	jmp_enable0_type,
+	jmp_low0_type,
+	jmp_high0_type,
+	jmp_enable1_type,
+	jmp_low1_type,
+	jmp_high1_type,
+	jmp_enable2_type,
+	jmp_low2_type,
+	jmp_high2_type,
 	brake_type_type,
 	brake_freq_type,
 	dci_brk_freq_type,
@@ -68,15 +60,20 @@ typedef enum{
 	multi_Din_0_type,
 	multi_Din_1_type,
 	multi_Din_2_type,
-	multi_Din_3_type,
+	multi_val_0_type,
+	multi_val_1_type,
+	multi_val_2_type,
+	multi_val_3_type,
+	multi_val_4_type,
+	multi_val_5_type,
+	multi_val_6_type,
+	multi_val_7_type,
 	multi_Dout_0_type,
 	multi_Dout_1_type,
 	v_in_min_type,
 	v_in_min_freq_type,
 	v_in_max_type,
 	v_in_max_freq_type,
-	aout_type_type,
-	aout_rate_type,
 	mb_address_type,
 	baudrate_type,
 
@@ -86,51 +83,33 @@ typedef enum{
 	noload_current_type,
 	rated_current_type,
 	poles_type,
-	input_voltage_type,
-	rated_freq_type,
-
 	model_type,
 	motor_type_type,
 	gear_ratio_type,
-	motor_on_cnt_type,
-	elapsed_hour_type,
-	operating_hour_type,
 
-	err_date_0_type,
-	err_code_0_type,
-	err_status_0_type,
-	err_current_0_type,
-	err_freq_0_type,
-	err_date_1_type,
 	err_code_1_type,
 	err_status_1_type,
 	err_current_1_type,
 	err_freq_1_type,
-	err_date_2_type,
 	err_code_2_type,
 	err_status_2_type,
 	err_current_2_type,
 	err_freq_2_type,
-	err_date_3_type,
 	err_code_3_type,
 	err_status_3_type,
 	err_current_3_type,
 	err_freq_3_type,
-	err_date_4_type,
 	err_code_4_type,
 	err_status_4_type,
 	err_current_4_type,
 	err_freq_4_type,
+	err_code_5_type,
+	err_status_5_type,
+	err_current_5_type,
+	err_freq_5_type,
 
-#ifdef SUPPORT_NFC_OLD
 	run_status1_type,
 	run_status2_type,
-#else
-	run_status_type,
-	dir_status_type,
-	overload_alarm_type,
-	shaftbrake_status_type,
-#endif
 	I_rms_type,
 	run_freq_type,
 	dc_voltage_type,
@@ -139,6 +118,9 @@ typedef enum{
 	di_status_type,
 	do_status_type,
 	ai_status_type,
+	motor_on_cnt_type,
+	elapsed_hour_type,
+	operating_hour_type,
 
 	PARAM_TABLE_SIZE,
 } PARAM_IDX_t ;//new
@@ -184,8 +166,8 @@ typedef enum{
 	regen_band_dsp,
 
 	fan_onoff_dsp,
-
 	motor_type_dsp,
+	voltage_in_dsp,
 
 	DSP_PARAM_SIZE,
 }TABLE_DSP_PARAM_t;//new
@@ -273,6 +255,21 @@ typedef enum{
 	DOUT_shaftbrake_on,
 
 } DOUT_config_t;
+
+typedef enum{
+	VOLTAGE_380 = 0,
+	VOLTAGE_400,
+	VOLTAGE_415,
+	VOLTAGE_480,
+
+} Voltage_in_t;
+
+typedef enum{
+	MOTOR_1HP_4P_TYPE = 0,
+	MOTOR_2HP_4P_TYPE = 1,
+	MOTOR_3HP_4P_TYPE = 2,
+
+} MOTOR_type_t;
 
 typedef enum
 {
