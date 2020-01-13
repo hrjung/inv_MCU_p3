@@ -167,11 +167,12 @@ int8_t NVM_readTime(void)
 	status = NVM_readParam(motor_on_cnt_type, (int32_t *)&motor_run_cnt);
 	if(status==NVM_NOK) errflag++;
 
-	status = NVM_readParam(elapsed_hour_type, (int32_t *)&device_on_hour);
+	status = NVM_readParam(elapsed_hour_type, (int32_t *)&motor_run_hour);
 	if(status==NVM_NOK) errflag++;
 
-	status = NVM_readParam(operating_hour_type, (int32_t *)&motor_run_hour);
+	status = NVM_readParam(operating_hour_type, (int32_t *)&device_on_hour);
 	if(status==NVM_NOK) errflag++;
+
 
 #if 0
 	// restore device counter
@@ -194,7 +195,7 @@ int8_t NVM_setDeviceOnTime(uint32_t on_time)
 {
 	int8_t status;
 
-	status = NVM_writeParam(elapsed_hour_type, (int32_t)on_time);
+	status = NVM_writeParam(operating_hour_type, (int32_t)on_time);
 	//NVMQ_enqueueTableQ(elapsed_hour_type, (int32_t)on_time);
 
 	return status;
@@ -204,7 +205,7 @@ int8_t NVM_setMotorRunTime(uint32_t run_time)
 {
 	int8_t status;
 
-	status = NVM_writeParam(operating_hour_type, (int32_t)run_time);
+	status = NVM_writeParam(elapsed_hour_type, (int32_t)run_time);
 	//NVMQ_enqueueTableQ(operating_hour_type, (int32_t)run_time);
 
 	return status;

@@ -507,7 +507,7 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 		device_on_hour++;
 		status = NVM_setDeviceOnTime(device_on_hour);
 		if(status == 0) {kprintf(PORT_DEBUG, "ERROR update On time \r\n"); errflag++;}
-		NVMQ_enqueueTableQ(elapsed_hour_type, (int32_t)device_on_hour);
+		NVMQ_enqueueTableQ(operating_hour_type, (int32_t)device_on_hour);
 
 #if 0
 		status = NVM_setMotorDevCounter(cur_time);
@@ -530,7 +530,7 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 			motor_run_hour++;
 			status = NVM_setMotorRunTime(motor_run_hour);
 			if(status == 0) {kprintf(PORT_DEBUG, "ERROR update Run time \r\n"); errflag++;}
-			NVMQ_enqueueTableQ(operating_hour_type, (int32_t)motor_run_hour);
+			NVMQ_enqueueTableQ(elapsed_hour_type, (int32_t)motor_run_hour);
 
 			motor_run_start_time = cur_time;
 			kprintf(PORT_DEBUG, "motor run 1 more hour %d\r\n", cur_time);
