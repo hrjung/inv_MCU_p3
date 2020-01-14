@@ -75,6 +75,7 @@ STATIC int8_t table_setTimeValue(PARAM_IDX_t index, int32_t value, int16_t optio
 int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 extern void MB_UART_init(uint32_t baudrate_index);
+extern void MB_initTimer(int32_t b_index);
 extern void MB_setSlaveAddress(uint8_t addr);
 
 extern void UTIL_startADC(void);
@@ -567,7 +568,10 @@ int8_t table_setBaudValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 	status = table_setValue(idx, value, option);
 
 	if(status)
+	{
 		MB_UART_init(value);
+		MB_initTimer(value);
+	}
 
 	return status;
 }

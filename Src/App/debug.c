@@ -274,6 +274,7 @@ extern int32_t EXT_getAIValue(void);
 //extern void EXT_AI_printConfig(void);
 
 extern void MB_UART_init(uint32_t baudrate);
+extern void MB_initTimer(int32_t b_index);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
@@ -822,6 +823,7 @@ void test_DinConfig(void)
 	// DI0 : run/stop
 	t_status = table_runFunc(multi_Din_0_type, (int32_t)DIN_run, REQ_FROM_MODBUS);
 	if(t_status == 0) err_flag++;
+
 	// DI1 : Freq_low
 	t_status = table_runFunc(multi_Din_1_type, (int32_t)DIN_freq_low, REQ_FROM_MODBUS);
 	if(t_status == 0) err_flag++;
@@ -1001,6 +1003,7 @@ STATIC int test_ser(uint8_t dport)
 
     	b_index = (int)atoi(arg_v[2]);
    		MB_UART_init((uint32_t)b_index);
+   		MB_initTimer((int32_t)b_index);
 		kprintf(dport, "\r\n MB_address=%d, baudrate=%d", mb_slaveAddress, mb_baudrate[b_index]);
     }
     else if(test_case == 'A') // show Analog input setting

@@ -40,6 +40,7 @@ uint16_t mb_err_code = 0;
 uint8_t reset_enabled_f=0;
 
 uint32_t mb_baudrate[6] = {2400, 4800, 9600, 19200, 38400, 115200};
+uint16_t mb_frame_delay[6] = {35*4, 35*2, MODBUS_INTER_FRAME_DELAY, MODBUS_INTER_FRAME_DELAY, MODBUS_INTER_FRAME_DELAY, MODBUS_INTER_FRAME_DELAY};
 
 MODBUS_SLAVE_QUEUE mbBufRx, mbBufTx;
 
@@ -67,9 +68,9 @@ extern int MB_isCRC_OK(uint8_t *buf, uint32_t len);
  * 	timer related function
  */
 
-void MB_initTimer(uint16_t timeout_value)
+void MB_initTimer(int32_t b_index)
 {
-	mb_timeout = timeout_value;
+	mb_timeout = mb_frame_delay[b_index];
 }
 
 void MB_enableTimer(void)
@@ -110,7 +111,7 @@ void MB_init(void)
 
 	//b_index = 2; //// fix only 9600bps for exhibition
 	MB_UART_init((uint32_t)b_index);
-	MB_initTimer(MODBUS_INTER_FRAME_DELAY); // 1.75ms for 3.5 char
+	MB_initTimer(b_index);
 
 	kprintf(PORT_DEBUG, "MB init s_addr=%d, baud=%d \r\n", mb_slaveAddress, (int)mb_baudrate[b_index]);
 
