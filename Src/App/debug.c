@@ -35,7 +35,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		23
+#define VERSION_MIN		30
 
 
 //#define CMDLINE_MAX_ARGS        8
@@ -274,6 +274,7 @@ extern int32_t EXT_getAIValue(void);
 //extern void EXT_AI_printConfig(void);
 
 extern void MB_UART_init(uint32_t baudrate);
+extern void MB_initTimer(int32_t b_index);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
@@ -1002,6 +1003,7 @@ STATIC int test_ser(uint8_t dport)
 
     	b_index = (int)atoi(arg_v[2]);
    		MB_UART_init((uint32_t)b_index);
+   		MB_initTimer((int32_t)b_index);
 		kprintf(dport, "\r\n MB_address=%d, baudrate=%d", mb_slaveAddress, mb_baudrate[b_index]);
     }
     else if(test_case == 'A') // show Analog input setting
