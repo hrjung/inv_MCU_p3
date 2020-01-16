@@ -13,6 +13,7 @@
 #include "error.h"
 #include "ext_io.h"
 #include "drv_gpio.h"
+#include "handler.h"
 
 #define F_CMD_DIFF_HYSTERISIS		(10)
 

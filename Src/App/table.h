@@ -9,6 +9,8 @@
 #define SRC_TABLE_H_
 
 
+#define NVM_TABLE_VERSION		0x105
+
 #define NVM_BACKUP_FLAG_ADDR	0x5F8
 #define NVM_BACKUP_START_ADDR	0x600
 

@@ -16,6 +16,7 @@
 #include "drv_nvm.h"
 #include "ext_io.h"
 #include "error.h"
+#include "handler.h"
 
 
 #ifdef SUPPORT_NFC_OLD
