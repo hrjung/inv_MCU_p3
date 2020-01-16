@@ -503,11 +503,14 @@ STATIC int param_ser(uint8_t dport)
 {
 	uint16_t index;
 	int32_t l_val;
-	int result;
+	int result, maj, min;
 
 	if(arg_c != 2 && arg_c != 3)
 	{
-		kprintf(dport, "\r\nInvalid number of parameters");
+		maj = (int)((NVM_TABLE_VERSION&0xFF00)>>8);
+		min = (int)(NVM_TABLE_VERSION&0xFF);
+		kprintf(dport, "\r\n table version = %d.%d", maj, min);
+		kprintf(dport, "\r\n Usage: PARAM index l_value");
 		return -1;
 	}
 

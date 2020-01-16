@@ -43,6 +43,7 @@
 #define MB_CTRL_BACKUP_FLAG_ADDR	(40093) // backup parameter settings
 #define MB_CTRL_RUN_STOP_ADDR		(40095) // inverter run/stop command
 #define MB_CTRL_CONN_CHECK_ADDR		(40096) // connection check command
+#define MB_CTRL_READ_NVM_VER		(40097) // get parameter version
 
 // normal parameter address range
 #define MB_DRIVER_START_ADDR		(40100)

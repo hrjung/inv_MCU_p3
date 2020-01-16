@@ -380,6 +380,18 @@ int MB_handleDummyRead(uint8_t func_code, uint16_t addr, uint16_t cnt)
 		kprintf(PORT_DEBUG, "addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
 
 		break;
+
+	case MB_CTRL_READ_NVM_VER:
+		modbusTx.wp = 0;
+		modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+		modbusTx.buf[modbusTx.wp++] = func_code;
+		modbusTx.buf[modbusTx.wp++] = cnt*2;
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)((NVM_TABLE_VERSION&0xFF00) >> 8);
+		modbusTx.buf[modbusTx.wp++] = (uint8_t)(NVM_TABLE_VERSION&0x00FF);
+
+		result = MOD_EX_NO_ERR;
+		kprintf(PORT_DEBUG, "addr=%d, nvm_ver=0x%x, wp=%d \r\n", addr, (uint16_t)NVM_TABLE_VERSION, modbusTx.wp);
+
 	}
 
 	return result;
@@ -587,6 +599,10 @@ int MB_handleFactoryModeWriteRegister(uint16_t addr, uint16_t value)
 {
 	int ret, result=MOD_EX_NO_ERR;
 	uint16_t index;
+	int8_t type=0;
+
+	index = MB_convModbusAddr(addr, 1, &type);
+	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC06_FM_ERR; } // range errer
 
 	modbusTx.wp = 0;
 	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
@@ -605,6 +621,7 @@ int MB_handleFactoryModeWriteRegister(uint16_t addr, uint16_t value)
 	else
 		result = MOD_EX_SLAVE_FAIL;
 
+FC06_FM_ERR:
 	if(result != MOD_EX_NO_ERR)
 	{
 		MB_generateErrorResp(MOD_FC06_WR_REG, result);
@@ -792,7 +809,7 @@ int MB_processModbusPacket(void) // error or response packet
 
 	case MOD_FC06_WR_REG:
 		value = (uint16_t)(((uint16_t)modbusRx.buf[4] << 8) | modbusRx.buf[5]);
-		if(HDLR_isFactoryModeEnabled()) // factory mode
+		if(HDLR_isFactoryModeEnabled()) // factory mode to write all parameters
 		{
 			ret_code = MB_handleFactoryModeWriteRegister(reg_addr, value);
 		}
