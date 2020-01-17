@@ -202,14 +202,18 @@ STATIC Param_t param_table[] =
 	{ I_rms_type,			0x88,	40162,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
 	{ run_freq_type,		0x8C,	40163,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
 	{ dc_voltage_type,		0x90,	40164,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
-	{ ipm_temperature_type,	0x94,	40165,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
-	{ mtr_temperature_type,	0x98,	40166,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
-	{ di_status_type,		0x9C,	40167,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
-	{ do_status_type,		0xA0,	40168,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
-	{ ai_status_type,		0xA4,	40169,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
-	{ motor_on_cnt_type,	0xA8,	40170,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
-	{ elapsed_hour_type,	0xAC,	40171,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
-	{ operating_hour_type,	0xB0,	40172,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
+#ifdef SUPPORT_STATUS_TORQUE
+	{ torque_value_type,	0x94,	40165,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+	{ torque_percent_type,	0x98,	40166,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+#endif
+	{ ipm_temperature_type,	0x9C,	40167,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+	{ mtr_temperature_type,	0xA0,	40168,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
+	{ di_status_type,		0xA4,	40169,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
+	{ do_status_type,		0xA8,	40170,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
+	{ ai_status_type,		0xAC,	40171,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
+	{ motor_on_cnt_type,	0xB0,	40172,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
+	{ elapsed_hour_type,	0xB4,	40173,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
+	{ operating_hour_type,	0xB8,	40174,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setTimeValue},
 
 };
 
@@ -1028,6 +1032,12 @@ int8_t table_setStatusDSP(void)
 	if(nvm_status == 0) errflag++;
 	nvm_status = NVMQ_enqueueNfcQ(dc_voltage_type, table_data[dc_voltage_type]);
 	if(nvm_status == 0) errflag++;
+#ifdef SUPPORT_STATUS_TORQUE
+	nvm_status = NVMQ_enqueueNfcQ(torque_value_type, table_data[torque_value_type]);
+	if(nvm_status == 0) errflag++;
+	nvm_status = NVMQ_enqueueNfcQ(torque_percent_type, table_data[torque_percent_type]);
+	if(nvm_status == 0) errflag++;
+#endif
 	nvm_status = NVMQ_enqueueNfcQ(ipm_temperature_type, table_data[ipm_temperature_type]);
 	if(nvm_status == 0) errflag++;
 	nvm_status = NVMQ_enqueueNfcQ(mtr_temperature_type, table_data[mtr_temperature_type]);
@@ -1039,6 +1049,7 @@ int8_t table_setStatusDSP(void)
 	if(nvm_status == 0) errflag++;
 	nvm_status = NVMQ_enqueueNfcQ(ai_status_type, table_data[ai_status_type]);
 	if(nvm_status == 0) errflag++;
+
 
 	if(errflag) return 0;
 	else	return 1;

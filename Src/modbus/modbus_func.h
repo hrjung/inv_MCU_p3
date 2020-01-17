@@ -65,8 +65,13 @@
 #define MB_ERROR_START_ADDR			(40401)
 #define MB_ERROR_END_ADDR			(40420)
 
+#ifdef SUPPORT_STATUS_TORQUE
+#define MB_STATUS_START_ADDR		(40160)
+#define MB_STATUS_END_ADDR			(40174)
+#else
 #define MB_STATUS_START_ADDR		(40160)
 #define MB_STATUS_END_ADDR			(40172)
+#endif
 
 
 /*

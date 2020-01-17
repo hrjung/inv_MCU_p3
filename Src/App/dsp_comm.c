@@ -18,7 +18,7 @@
 #include "error.h"
 
 
-#define LENGTH_BUFFER 20
+#define LENGTH_BUFFER 30	// 20 -> 30 for add torque value at status response
 static int8_t comm_state;
 STATIC uint16_t sendMsg[LENGTH_BUFFER ];
 STATIC uint16_t recvMsg[LENGTH_BUFFER ];
@@ -146,7 +146,7 @@ int16_t COMM_getRecvLength(COMM_CMD_t cmd)
 
 	switch(cmd)
 	{
-	case SPICMD_REQ_ST: 	return 18;
+	case SPICMD_REQ_ST: 	return 22; // 18 -> 22 for add torque value at status response
 	case SPICMD_CTRL_RUN:
 	case SPICMD_CTRL_STOP:
 	case SPICMD_CTRL_DIR_F:
@@ -381,6 +381,10 @@ int8_t COMM_parseMessage(void)
 	float dc_voltage_index = 0.f;
 	float ipm_temp_index = 0.f;
 	int32_t motor_temp_index = 0;
+#ifdef SUPPORT_STATUS_TORQUE
+	float torque_index = 0.f;
+	float torque_percent_index = 0.f;
+#endif
 
 	comm_state=COMM_DEFAULT;
 #ifdef DEBUG_DSP
@@ -429,6 +433,11 @@ int8_t COMM_parseMessage(void)
 		memcpy(&dc_voltage_index, &recvMsg[5+6], sizeof(float));
 		memcpy(&ipm_temp_index, &recvMsg[5+8], sizeof(float));
 		memcpy(&motor_temp_index, &recvMsg[5+10], sizeof(long));
+#ifdef SUPPORT_STATUS_TORQUE
+		memcpy(&torque_index, &recvMsg[5+12], sizeof(float));
+		memcpy(&torque_percent_index, &recvMsg[5+14], sizeof(float));
+#endif
+
 #else
 		/*for test : count-up values*/
 
@@ -466,6 +475,10 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index), REQ_FROM_DSP);
 		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index + 0.05), REQ_FROM_DSP);
 		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index), REQ_FROM_DSP);
+#ifdef SUPPORT_STATUS_TORQUE
+		table_setStatusValue(torque_value_type, (int32_t)(10.0*torque_index + 0.05), REQ_FROM_DSP);
+		table_setStatusValue(torque_percent_type, (int32_t)(10.0*torque_percent_index + 0.05), REQ_FROM_DSP);
+#endif
 		table_setExtStatusValue();
 
 		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST status1=0x%x status2=0x%x\r\n",status1, status2);
@@ -613,10 +626,10 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 // only for SPICMD_PARAM_W command
 int8_t COMM_sendParamWrite(const uint16_t* data)
 {
-	//int32_t value;
+	int32_t value;
 	int8_t result;
 
-#if 0 // remove read parameter before write
+#if 1
 	// read parameter before write, in order to avoid writing same value
 	result = COMM_sendCommand(SPICMD_PARAM_R, data);
 	if(result == COMM_FAILED) return COMM_FAILED;
@@ -653,7 +666,7 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 {
 	int8_t result;
 
-#if 0
+#if 0 // don't need to read DSP to compare same value, just send
 	if(cmd == SPICMD_PARAM_W)
 		result = COMM_sendParamWrite(data);
 	else

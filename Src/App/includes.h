@@ -25,6 +25,9 @@
 
 #define SUPPORT_DI_AI_CONTROL
 
+// add torque value to status info from DSP
+#define SUPPORT_STATUS_TORQUE
+
 //#define SUPPORT_UNIT_TEST
 
 #define SUPPORT_PRODUCTION_TEST_MODE

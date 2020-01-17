@@ -9,7 +9,7 @@
 #define SRC_TABLE_H_
 
 
-#define NVM_TABLE_VERSION		0x201
+#define NVM_TABLE_VERSION		0x301
 
 #define NVM_BACKUP_FLAG_ADDR	0x5F8
 #define NVM_BACKUP_START_ADDR	0x600
@@ -115,6 +115,10 @@ typedef enum{
 	I_rms_type,
 	run_freq_type,
 	dc_voltage_type,
+#ifdef SUPPORT_STATUS_TORQUE
+	torque_value_type,
+	torque_percent_type,
+#endif	
 	ipm_temperature_type,
 	mtr_temperature_type,
 	di_status_type,
