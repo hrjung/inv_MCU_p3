@@ -115,7 +115,7 @@ int8_t HDLR_handleDspError(void)
 {
 	uint16_t dummy[] = {0,0,0};
 	int8_t status;
-	int32_t err_code=0;
+	int32_t err_code=0, run_stop=0;
 
 	if((UTIL_isDspError() || ERR_isErrorState()) && err_state_f == 0)
 	{
@@ -147,6 +147,10 @@ int8_t HDLR_handleDspError(void)
 		ERR_setErrorState(err_code);
 		//UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
 		err_state_f = 1;
+
+		status = NVM_getRunStopFlag(&run_stop);
+		if(run_stop != 0 || status == 0)
+			NVM_clearRunStopFlag(); // clear run/stop flag at trip condition
 	}
 
 	return 1;

@@ -146,7 +146,11 @@ int16_t COMM_getRecvLength(COMM_CMD_t cmd)
 
 	switch(cmd)
 	{
+#ifdef SUPPORT_STATUS_TORQUE
 	case SPICMD_REQ_ST: 	return 22; // 18 -> 22 for add torque value at status response
+#else
+	case SPICMD_REQ_ST: 	return 18;
+#endif
 	case SPICMD_CTRL_RUN:
 	case SPICMD_CTRL_STOP:
 	case SPICMD_CTRL_DIR_F:
@@ -384,6 +388,7 @@ int8_t COMM_parseMessage(void)
 #ifdef SUPPORT_STATUS_TORQUE
 	float torque_index = 0.f;
 	float torque_percent_index = 0.f;
+	static float prev_torque=0.f;
 #endif
 
 	comm_state=COMM_DEFAULT;
@@ -436,6 +441,9 @@ int8_t COMM_parseMessage(void)
 #ifdef SUPPORT_STATUS_TORQUE
 		memcpy(&torque_index, &recvMsg[5+12], sizeof(float));
 		memcpy(&torque_percent_index, &recvMsg[5+14], sizeof(float));
+
+		// avoid invalid torque
+		if(torque_index < 0.0 || torque_index > 50.0) torque_index = prev_torque;
 #endif
 
 #else
@@ -478,6 +486,7 @@ int8_t COMM_parseMessage(void)
 #ifdef SUPPORT_STATUS_TORQUE
 		table_setStatusValue(torque_value_type, (int32_t)(10.0*torque_index + 0.05), REQ_FROM_DSP);
 		table_setStatusValue(torque_percent_type, (int32_t)(10.0*torque_percent_index + 0.05), REQ_FROM_DSP);
+		prev_torque = torque_index;
 #endif
 		table_setExtStatusValue();
 

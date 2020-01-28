@@ -148,6 +148,13 @@ const char	*utest_msg[] = {
 };
 #endif
 
+
+const char	*version_msg[] = {
+	"VERSION INFO",
+	"Usage: VER ",
+	0
+};
+
 static int display_BoardInfo(uint8_t dport);
 
 STATIC int help_ser(uint8_t dport);
@@ -174,6 +181,7 @@ STATIC int ptest_ser(uint8_t dport);
 #ifdef SUPPORT_UNIT_TEST
 STATIC int utest_ser(uint8_t dport);
 #endif
+STATIC int ver_ser(uint8_t dport);
 
 const COMMAND	Cmd_List[] =
 {
@@ -201,6 +209,7 @@ const COMMAND	Cmd_List[] =
 #ifdef SUPPORT_UNIT_TEST	
 	{ 1,  	"UTEST",		1,		utest_ser,			utest_msg	},
 #endif	
+	{ 1,  	"VER",			1,		ver_ser,			version_msg	},
 	{ 0, 	(const char *)0,0,		0,			(const char **)0	}
 };
 
@@ -804,7 +813,7 @@ STATIC int backup_ser(uint8_t dport)
 
 		HDLR_setBackupFlagModbus(bk_cmd);
 
-		kprintf(dport, "\r\n set backup_cmd=%d %d", bk_cmd);
+		kprintf(dport, "\r\n set backup_cmd=%d ", bk_cmd);
 	}
 	else
 	{
@@ -853,6 +862,18 @@ void test_DinConfig(void)
 	if(t_status == 0) err_flag++;
 
 	kprintf(PORT_DEBUG, "\r\n setup DIN control  err=%d\r\n", err_flag);
+}
+
+STATIC int ver_ser(uint8_t dport)
+{
+	int maj, min;
+
+	maj = (int)((NVM_TABLE_VERSION&0xFF00)>>8);
+	min = (int)(NVM_TABLE_VERSION&0xFF);
+	kprintf(dport, "\r\n table version = %d.%d", maj, min);
+	kprintf(dport, "\r\n MCU v%d.%d", VERSION_MAJ, VERSION_MIN);
+
+	return 0;
 }
 
 STATIC int test_ser(uint8_t dport)
@@ -1263,6 +1284,7 @@ ptest_err:
 	return 1;
 }
 #endif
+
 
 #ifdef SUPPORT_UNIT_TEST
 STATIC int utest_ser(uint8_t dport)

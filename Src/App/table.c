@@ -19,11 +19,7 @@
 #include "handler.h"
 
 
-#ifdef SUPPORT_NFC_OLD
-#define ERRINFO_ITEM_CNT	5
-#else
 #define ERRINFO_ITEM_CNT	4
-#endif
 
 
 #define	FREQ_MIN_VALUE		10
@@ -856,6 +852,7 @@ int8_t table_init(void)
 {
 	int8_t status, errflag=0;
 	int i;
+	int32_t run_stop=0;
 	uint16_t buf[3]={0,0,0}; // index + int32 or float
 
 	status = table_updateRange();
@@ -879,6 +876,10 @@ int8_t table_init(void)
 
 	// sync EEPROM data and table data
 	for(i=0; i<PARAM_TABLE_SIZE; i++) table_nvm[i] = table_data[i];
+
+	status = NVM_getRunStopFlag(&run_stop);
+	if(run_stop != 0 || status == 0)
+		NVM_clearRunStopFlag(); // clear run/stop flag at init
 
 	status = NVM_readTime();
 	if(status == 0) errflag++;
@@ -993,7 +994,7 @@ int32_t table_getCtrllIn(void)
 
 int32_t table_getStatusValue(int16_t index)
 {
-	if(index >= run_status1_type && index <= ai_status_type)
+	if(index >= run_status1_type && index < PARAM_TABLE_SIZE)
 		return table_data[index];
 	else
 		kprintf(PORT_DEBUG, "table_getStatusValue index=%d error\r\n", index);
@@ -1066,6 +1067,7 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	if(table_isMotorStop() && err_code == TRIP_REASON_VDC_UNDER)
 	{
 		table_data[err_code_1_type] = (int32_t)err_code; // only let know error code
+		kputs(PORT_DEBUG, "VDC_UNDER at power off\r\n");
 		return 1;
 	}
 
