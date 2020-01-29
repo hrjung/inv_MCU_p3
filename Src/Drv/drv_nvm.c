@@ -517,7 +517,12 @@ int8_t NVM_setMotorDevCounter(uint32_t r_time)
 
 uint8_t NVM_isInitNvmNfc(void)
 {
-	return (uint8_t)(sys_data[SYSTEM_PARAM_INIT_NVM] == 1);
+	return (uint8_t)(sys_data[SYSTEM_PARAM_INIT_NVM] > 0);
+}
+
+uint8_t NVM_getInitSysParam(void)
+{
+	return (uint8_t)sys_data[SYSTEM_PARAM_INIT_NVM];
 }
 
 uint8_t NVM_isBackupCmd(void)

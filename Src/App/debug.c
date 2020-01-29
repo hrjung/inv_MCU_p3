@@ -35,7 +35,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		30
+#define VERSION_MIN		31
 
 
 //#define CMDLINE_MAX_ARGS        8
@@ -187,7 +187,7 @@ const COMMAND	Cmd_List[] =
 {
 	{ 1,   	"HELP",			2,		help_ser,			help_msg	},
 	{ 1,  	"RESET",		1,		reset_ser,			reset_msg	},
-	{ 1,  	"INITP",		1,		init_param_ser,		init_param_msg	},
+	{ 1,  	"INITP",		2,		init_param_ser,		init_param_msg	},
 	{ 1,  	"PARAM",		3,		param_ser,			param_msg	},
 	{ 1,  	"RNV",			2,		read_nv_ser,		read_nv_msg	},
 	{ 1,  	"WNV",			3,		write_nv_ser,		write_nv_msg},
@@ -502,9 +502,25 @@ STATIC int reset_ser(uint8_t dport)
 
 STATIC int init_param_ser(uint8_t dport)
 {
-	kputs(dport, "\r\n\r\n--- going to initialize EEPROM, please make sure motor is stopped");
+	uint8_t option=0;
 
-	param_init_requested_f = 1;
+	if(!table_isMotorStop())
+	{
+		kputs(dport, "\r\n\r\n--- please make sure motor is stopped");
+		return -1;
+	}
+
+	option = (uint8_t)atoi(arg_v[1]);
+	if(option > NVM_INIT_PARAM_TIME)
+	{
+		kputs(dport, "\r\n invalid value");
+		return -1;
+	}
+
+	param_init_requested_f = option;
+
+	kprintf(dport, "\r\n parameter initialization option= %d", param_init_requested_f);
+
 	return 0;
 }
 

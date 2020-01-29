@@ -561,11 +561,11 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 
 #ifdef SUPPORT_INIT_PARAM
 	case MB_CTRL_NVM_INIT_ADDR:
-		if(value == 1)
+		if(value > NVM_INIT_PARAM_NONE && value <= NVM_INIT_PARAM_TIME)
 		{
 			if(table_isMotorStop()) // only on motor not running
 			{
-				param_init_requested_f = 1; // set flag
+				param_init_requested_f = (uint8_t)value; // set flag
 
 				modbusTx.wp = 0;
 				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;

@@ -63,6 +63,7 @@ extern int NVM_getSysParamUpdateIndex(void);
 
 extern void NVM_getCommandParam(void);
 extern uint8_t NVM_isInitNvmNfc(void);
+extern uint8_t NVM_getInitSysParam(void);
 extern void NVM_clearInitParamCmd(void);
 
 extern uint8_t NVM_isBackupCmd(void);

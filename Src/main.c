@@ -1294,11 +1294,15 @@ void NfcNvmTaskFunc(void const * argument)
 	  if(bk_cnt%50 == 0) // every 500ms
 	  {
 #ifdef SUPPORT_INIT_PARAM
-		  if(param_init_requested_f || NVM_isInitNvmNfc()) // need NVM initialize ?
+		  uint8_t nvm_init_type=0;
+
+		  nvm_init_type = HDLR_isNeedInitialize();
+		  if(nvm_init_type > 0) // need NVM initialize ?
 		  {
 			  UTIL_setLED(LED_COLOR_B, 0);
+			  kprintf(PORT_DEBUG, "HDLR_initNVM type=%d\r\n", nvm_init_type);
 
-			  status = HDLR_initNVM();
+			  status = HDLR_initNVM((NVM_INIT_t)nvm_init_type);
 			  if(status == 0)
 				  kputs(PORT_DEBUG, "HDLR_initNVM ERROR\r\n");
 			  else

@@ -13,6 +13,15 @@
 #define RUN_STOP_FLAG_RUN		1
 #define RUN_STOP_FLAG_STOP		2
 
+typedef enum
+{
+	NVM_INIT_PARAM_NONE = 0,
+	NVM_INIT_PARAM_ALL,
+	NVM_INIT_PARAM_CONFIG,
+	NVM_INIT_PARAM_ERROR,
+	NVM_INIT_PARAM_TIME,
+} NVM_INIT_t;
+
 // mainhandler task function
 extern int8_t HDLR_handleDspError(void);
 extern int8_t HDLR_readDspStatus(void);
@@ -47,7 +56,8 @@ extern void HDLR_saveMotorRunTime(void);
 extern int8_t HDLR_updatebyNfc(void);
 extern int8_t HDLR_restoreNVM(void);
 extern int8_t HDLR_updateParamNVM(void);
-extern int8_t HDLR_initNVM(void);
+extern int8_t HDLR_initNVM(NVM_INIT_t init_type);
+extern uint8_t HDLR_isNeedInitialize(void);
 
 extern int8_t HDLR_updateTime(uint32_t cur_time);
 

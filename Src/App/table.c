@@ -736,6 +736,8 @@ int8_t table_initializeBlankEEPROM(void)
 	status = NVM_initSystemParam();
 	if(status == 0) errflag++;
 
+	HDLR_clearBackupFlag();
+
 	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
 
 	status = NVM_initTime();
