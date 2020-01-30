@@ -28,6 +28,7 @@
 
 int32_t table_data[PARAM_TABLE_SIZE]; // parameter table of actual value
 extern int32_t table_nvm[];
+extern int32_t table_dbg[];
 
 extern int16_t state_run_stop; // run_stop status
 extern int16_t state_direction;
@@ -74,6 +75,8 @@ int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_initTimer(int32_t b_index);
 extern void MB_setSlaveAddress(uint8_t addr);
+
+extern int8_t COMM_getMotorType(int8_t *status);
 
 extern void UTIL_startADC(void);
 extern void UTIL_stopADC(void);
@@ -163,7 +166,7 @@ STATIC Param_t param_table[] =
 	{ rated_current_type,	0x30,	40024,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
 	{ poles_type,			0x34,	40025,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
 	{ model_type,			0x38,	40026,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ motor_type_type,		0x3C,	40027,	1,		0,		2,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
+	{ motor_type_type,		0x3C,	40027,	0,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
 	{ gear_ratio_type,		0x40,	40028,	1,		1,		200,	0,	1, 		0, 	none_dsp,		table_setFactoryValue},
 
 
@@ -879,9 +882,10 @@ int8_t table_init(void)
 	// sync EEPROM data and table data
 	for(i=0; i<PARAM_TABLE_SIZE; i++) table_nvm[i] = table_data[i];
 
+	// clear run/stop flag at init
 	status = NVM_getRunStopFlag(&run_stop);
 	if(run_stop != 0 || status == 0)
-		NVM_clearRunStopFlag(); // clear run/stop flag at init
+		NVM_clearRunStopFlag();
 
 	status = NVM_readTime();
 	if(status == 0) errflag++;
@@ -894,6 +898,7 @@ int8_t table_init(void)
 int8_t table_initNVM(void)
 {
 	int8_t status;
+	int32_t motor_type, value;
 
 	// initialize EEPROM
 	if(table_isInit() == 1) // correctly initialize
@@ -913,10 +918,35 @@ int8_t table_initNVM(void)
 		// blank NVM : initialize as init value
 		kputs(PORT_DEBUG, "blank EEPROM\r\n");
 		status = table_initializeBlankEEPROM();
-		//printf("EEPROM status=%d\r\n", status);
 	}
 
-	//err_cnt = table_getValue(err_date_0_type);
+	// read motor type from DSP
+	motor_type = COMM_getMotorType(&status);
+	if(status == 0)
+	{
+		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		return status;
+	}
+
+	value = table_getValue(motor_type_type);
+	if(value == MOTOR_NONE_TYPE)
+	{
+		// valid motor type value
+		if(motor_type > MOTOR_NONE_TYPE && motor_type < MOTOR_MAX_TYPE)
+		{
+			status = NVM_writeParam((PARAM_IDX_t)motor_type_type, motor_type);
+			table_data[motor_type_type] = motor_type;
+		}
+		else
+			status = 0;
+	}
+	else
+	{
+		// type is mis-matched
+		if(motor_type != value)	status = 0;
+	}
+
+	kprintf(PORT_DEBUG, " read motor type=%d, value=%d, status=%d  \r\n", motor_type, value, status);
 
 	return status;
 }
@@ -1099,9 +1129,19 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 		table_data[err_code_1_type] = (int32_t)ERR_getErrorState();
 	else
 		table_data[err_code_1_type] = (int32_t)err_code;
-	table_data[err_status_1_type] = (int32_t)status;
-	table_data[err_current_1_type] = (int32_t)(current*(float)param_table[err_current_1_type].ratio);
-	table_data[err_freq_1_type] = (int32_t)(freq*(float)param_table[err_freq_1_type].ratio);
+
+	if(ERR_getErrorState() == TRIP_REASON_MCU_COMM_FAIL) // store status value for COMM error
+	{
+		table_data[err_current_1_type] = table_getStatusValue(run_status1_type)&0xFF;
+		table_data[err_current_1_type] = table_getStatusValue(I_rms_type);
+		table_data[err_freq_1_type] = table_getStatusValue(run_freq_type);
+	}
+	else
+	{
+		table_data[err_status_1_type] = (int32_t)status;
+		table_data[err_current_1_type] = (int32_t)(current*(float)param_table[err_current_1_type].ratio);
+		table_data[err_freq_1_type] = (int32_t)(freq*(float)param_table[err_freq_1_type].ratio);
+	}
 
 #if 1
 	// update EEPROM

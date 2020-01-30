@@ -470,6 +470,10 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 		kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 	}
 
+	init_value = table_getInitValue(motor_type_type);
+	status = NVM_writeParam((PARAM_IDX_t)motor_type_type, init_value);
+	if(status == 0) errflag++;
+
 	if(init_type == NVM_INIT_PARAM_ALL || init_type == NVM_INIT_PARAM_ERROR)
 	{
 		// initialize error, status

@@ -271,10 +271,11 @@ typedef enum{
 } Voltage_in_t;
 
 typedef enum{
-	MOTOR_1HP_4P_TYPE = 0,
-	MOTOR_2HP_4P_TYPE = 1,
-	MOTOR_3HP_4P_TYPE = 2,
-
+	MOTOR_NONE_TYPE = 0,
+	MOTOR_1HP_4P_TYPE,
+	MOTOR_2HP_4P_TYPE,
+	MOTOR_3HP_4P_TYPE,
+	MOTOR_MAX_TYPE,
 } MOTOR_type_t;
 
 typedef enum

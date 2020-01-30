@@ -191,6 +191,7 @@ int8_t NVM_readTime(void)
 	return status;
 }
 
+
 int8_t NVM_setDeviceOnTime(uint32_t on_time)
 {
 	int8_t status;

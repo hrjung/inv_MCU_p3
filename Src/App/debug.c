@@ -218,6 +218,8 @@ uint8_t debugIoFlag=0;
 
 int16_t test_run_stop_f=0;
 
+int32_t table_dbg[PARAM_TABLE_SIZE];
+
 /* Global variables ---------------------------------------------------------*/
 
 //extern uint32_t AO_duty;
@@ -290,6 +292,7 @@ extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 
 extern int8_t main_SwReset(void);
 
+extern void test_initDbgTableValue(void);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getInitValue(PARAM_IDX_t index);
@@ -1189,6 +1192,106 @@ STATIC int test_ser(uint8_t dport)
     	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d", \
     			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour);
     	kprintf(dport, "\r\n r_start=%d, minutes=%d", motor_run_start_time, run_minutes);
+    }
+    else if(test_case == 'V') // show status in EEPROM
+    {
+    	uint8_t i, status=0;
+    	uint16_t i2c_addr, i2c_len=4;
+    	uint32_t i2c_value=0;
+
+    	for(i=run_status1_type; i<PARAM_TABLE_SIZE; i++)
+    	{
+    		i2c_addr = table_getAddr((PARAM_IDX_t)i);
+    		status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
+    		kprintf(dport, "\r\n idx=%d, value=%d, nvm=%d, status=%d, ", i, i2c_value, table_nvm[i], status);
+    		osDelay(5);
+    	}
+    }
+    else if(test_case == 'W')
+    {
+    	int idx, errflag=0;
+    	int8_t status=NVM_OK;
+    	uint16_t addr;
+
+    	table_dbg[Rs_type] = 25;
+    	table_dbg[Rr_type] = 21;
+    	table_dbg[Ls_type] = 130;
+    	table_dbg[noload_current_type] = 20;
+    	table_dbg[rated_current_type] = 32;
+    	table_dbg[poles_type] = 4;
+    	table_dbg[model_type] = 3;
+    	table_dbg[motor_type_type] = 3;
+    	table_dbg[gear_ratio_type] = 120;
+
+    	table_dbg[err_code_1_type] = 10;
+    	table_dbg[err_status_1_type] = 4;
+    	table_dbg[err_current_1_type] = 17;
+    	table_dbg[err_freq_1_type] = 100;
+
+    	table_dbg[err_code_2_type] = 2;
+    	table_dbg[err_status_2_type] = 1;
+    	table_dbg[err_current_2_type] = 19;
+    	table_dbg[err_freq_2_type] = 200;
+
+    	table_dbg[err_code_3_type] = 7;
+    	table_dbg[err_status_3_type] = 2;
+    	table_dbg[err_current_3_type] = 22;
+    	table_dbg[err_freq_3_type] = 300;
+
+    	table_dbg[err_code_4_type] = 9;
+    	table_dbg[err_status_4_type] = 3;
+    	table_dbg[err_current_4_type] = 21;
+    	table_dbg[err_freq_4_type] = 400;
+
+    	table_dbg[err_code_5_type] = 11;
+    	table_dbg[err_status_5_type] = 4;
+    	table_dbg[err_current_5_type] = 34;
+    	table_dbg[err_freq_5_type] = 500;
+
+    	table_dbg[run_status1_type] = 4;
+    	table_dbg[run_status2_type] = 1;
+    	table_dbg[I_rms_type] = 18;
+    	table_dbg[run_freq_type] = 310;
+    	table_dbg[dc_voltage_type] = 520;
+    	table_dbg[torque_value_type] = 50;
+    	table_dbg[torque_percent_type] = 95;
+    	table_dbg[ipm_temperature_type] = 401;
+    	table_dbg[mtr_temperature_type] = 3;
+    	table_dbg[di_status_type] = 1;
+    	table_dbg[do_status_type] = 2;
+    	table_dbg[ai_status_type] = 3;
+    	table_dbg[motor_on_cnt_type] = 20;
+    	table_dbg[elapsed_hour_type] = 30;
+    	table_dbg[operating_hour_type] = 50;
+
+    	for(idx=Rs_type; idx<=operating_hour_type; idx++)
+    	{
+    		addr = table_getAddr((PARAM_IDX_t)idx);
+    		status = NVM_write(addr, table_dbg[idx]); // clear all flag
+    		if(status==NVM_NOK) errflag++;
+
+#ifdef SUPPORT_TASK_WATCHDOG
+    		watchdog_f= 0x1F; // WATCHDOG_ALL; to kick watchdog in case of no NFC B/D
+#endif
+    	}
+    	kprintf(dport, "\r\n EEPROM write done err=%d", errflag);
+    }
+    else if(test_case == 'Y')
+    {
+    	uint8_t i, status=0;
+    	uint16_t i2c_addr, i2c_len=4;
+    	uint32_t i2c_value=0;
+
+    	for(i=Rs_type; i<=operating_hour_type; i++)
+    	{
+			i2c_addr = table_getAddr((PARAM_IDX_t)i);
+			status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
+			kprintf(dport, "\r\n idx=%d, value=%d, dbg=%d, status=%d, ", i, i2c_value, table_dbg[i], status);
+			osDelay(5);
+#ifdef SUPPORT_TASK_WATCHDOG
+    		watchdog_f= 0x1F; // WATCHDOG_ALL; to kick watchdog in case of no NFC B/D
+#endif
+    	}
     }
 #ifdef SUPPORT_PASSWORD
     else if(test_case == 'U') // lock/unock with password

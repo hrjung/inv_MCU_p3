@@ -638,7 +638,7 @@ int8_t COMM_sendParamWrite(const uint16_t* data)
 	int32_t value;
 	int8_t result;
 
-#if 1
+#if 0
 	// read parameter before write, in order to avoid writing same value
 	result = COMM_sendCommand(SPICMD_PARAM_R, data);
 	if(result == COMM_FAILED) return COMM_FAILED;
@@ -687,6 +687,7 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 	return (result == COMM_SUCCESS);
 }
 
+#if 0
 // only used at inverter initialize to sync motor parameter
 int8_t COMM_sendMotorType(void)
 {
@@ -703,6 +704,19 @@ int8_t COMM_sendMotorType(void)
 			status, (int)table_idx, (int)table_getValue(table_idx));
 
 	return status;
+}
+#endif
+// read motor type from DSP at startup
+int32_t COMM_getMotorType(int8_t *status)
+{
+	int8_t result = COMM_SUCCESS;
+	uint16_t buf[3]={0,0,0};
+
+	buf[0] = (uint16_t)table_getDspAddr((PARAM_IDX_t)motor_type_type);
+	result = COMM_sendCommand(SPICMD_PARAM_R, buf);
+	if(result == COMM_FAILED) *status = 0;
+
+	return read_value;
 }
 
 int8_t COMM_sendTestCmd(uint16_t test_cmd)

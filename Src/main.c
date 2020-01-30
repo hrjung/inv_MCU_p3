@@ -203,7 +203,7 @@ extern void MB_TaskFunction(void);
 extern int8_t MB_handlePacket(void);
 
 extern int8_t NVM_setMotorRunCount(uint32_t run_count);
-extern int8_t COMM_sendMotorType(void);
+//extern int8_t COMM_sendMotorType(void);
 
 // opt485_task.c
 extern void OPT_init(void);
@@ -1546,11 +1546,12 @@ void mainHandlerTaskFunc(void const * argument)
   if(nv_status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
 
-  com_status = COMM_sendMotorType();
-  if(com_status == 0)
-	  ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
-
-  kprintf(PORT_DEBUG, "nv_status = %d, com_status=%d\r\n", nv_status, com_status);
+//  com_status = COMM_sendMotorType();
+//  if(com_status == 0)
+//	  ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+//
+//  kprintf(PORT_DEBUG, "nv_status = %d, com_status=%d\r\n", nv_status, com_status);
+  kprintf(PORT_DEBUG, "nv_status = %d \r\n", nv_status);
 #endif
 
   // init queue

@@ -18,6 +18,8 @@
 
 STATIC uint8_t err_state=TRIP_REASON_NONE;
 
+extern int32_t table_getStatusValue(int16_t index);
+
 uint8_t ERR_isErrorState(void)
 {
 	return (err_state != TRIP_REASON_NONE);
@@ -36,7 +38,15 @@ uint8_t ERR_getErrorState(void)
 void ERR_setErrorState(TRIP_REASON_t err_code)
 {
 	err_state = err_code;
-	if(ERR_getErrorState() > TRIP_REASON_MAX)
+
+	if(err_state == TRIP_REASON_MCU_COMM_FAIL)
+	{
+		int32_t err_status=0;
+		float err_current=0.0, err_freq=0.0;
+
+		table_updateErrorDSP(err_code, err_status, err_current, err_freq);
+	}
+	else if(err_state > TRIP_REASON_MAX)
 	{
 		UTIL_setMTDpin(1); // notify to DSP
 	}
