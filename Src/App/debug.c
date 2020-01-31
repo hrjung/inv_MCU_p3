@@ -35,7 +35,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		31
+#define VERSION_MIN		32
 
 
 //#define CMDLINE_MAX_ARGS        8
@@ -1035,7 +1035,8 @@ STATIC int test_ser(uint8_t dport)
     	{
     		i2c_addr = table_getAddr((PARAM_IDX_t)i);
     		status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
-    		kprintf(dport, "\r\n idx=%d, value=%d, nvm=%d, status=%d, ", i, i2c_value, table_nvm[i], status);
+    		kprintf(dport, "\r\n idx=%d, value=%d, data=%d, nvm=%d, status=%d, ", \
+    				i, i2c_value, table_data[i], table_nvm[i], status);
     		osDelay(5);
     	}
     }

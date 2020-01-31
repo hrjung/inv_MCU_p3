@@ -1175,6 +1175,64 @@ void StartDefaultTask(void const * argument)
 * @param argument: Not used
 * @retval None
 */
+
+void NfcNvmUpdateParam(int32_t tag_end)
+{
+	int8_t status;
+
+	// if tagged, wait tag_end
+	if(tag_end == 1)
+	{
+		// if tag end, update NVM -> table
+		//	check parameter table
+		//	check system parameter
+		osDelay(5);
+		if(NVM_isNfcMonitoring())
+		{
+			UTIL_setLED(LED_COLOR_B, 0);
+		}
+		else
+		{
+#ifdef SUPPORT_PASSWORD
+			if(table_isLocked()) // in case of lock, parameter should be restored
+			{
+				osDelay(5);
+				status = HDLR_restoreNVM();
+				if(status == 0) {kputs(PORT_DEBUG, "locked!! nfc tag restore error\r\n"); }
+
+				UTIL_setLED(LED_COLOR_G, 0);
+			}
+			else
+			{
+#endif
+				status = HDLR_updatebyNfc(); // EEPROM updated -> table update
+				if(status == 0)
+				{
+					kputs(PORT_DEBUG, "nfc tag update error\r\n");
+					UTIL_setLED(LED_COLOR_B, 1);
+				}
+				else
+					UTIL_setLED(LED_COLOR_G, 0);
+		  }
+
+		  kputs(PORT_DEBUG, "nfc tag processed!\r\n");
+		}
+	}
+	else if(tag_end != 0 && tag_end != 1) // NFC write is incomplete -> restore
+	{
+		// tag error : restore NVM <- table
+		osDelay(5);
+		status = HDLR_restoreNVM();
+		if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
+
+		kputs(PORT_DEBUG, "nfc tag imcomplete!\r\n");
+
+		UTIL_setLED(LED_COLOR_G, 0);
+	}
+	else
+		UTIL_setLED(LED_COLOR_G, 0);
+}
+
 /* USER CODE END Header_NfcNvmTaskFunc */
 void NfcNvmTaskFunc(void const * argument)
 {
@@ -1208,62 +1266,10 @@ void NfcNvmTaskFunc(void const * argument)
 	  {
 		  UTIL_setLED(LED_COLOR_B, 0);
 		  osDelay(10);
-		  continue; // it can skip below EEPROM access until NFC untagged
-	  }
-//	  else
-//		  UTIL_setLED(LED_COLOR_G, 0);
-
-	  // if tagged, wait tag_end
-	  if(tag_end == 1)
-	  {
-		  // if tag end, update NVM -> table
-		  //	check parameter table
-		  //	check system parameter
-		  osDelay(5);
-		  if(NVM_isNfcMonitoring())
-		  {
-			  UTIL_setLED(LED_COLOR_B, 0);
-		  }
-		  else
-		  {
-#ifdef SUPPORT_PASSWORD
-			  if(table_isLocked()) // in case of lock, parameter should be restored
-			  {
-				  osDelay(5);
-				  status = HDLR_restoreNVM();
-				  if(status == 0) {kputs(PORT_DEBUG, "locked!! nfc tag restore error\r\n"); }
-
-				  UTIL_setLED(LED_COLOR_G, 0);
-			  }
-			  else
-			  {
-#endif
-				  status = HDLR_updatebyNfc(); // EEPROM updated -> table update
-				  if(status == 0)
-				  {
-					  kputs(PORT_DEBUG, "nfc tag update error\r\n");
-					  UTIL_setLED(LED_COLOR_B, 1);
-				  }
-				  else
-					  UTIL_setLED(LED_COLOR_G, 0);
-			  }
-
-			  kputs(PORT_DEBUG, "nfc tag processed!\r\n");
-		  }
-	  }
-	  else if(tag_end != 0 && tag_end != 1) // NFC write is incomplete -> restore
-	  {
-		  // tag error : restore NVM <- table
-		  osDelay(5);
-		  status = HDLR_restoreNVM();
-		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
-
-		  kputs(PORT_DEBUG, "nfc tag imcomplete!\r\n");
-
-		  UTIL_setLED(LED_COLOR_G, 0);
+		  //continue; // it can skip below EEPROM access until NFC untagged
 	  }
 	  else
-		  UTIL_setLED(LED_COLOR_G, 0);
+		  NfcNvmUpdateParam(tag_end);
 
 	  // no tag state,
 	  //	handle NVM update request

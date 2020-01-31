@@ -219,7 +219,7 @@ void MB_initAddrMap(void)
 	// device setting
 	mb_device.start = MB_DEVICE_START_ADDR;
 	mb_device.end = MB_DEVICE_END_ADDR;
-	mb_device.start_index = model_type;
+	mb_device.start_index = Rs_type;
 	count = MB_DEVICE_END_ADDR - MB_DEVICE_START_ADDR + 1;
 	for(i=0; i<count; i++)
 	{
@@ -434,13 +434,14 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	}
 	else
 	{
+		kprintf(PORT_DEBUG, "multi_read s_addr=%d, s_idx=%d, cnt=%d \r\n", addr, index, cnt);
 		for(i=0; i<cnt; i++)
 		{
 			value = table_getValue(index + i);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0x0000FF00) >> 8);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x000000FF);
+			//kprintf(PORT_DEBUG, "multi_read index=%d, value=%d \r\n", index+i, value);
 		}
-		//kprintf(PORT_DEBUG, "s_read index=%d, value=%d, wp=%d \r\n", index, (uint16_t)value, modbusTx.wp);
 	}
 
 

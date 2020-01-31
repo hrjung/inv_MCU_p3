@@ -51,7 +51,9 @@ extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
 
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern int8_t table_initStatusError(uint16_t index);
+#ifdef SUPPORT_TASK_WATCHDOG
 extern void main_kickWatchdogNFC(void);
+#endif
 
 #ifdef SUPPORT_PARAMETER_BACKUP
 extern uint16_t table_getAddr(PARAM_IDX_t index);
@@ -320,6 +322,9 @@ int8_t HDLR_restoreNVM(void)
 			}
 		}
 		index++;
+#ifdef SUPPORT_TASK_WATCHDOG
+		main_kickWatchdogNFC();
+#endif
 	}
 
 	// restore CRC as well
@@ -348,19 +353,16 @@ int8_t HDLR_updateParamNVM(void)
 		if(status == 0) {kprintf(PORT_DEBUG,"ERROR NfcQ dequeue \r\n"); errflag++;}
 
 		nvm_status = NVM_read(addr, &nvm_value);
-		if(nvm_status == 0)
+		if(nvm_status == 0 || nvm_value != value)
 		{
-			kprintf(PORT_DEBUG,"ERROR NVM read error addr=0x%x\r\n", addr); errflag++;
-		}
-		else
-		{
-			if(nvm_value != value)
-			{
-				nvm_status = NVM_write(addr, value);
-				if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error addr=0x%x\r\n", addr); errflag++;}
-			}
+			//kprintf(PORT_DEBUG,"ERROR NVM read error addr=0x%x\r\n", addr); errflag++;
+			nvm_status = NVM_write(addr, value);
+			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error addr=0x%x\r\n", addr); errflag++;}
 		}
 		osDelay(5);
+#ifdef SUPPORT_TASK_WATCHDOG
+		main_kickWatchdogNFC();
+#endif
 
 		empty = NVMQ_isEmptyNfcQ();
 	} while(empty == 0); // not empty
