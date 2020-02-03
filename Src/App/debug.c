@@ -220,6 +220,8 @@ int16_t test_run_stop_f=0;
 
 int32_t table_dbg[PARAM_TABLE_SIZE];
 
+int16_t dbg_warn_test=0;
+
 /* Global variables ---------------------------------------------------------*/
 
 //extern uint32_t AO_duty;
@@ -965,8 +967,24 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 4) // set MCU error code to DSP  for testing
     {
-    	ERR_setErrorState(TRIP_REASON_MCU_ERR_TEST);
-    	kputs(dport, "\r\n set MCU ERR TEST");
+    	int16_t value;
+
+    	value = (int16_t)atoi(arg_v[2]);
+    	switch(value)
+    	{
+    	case 0 :
+    		dbg_warn_test = 0;
+    		kputs(dport, "\r\n clear MCU WARNNING");
+    		break;
+    	case 1 :
+    		dbg_warn_test = 1;
+    		kputs(dport, "\r\n set MCU WARNNING TEST");
+    		break;
+    	case 2:
+    		ERR_setErrorState(TRIP_REASON_MCU_ERR_TEST);
+    		kputs(dport, "\r\n set MCU ERR TEST");
+    		break;
+    	}
     }
     else if(test_case == 5) // read table value
     {
@@ -985,7 +1003,7 @@ STATIC int test_ser(uint8_t dport)
 		kprintf(dport, "\r\n motor_on_cnt=%d, device_on_hour=%d, motor_run_hour=%d", (int)motor_run_cnt, (int)device_on_hour, (int)motor_run_hour);
 		kprintf(dport, "\r\n monitor=%d, run_stop=%d", NVM_isNfcMonitoring(), state_run_stop);
     }
-    else if(test_case == 7)
+    else if(test_case == 7) // change ctrl_in
     {
 #if 1
     	uint32_t crtrl_in=0;

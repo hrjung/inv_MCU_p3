@@ -53,6 +53,8 @@ uint16_t ain_sample_val[EXT_AIN_SAMPLE_CNT];
 //extern uint16_t ain_sample_val[];
 extern uint16_t adc_value;
 
+extern int table_isWarning(void);
+
 
 void UTIL_setTestPin(uint8_t index, uint8_t onoff)
 {
@@ -144,7 +146,12 @@ void UTIL_setLED(uint8_t color, uint8_t blink_on)
 
 void UTIL_handleLED(void)
 {
-	if(ERR_isErrorState())
+	if(table_isWarning()) // alarm : RED on
+	{
+		UTIL_setLED(LED_COLOR_R, 0);
+	}
+
+	if(ERR_isErrorState()) // trip : RED blinking
 	{
 		UTIL_setLED(LED_COLOR_R, 1);
 	}

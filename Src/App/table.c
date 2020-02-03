@@ -27,6 +27,9 @@
 
 
 int32_t table_data[PARAM_TABLE_SIZE]; // parameter table of actual value
+int16_t st_ipm_temp_warning=0;
+int16_t st_mtr_temp_warning=0;
+
 extern int32_t table_nvm[];
 extern int32_t table_dbg[];
 
@@ -36,7 +39,8 @@ extern int16_t st_overload;
 extern int16_t st_brake;
 extern int16_t gear_ratio;
 
-//extern int32_t err_cnt;
+extern int16_t dbg_warn_test;
+
 
 extern COMM_CMD_t test_cmd;
 
@@ -646,8 +650,27 @@ int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 		st_overload = value&0x01;		// overload on/off
 		st_brake = (value>>8)&0x01;  	// external brake on/off
 	}
+	else if(index == ipm_temperature_type)
+	{
+		if(value > 900) // over 90 than warning
+			st_ipm_temp_warning = 1;
+		else
+			st_ipm_temp_warning = 0;
+	}
+	else if(index == mtr_temperature_type)
+	{
+		if(value == 1)
+			st_mtr_temp_warning = 1;
+		else
+			st_mtr_temp_warning = 0;
+	}
 
 	return 1;
+}
+
+int table_isWarning(void)
+{
+	return(st_overload || st_ipm_temp_warning || st_mtr_temp_warning || dbg_warn_test);
 }
 
 void table_setExtStatusValue(void)
