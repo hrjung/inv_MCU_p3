@@ -1293,6 +1293,7 @@ void NfcNvmTaskFunc(void const * argument)
 		  if(status == 0) kprintf(PORT_DEBUG, "HDLR_updateSysParam index=%d ERROR\r\n", sys_index);
 
 		  UTIL_setLED(LED_COLOR_G, 0);
+		  kputs(PORT_DEBUG, "HDLR_updateParamNVM called\r\n");
 	  }
 
 

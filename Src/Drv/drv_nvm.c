@@ -344,7 +344,7 @@ int8_t NVM_isInit(void)
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_IS_INITIATED].addr, &isInit);
 
-	printf("NVM_isInit init=%d, status=%d\r\n", (int)isInit, status);
+	kprintf(PORT_DEBUG, "NVM_isInit init=%d, status=%d\r\n", (int)isInit, status);
 	if(status!=NVM_OK) return -1;
 
 	sys_data[SYSTEM_PARAM_IS_INITIATED] = isInit;
@@ -358,11 +358,29 @@ int8_t NVM_isNfcMonitoring(void)
 	uint8_t status;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_ON_MONITORING].addr, &isMonitoring);
-	if(status!=NVM_OK) return 0; // default not monitoring
+	if(status!=NVM_OK)
+	{
+		kputs(PORT_DEBUG, "read monitoring error\r\n");
+		return 0; // default not monitoring
+	}
 
 	sys_data[SYSTEM_PARAM_ON_MONITORING] = isMonitoring;
 
 	return (int8_t)isMonitoring;
+}
+
+void NVM_setNfcMonitoring(void)
+{
+	uint8_t status;
+
+	if(sys_data[SYSTEM_PARAM_ON_MONITORING] != 1)
+	{
+		sys_data[SYSTEM_PARAM_ON_MONITORING] = 1;
+		sys_table[SYSTEM_PARAM_ON_MONITORING].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_ON_MONITORING].addr, sys_data[SYSTEM_PARAM_ON_MONITORING]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_ON_MONITORING);
+	}
 }
 
 void NVM_clearNfcMonitoring(void)

@@ -16,6 +16,8 @@
 
 #define NVM_BACKUP_AVAILABLE_F	(0x5555)
 
+#define IPM_TEMPERATURE_WARNNING	(900)
+
 typedef enum{
 	value_type,
 	freq_min_type,
@@ -262,13 +264,6 @@ typedef enum{
 
 } DOUT_config_t;
 
-typedef enum{
-	VOLTAGE_380 = 0,
-	VOLTAGE_400,
-	VOLTAGE_415,
-	VOLTAGE_480,
-
-} Voltage_in_t;
 
 typedef enum{
 	MOTOR_NONE_TYPE = 0,
@@ -295,6 +290,13 @@ enum {
 	REQ_FROM_MODBUS,
 	REQ_FROM_KEPAD,
 
+};
+
+enum {
+    MOTOR_TEMP_NORMAL = 0,
+    MOTOR_TEMP_WARNNING,
+    MOTOR_TEMP_ERROR,
+    MOTOR_TEMP_NO_CONNECT,
 };
 
 

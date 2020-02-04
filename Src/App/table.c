@@ -652,14 +652,14 @@ int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 	}
 	else if(index == ipm_temperature_type)
 	{
-		if(value > 900) // over 90 than warning
+		if(value > IPM_TEMPERATURE_WARNNING) // over 90 than warning
 			st_ipm_temp_warning = 1;
 		else
 			st_ipm_temp_warning = 0;
 	}
 	else if(index == mtr_temperature_type)
 	{
-		if(value == 1)
+		if(value == MOTOR_TEMP_WARNNING) //
 			st_mtr_temp_warning = 1;
 		else
 			st_mtr_temp_warning = 0;

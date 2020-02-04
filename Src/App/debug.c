@@ -291,6 +291,7 @@ extern void MB_initTimer(int32_t b_index);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
+extern void NVM_setNfcMonitoring(void); // test only
 
 extern int8_t main_SwReset(void);
 
@@ -1339,6 +1340,8 @@ STATIC int test_ser(uint8_t dport)
 #endif
     else if(test_case == 'T') // show time info
     {
+    	kprintf(dport, "\r\n set monitoring flag !!");
+    	NVM_setNfcMonitoring();
 
     }
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
