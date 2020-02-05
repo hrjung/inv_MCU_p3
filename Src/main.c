@@ -1467,11 +1467,9 @@ int8_t mainHandlerState(void)
 			status = EXT_AI_handleAin();
 			break;
 
-#ifdef SUPPORT_DI_AI_CONTROL
 		case CTRL_IN_Din_Ain:
 			status = EXT_handleDAin(ctrl_in);
 			break;
-#endif
 
 		case CTRL_IN_Modbus: // only run/stop command
 			status = HDLR_handleRunStopFlagModbus();
@@ -1702,11 +1700,7 @@ void userIoTimerCallback(void const * argument)
 
 	ctrl_in = table_getCtrllIn();
 
-	if(ctrl_in == CTRL_IN_Analog_V
-#ifdef SUPPORT_DI_AI_CONTROL
-		|| ctrl_in == CTRL_IN_Din_Ain
-#endif
-	)
+	if(ctrl_in == CTRL_IN_Analog_V || ctrl_in == CTRL_IN_Din_Ain)
 	{
 		// read ADC
 		if(ADC_ConvCpltFlag)

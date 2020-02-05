@@ -9,7 +9,7 @@
 #define SRC_TABLE_H_
 
 
-#define NVM_TABLE_VERSION		0x301
+#define NVM_TABLE_VERSION		0x401
 
 #define NVM_BACKUP_FLAG_ADDR	0x5F8
 #define NVM_BACKUP_START_ADDR	0x600
@@ -31,7 +31,6 @@ typedef enum{
 	ctrl_in_type,
 	energy_save_type,
 	pwm_freq_type,
-	input_voltage_type,
 	jmp_enable0_type,
 	jmp_low0_type,
 	jmp_high0_type,
@@ -81,15 +80,10 @@ typedef enum{
 	mb_address_type,
 	baudrate_type,
 
-	Rs_type,
-	Rr_type,
-	Ls_type,
-	noload_current_type,
-	rated_current_type,
-	poles_type,
 	model_type,
 	motor_type_type,
 	gear_ratio_type,
+	fw_ver_type,
 
 	err_code_1_type,
 	err_status_1_type,
@@ -175,7 +169,6 @@ typedef enum{
 
 	fan_onoff_dsp,
 	motor_type_dsp,
-	voltage_in_dsp,
 
 	DSP_PARAM_SIZE,
 }TABLE_DSP_PARAM_t;//new
@@ -217,9 +210,7 @@ typedef enum{
 	CTRL_IN_NFC = 0,
 	CTRL_IN_Digital,
 	CTRL_IN_Analog_V,
-#ifdef SUPPORT_DI_AI_CONTROL
 	CTRL_IN_Din_Ain,
-#endif
 	CTRL_IN_Modbus,
 	CTRL_IN_MAX
 } CTRL_IN_t;

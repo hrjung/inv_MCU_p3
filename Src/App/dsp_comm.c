@@ -36,8 +36,8 @@ int16_t gear_ratio = 1;
 
 int16_t comm_err_cnt=0;
 
-RTC_TimeTypeDef sTime;
-extern RTC_HandleTypeDef hrtc;
+//RTC_TimeTypeDef sTime;
+//extern RTC_HandleTypeDef hrtc;
 
 //extern int16_t test_run_stop_f;
 uint8_t time_cnt=0;
@@ -458,6 +458,7 @@ int8_t COMM_parseMessage(void)
 		motor_temp_index = 1.f;
 #endif
 
+		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST run_freq=%d \r\n", (int32_t)run_freq_index);
 #ifdef SUPPORT_NFC_OLD
 //		status1 = (int32_t)((state_direction<<8) | state_run_stop); // only use lower 16 bit for modbus
 //		status2 = (int32_t)((st_brake<<8) | st_overload);
@@ -490,7 +491,7 @@ int8_t COMM_parseMessage(void)
 #endif
 		table_setExtStatusValue();
 
-		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST status1=0x%x status2=0x%x\r\n",status1, status2);
+		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST run_freq=%d freq=%f \r\n", (int32_t)run_freq_index, (int32_t)run_freq_f);
 #ifdef SUPPORT_NFC_OLD
 		// update EEPROM while NFC tagged
 		if(NVM_isNfcMonitoring())

@@ -34,9 +34,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-#define VERSION_MAJ		0
-#define VERSION_MIN		32
-
 
 //#define CMDLINE_MAX_ARGS        8
 #define NUM_OF_DEBUGCHAR    	80
@@ -1233,12 +1230,6 @@ STATIC int test_ser(uint8_t dport)
     	int8_t status=NVM_OK;
     	uint16_t addr;
 
-    	table_dbg[Rs_type] = 25;
-    	table_dbg[Rr_type] = 21;
-    	table_dbg[Ls_type] = 130;
-    	table_dbg[noload_current_type] = 20;
-    	table_dbg[rated_current_type] = 32;
-    	table_dbg[poles_type] = 4;
     	table_dbg[model_type] = 3;
     	table_dbg[motor_type_type] = 3;
     	table_dbg[gear_ratio_type] = 120;
@@ -1284,7 +1275,7 @@ STATIC int test_ser(uint8_t dport)
     	table_dbg[elapsed_hour_type] = 30;
     	table_dbg[operating_hour_type] = 50;
 
-    	for(idx=Rs_type; idx<=operating_hour_type; idx++)
+    	for(idx=model_type; idx<=operating_hour_type; idx++)
     	{
     		addr = table_getAddr((PARAM_IDX_t)idx);
     		status = NVM_write(addr, table_dbg[idx]); // clear all flag
@@ -1302,7 +1293,7 @@ STATIC int test_ser(uint8_t dport)
     	uint16_t i2c_addr, i2c_len=4;
     	uint32_t i2c_value=0;
 
-    	for(i=Rs_type; i<=operating_hour_type; i++)
+    	for(i=model_type; i<=operating_hour_type; i++)
     	{
 			i2c_addr = table_getAddr((PARAM_IDX_t)i);
 			status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);

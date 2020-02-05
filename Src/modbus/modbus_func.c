@@ -219,7 +219,7 @@ void MB_initAddrMap(void)
 	// device setting
 	mb_device.start = MB_DEVICE_START_ADDR;
 	mb_device.end = MB_DEVICE_END_ADDR;
-	mb_device.start_index = Rs_type;
+	mb_device.start_index = model_type;
 	count = MB_DEVICE_END_ADDR - MB_DEVICE_START_ADDR + 1;
 	for(i=0; i<count; i++)
 	{

@@ -73,11 +73,7 @@ int32_t EXT_getDIValue(void)
 	int32_t ctrl_in=0;
 
 	ctrl_in = table_getCtrllIn();
-	if(ctrl_in == CTRL_IN_Digital
-#ifdef SUPPORT_DI_AI_CONTROL
-		|| ctrl_in == CTRL_IN_Din_Ain
-#endif
-	)
+	if(ctrl_in == CTRL_IN_Digital || ctrl_in == CTRL_IN_Din_Ain)
 	{
 		di_val = (int32_t)((((mdin_value[2]&0x01)<<2) | ((mdin_value[1]&0x01)<<1) | (mdin_value[0]&0x01)));
 	}
@@ -314,9 +310,7 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 	int8_t status;
 	uint16_t dummy[3] = {0,0,0};
 
-#ifdef SUPPORT_DI_AI_CONTROL
 	if(ctrl_in == CTRL_IN_Digital) // only DI control
-#endif
 	{
 		if(!HDLR_isStopInProgress()) // block multistep command till stop completed
 		{
@@ -646,7 +640,6 @@ int8_t EXT_AI_handleAin(void)
 	return 1;
 }
 
-#ifdef SUPPORT_DI_AI_CONTROL
 int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 {
 	uint16_t value;
@@ -681,4 +674,3 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 
 	return 1;
 }
-#endif

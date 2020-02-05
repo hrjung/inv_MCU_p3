@@ -102,29 +102,24 @@ STATIC Param_t param_table[] =
 	{ dir_domain_type,		0x11C,	40107,	0,		0,		2,		1, 	1, 		0, 	none_dsp,			table_setValueDir,},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
-#ifdef SUPPORT_DI_AI_CONTROL
 	{ ctrl_in_type,			0x200,	40200,	0,		0,		4,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
-#else
-	{ ctrl_in_type,			0x200,	40200,	0,		0,		3,		1, 	1, 		0, 	none_dsp,			table_setCtrlIn},
-#endif
 	{ energy_save_type,		0x204,	40201,	0,		0,		1,		1, 	1, 		0, 	energy_save_dsp,	table_setValue	},
 	{ pwm_freq_type,		0x208,	40202,	0,		0,		3,		1, 	1, 		0, 	pwm_freq_dsp,		table_setValue	},
-	{ input_voltage_type,	0x20C,	40203,	0,		0,		3,		0, 	1, 		0, 	voltage_in_dsp,		table_setValue},
-	{ jmp_enable0_type,		0x210,	40204,	0,		0,		1,		1, 	1, 		0, 	jmp_enable0_dsp,	table_setValue,	},
-	{ jmp_low0_type,		0x214,	40205,	100,	100,	800,	1, 	10, 	0, 	jmp_low0_dsp, 		table_setFreqValue,},
-	{ jmp_high0_type,		0x218,	40206,	100,	100,	800,	1, 	10, 	0, 	jmp_high0_dsp, 		table_setFreqValue,},
-	{ jmp_enable1_type,		0x21C,	40207,	0,		0,		1,		1, 	1, 		0, 	jmp_enable1_dsp,	table_setValue,	},
-	{ jmp_low1_type,		0x220,	40208,	100,	100,	800,	1, 	10, 	0, 	jmp_low1_dsp, 		table_setFreqValue,},
-	{ jmp_high1_type,		0x224,	40209,	100,	100,	800,	1, 	10, 	0, 	jmp_high1_dsp, 		table_setFreqValue,},
-	{ jmp_enable2_type,		0x228,	40210,	0,		0,		1,		1, 	1, 		0, 	jmp_enable2_dsp,	table_setValue,	},
-	{ jmp_low2_type,		0x22C,	40211,	100,	100,	800,	1, 	10, 	0, 	jmp_low2_dsp, 		table_setFreqValue,},
-	{ jmp_high2_type,		0x230,	40212,	100,	100,	800,	1, 	10, 	0, 	jmp_high2_dsp, 		table_setFreqValue,},
-	{ brake_type_type,		0x234,	40213,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
-	{ brake_freq_type,		0x238,	40214,	10,		10,		600,	1, 	10, 	0, 	brake_freq_dsp,		table_setFreqValue	},
-	{ dci_brk_freq_type,	0x23C,	40215,	30,		10,		600,	1, 	10, 	0, 	dci_brk_freq_dsp,	table_setFreqValue	},
-	{ dci_brk_hold_type,	0x240,	40216,	10,		0,		600,	1,	10, 	0, 	dci_brk_hold_dsp,	table_setValue	},
-	{ dci_brk_time_type,	0x244,	40217,	50,		0,		600,	1, 	10, 	0, 	dci_brk_time_dsp,	table_setValue	},
-	{ dci_brk_rate_type,	0x248,	40218,	500,	0,		2000,	1, 	10, 	0, 	dci_brk_rate_dsp,	table_setValue	},
+	{ jmp_enable0_type,		0x20C,	40203,	0,		0,		1,		1, 	1, 		0, 	jmp_enable0_dsp,	table_setValue,	},
+	{ jmp_low0_type,		0x210,	40204,	100,	100,	800,	1, 	10, 	0, 	jmp_low0_dsp, 		table_setFreqValue,},
+	{ jmp_high0_type,		0x214,	40205,	100,	100,	800,	1, 	10, 	0, 	jmp_high0_dsp, 		table_setFreqValue,},
+	{ jmp_enable1_type,		0x218,	40206,	0,		0,		1,		1, 	1, 		0, 	jmp_enable1_dsp,	table_setValue,	},
+	{ jmp_low1_type,		0x21C,	40207,	100,	100,	800,	1, 	10, 	0, 	jmp_low1_dsp, 		table_setFreqValue,},
+	{ jmp_high1_type,		0x220,	40208,	100,	100,	800,	1, 	10, 	0, 	jmp_high1_dsp, 		table_setFreqValue,},
+	{ jmp_enable2_type,		0x224,	40209,	0,		0,		1,		1, 	1, 		0, 	jmp_enable2_dsp,	table_setValue,	},
+	{ jmp_low2_type,		0x228,	40210,	100,	100,	800,	1, 	10, 	0, 	jmp_low2_dsp, 		table_setFreqValue,},
+	{ jmp_high2_type,		0x22C,	40211,	100,	100,	800,	1, 	10, 	0, 	jmp_high2_dsp, 		table_setFreqValue,},
+	{ brake_type_type,		0x230,	40212,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
+	{ brake_freq_type,		0x234,	40213,	10,		10,		600,	1, 	10, 	0, 	brake_freq_dsp,		table_setFreqValue	},
+	{ dci_brk_freq_type,	0x238,	40214,	30,		10,		600,	1, 	10, 	0, 	dci_brk_freq_dsp,	table_setFreqValue	},
+	{ dci_brk_hold_type,	0x23C,	40215,	10,		0,		600,	1,	10, 	0, 	dci_brk_hold_dsp,	table_setValue	},
+	{ dci_brk_time_type,	0x240,	40216,	50,		0,		600,	1, 	10, 	0, 	dci_brk_time_dsp,	table_setValue	},
+	{ dci_brk_rate_type,	0x244,	40217,	500,	0,		2000,	1, 	10, 	0, 	dci_brk_rate_dsp,	table_setValue	},
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
 	{ ovl_warn_limit_type,	0x280,	40280,	150,	100,	200,	1,	1, 		1, 	ovl_warn_limit_dsp,	table_setValue	},
@@ -163,15 +158,10 @@ STATIC Param_t param_table[] =
 
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm		do nothing for read only
-	{ Rs_type,				0x20,	40020,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ Rr_type,				0x24,	40021,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ Ls_type,				0x28,	40022,	0,		0,		0,		0, 	10, 	0,	none_dsp,		table_setFactoryValue},
-	{ noload_current_type,	0x2C,	40023,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ rated_current_type,	0x30,	40024,	0,		0,		0,		0, 	10, 	0, 	none_dsp,		table_setFactoryValue},
-	{ poles_type,			0x34,	40025,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ model_type,			0x38,	40026,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
-	{ motor_type_type,		0x3C,	40027,	0,		0,		3,		0,	1,		0, 	motor_type_dsp,	table_setFactoryValue},
-	{ gear_ratio_type,		0x40,	40028,	1,		1,		200,	0,	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ model_type,			0x20,	40020,	0,		0,		0,		0, 	1, 		0, 	none_dsp,		table_setFactoryValue},
+	{ motor_type_type,		0x24,	40021,	0,		0,		3,		0, 	1, 		0, 	motor_type_dsp,	table_setFactoryValue},
+	{ gear_ratio_type,		0x28,	40022,	1,		0,		200,	0, 	1, 		0,	none_dsp,		table_setFactoryValue},
+	{ fw_ver_type,			0x2C,	40023,	0,		0,		0,		0,	1, 		0, 	none_dsp,		table_setFactoryValue},
 
 
 	//    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, DSPcomm
@@ -471,20 +461,12 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 	if(status == 0) return 0;
 
 
-	if(value == CTRL_IN_Digital
-#ifdef SUPPORT_DI_AI_CONTROL
-		|| value == CTRL_IN_Din_Ain
-#endif
-	)
+	if(value == CTRL_IN_Digital	|| value == CTRL_IN_Din_Ain)
 	{
 		HDLR_setStopFlag(0); // init stop
 	}
 
-	if(value == CTRL_IN_Analog_V
-#ifdef SUPPORT_DI_AI_CONTROL
-		|| value == CTRL_IN_Din_Ain
-#endif
-	)
+	if(value == CTRL_IN_Analog_V || value == CTRL_IN_Din_Ain)
 	{
 		UTIL_startADC();
 	}
@@ -876,6 +858,59 @@ int8_t table_updateRange(void)
 	return 1;
 }
 
+int8_t table_getMotorType(void)
+{
+	int8_t status;
+	int32_t motor_type, value;
+
+	// read motor type from DSP
+	motor_type = COMM_getMotorType(&status);
+	if(status == 0)
+	{
+		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		return status;
+	}
+
+	value = table_getValue(motor_type_type);
+	if(value == MOTOR_NONE_TYPE)
+	{
+		// valid motor type value
+		if(motor_type > MOTOR_NONE_TYPE && motor_type < MOTOR_MAX_TYPE)
+		{
+			status = NVM_writeParam((PARAM_IDX_t)motor_type_type, motor_type);
+			table_data[motor_type_type] = motor_type;
+		}
+		else
+			status = 0;
+	}
+	else
+	{
+		// type is mis-matched
+		if(motor_type != value)	status = 0;
+	}
+
+	kprintf(PORT_DEBUG, " read motor type=%d, value=%d, status=%d  \r\n", motor_type, value, status);
+
+	return status;
+}
+
+int8_t table_updateFwVersion(void)
+{
+	int8_t status=1;
+	int32_t nvm_fw_ver;
+	int32_t fw_ver = (int32_t)((VERSION_MAJ<<8) | VERSION_MIN);
+
+	nvm_fw_ver = table_getValue(fw_ver_type);
+	if(nvm_fw_ver != fw_ver)
+	{
+		status = NVM_writeParam((PARAM_IDX_t)fw_ver_type, fw_ver);
+		table_data[fw_ver_type] = fw_ver;
+		kprintf(PORT_DEBUG, " need update! nvm_fw_ver=%d, fw_ver=%d status=%d \r\n", nvm_fw_ver, fw_ver, status);
+	}
+
+	return status;
+}
+
 int8_t table_init(void)
 {
 	int8_t status, errflag=0;
@@ -921,7 +956,7 @@ int8_t table_init(void)
 int8_t table_initNVM(void)
 {
 	int8_t status;
-	int32_t motor_type, value;
+	//int32_t motor_type, value;
 
 	// initialize EEPROM
 	if(table_isInit() == 1) // correctly initialize
@@ -943,33 +978,9 @@ int8_t table_initNVM(void)
 		status = table_initializeBlankEEPROM();
 	}
 
-	// read motor type from DSP
-	motor_type = COMM_getMotorType(&status);
-	if(status == 0)
-	{
-		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
-		return status;
-	}
+	status = table_getMotorType();
 
-	value = table_getValue(motor_type_type);
-	if(value == MOTOR_NONE_TYPE)
-	{
-		// valid motor type value
-		if(motor_type > MOTOR_NONE_TYPE && motor_type < MOTOR_MAX_TYPE)
-		{
-			status = NVM_writeParam((PARAM_IDX_t)motor_type_type, motor_type);
-			table_data[motor_type_type] = motor_type;
-		}
-		else
-			status = 0;
-	}
-	else
-	{
-		// type is mis-matched
-		if(motor_type != value)	status = 0;
-	}
-
-	kprintf(PORT_DEBUG, " read motor type=%d, value=%d, status=%d  \r\n", motor_type, value, status);
+	status = table_updateFwVersion();
 
 	return status;
 }
@@ -1272,11 +1283,7 @@ void table_initParam(void)
 	if(table_data[ctrl_in_type] == CTRL_IN_Digital)
 		EXI_DI_getStepValue(EXT_DI_INITIALIZE);
 
-	if(table_data[ctrl_in_type] == CTRL_IN_Analog_V
-#ifdef SUPPORT_DI_AI_CONTROL
-		|| table_data[ctrl_in_type] == CTRL_IN_Din_Ain
-#endif
-	)
+	if(table_data[ctrl_in_type] == CTRL_IN_Analog_V	|| table_data[ctrl_in_type] == CTRL_IN_Din_Ain)
 	{
 		// initialize AIN
 		EXT_AI_needReconfig();
@@ -1286,4 +1293,6 @@ void table_initParam(void)
 	// set dir_domain_type
 	param_table[dir_domain_type].param_func(dir_domain_type, table_data[dir_domain_type], REQ_FROM_TEST);
 	gear_ratio = (int16_t)table_getValue(gear_ratio_type);
+	if(gear_ratio == 0 || gear_ratio > param_table[gear_ratio_type].maxValue)
+		kprintf(PORT_DEBUG,"ERROR!! gear_ratio=%d \r\n", gear_ratio);
 }
