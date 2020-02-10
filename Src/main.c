@@ -1125,10 +1125,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+#ifdef SUPPORT_TASK_WATCHDOG
 void main_kickWatchdogNFC(void)
 {
 	watchdog_f |= WATCHDOG_NFC;
 }
+#endif
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */

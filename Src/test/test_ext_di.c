@@ -26,20 +26,27 @@ extern int16_t state_direction;
 extern int16_t st_overload;
 extern int16_t st_brake;
 
+extern uint8_t prev_emergency, prev_trip;
+
+extern uint8_t prev_run, prev_dir;
+
 extern uint8_t mdin_value[];
 extern DIN_PIN_NUM_t m_din;
 extern COMM_CMD_t test_cmd;
 extern uint8_t step_cmd;
 
+extern void HDLR_setStopFlag(uint8_t flag);
+
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option);
-
+extern int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t option);
+extern int8_t table_setMultiFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
 void test_clear(void)
 {
-	mdin_value[0] = 0;
-	mdin_value[1] = 0;
-	mdin_value[2] = 0;
+	mdin_value[0] = EXT_DI_INACTIVE;
+	mdin_value[1] = EXT_DI_INACTIVE;
+	mdin_value[2] = EXT_DI_INACTIVE;
 
 	state_run_stop = 0;
 	state_direction = 0;
@@ -50,7 +57,6 @@ void test_clear(void)
 	table_data[multi_Din_0_type] = DIN_unuse;
 	table_data[multi_Din_1_type] = DIN_unuse;
 	table_data[multi_Din_2_type] = DIN_unuse;
-	table_data[multi_Din_3_type] = DIN_unuse;
 
 	m_din.bit_H = EXT_DIN_COUNT;
 	m_din.bit_M = EXT_DIN_COUNT;
@@ -196,13 +202,13 @@ void test_convertMultiStep(void)
 	// use only 1 bit : low
 	l_index = 0;
 	func_set = DIN_freq_low;
-	mdin_value[l_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	result = EXT_DI_setupMultiFuncDin(l_index, func_set, REQ_FROM_TEST);
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
 	exp_step = 1;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -210,13 +216,13 @@ void test_convertMultiStep(void)
 	// use only 1 bit : mid
 	m_index = 0;
 	func_set = DIN_freq_mid;
-	mdin_value[m_index] = 0;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	result = EXT_DI_setupMultiFuncDin(m_index, func_set, REQ_FROM_TEST);
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[m_index] = 1;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
 	exp_step = 2;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -224,13 +230,13 @@ void test_convertMultiStep(void)
 	// use only 1 bit : high
 	h_index = 0;
 	func_set = DIN_freq_high;
-	mdin_value[h_index] = 0;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	result = EXT_DI_setupMultiFuncDin(h_index, func_set, REQ_FROM_TEST);
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[h_index] = 1;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 4;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -243,26 +249,26 @@ void test_convertMultiStep(void)
 	m_index = 1;
 	result = EXT_DI_setupMultiFuncDin(l_index, DIN_freq_low, REQ_FROM_TEST);
 	result = EXT_DI_setupMultiFuncDin(m_index, DIN_freq_mid, REQ_FROM_TEST);
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
 	exp_step = 1;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
 	exp_step = 2;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
 	exp_step = 3;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -272,26 +278,26 @@ void test_convertMultiStep(void)
 	m_index = 1;
 	result = EXT_DI_setupMultiFuncDin(h_index, DIN_freq_high, REQ_FROM_TEST);
 	result = EXT_DI_setupMultiFuncDin(m_index, DIN_freq_mid, REQ_FROM_TEST);
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 2;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 4;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 6;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -301,26 +307,26 @@ void test_convertMultiStep(void)
 	h_index = 1;
 	result = EXT_DI_setupMultiFuncDin(h_index, DIN_freq_high, REQ_FROM_TEST);
 	result = EXT_DI_setupMultiFuncDin(l_index, DIN_freq_low, REQ_FROM_TEST);
-	mdin_value[l_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 1;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 4;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 5;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -333,58 +339,58 @@ void test_convertMultiStep(void)
 	result = EXT_DI_setupMultiFuncDin(m_index, DIN_freq_mid, REQ_FROM_TEST);
 	result = EXT_DI_setupMultiFuncDin(l_index, DIN_freq_low, REQ_FROM_TEST);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 1;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 2;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 3;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 4;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 5;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 6;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 7;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -397,58 +403,58 @@ void test_convertMultiStep(void)
 	result = EXT_DI_setupMultiFuncDin(m_index, DIN_freq_mid, REQ_FROM_TEST);
 	result = EXT_DI_setupMultiFuncDin(l_index, DIN_freq_low, REQ_FROM_TEST);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 1;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 2;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 3;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 4;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 5;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 6;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 7;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
@@ -461,280 +467,354 @@ void test_convertMultiStep(void)
 	result = EXT_DI_setupMultiFuncDin(m_index, DIN_freq_mid, REQ_FROM_TEST);
 	result = EXT_DI_setupMultiFuncDin(l_index, DIN_freq_low, REQ_FROM_TEST);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 0;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 1;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 2;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 0;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_INACTIVE;
 	exp_step = 3;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 4;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 0;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_INACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 5;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 0;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_INACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 6;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 
-	mdin_value[l_index] = 1;
-	mdin_value[m_index] = 1;
-	mdin_value[h_index] = 1;
+	mdin_value[l_index] = EXT_DI_ACTIVE;
+	mdin_value[m_index] = EXT_DI_ACTIVE;
+	mdin_value[h_index] = EXT_DI_ACTIVE;
 	exp_step = 7;
 	step = EXT_DI_convertMultiStep();
 	TEST_ASSERT_EQUAL_INT(exp_step, step);
 }
 
 /*
- * 		test item : EXI_DI_handleDin
+ * 		test item : test_handleDinEmergency
  *
  *		1. set emergency_stop at index=0, check STOP_CMD, regardless ctrl_in
  * 		2. set external_trip at index=1, check STOP_CMD, regardless ctrl_in
- * 		3. set runPin at index=2, ctrl_in is not DIN, not send RUN CMD working
- * 		4. set ctrl_in = DIN, set run_pin=1, send RUN_CMD
- * 		5. set run_pin=1 in run state, not send RUN_CMD
- * 		6. set dir_pin at index=1 in run state, send DIR_F or DIR_R according to dir status
- *
  */
-void test_handleDin(void)
+void test_handleDinEmergency(void)
 {
 	uint8_t index;
 	DIN_config_t func_set;
 	uint8_t exp_pin;
 	int8_t result, exp_result;
 	COMM_CMD_t exp_cmd;
-	uint8_t exp_step;
 
 
 	table_setValue(ctrl_in_type, CTRL_IN_NFC, REQ_FROM_TEST); // not in CTRL_IN_Digital, but work
 	table_setStatusValue(run_status1_type, 1, REQ_FROM_TEST); // stop, forward
-	state_run_stop = 0;
-	state_direction = 0;
+	state_run_stop = CMD_STOP;
+	state_direction = CMD_DIR_F;
 
 	// set pin 0 as emergency_stop
 	index = 0;
 	func_set = DIN_emergency_stop;
+	prev_emergency = EXT_DI_INACTIVE;
 	exp_pin = index;
 	exp_result = 1;
 	result = EXT_DI_setupMultiFuncDin(index, func_set, REQ_FROM_TEST);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_pin, m_din.emergency_pin);
-	mdin_value[m_din.emergency_pin] = 0;
-	exp_result = 0; // not sending
-	result = EXI_DI_handleDin();
+	mdin_value[m_din.emergency_pin] = EXT_DI_INACTIVE;
+	exp_result = 1; // do nothing
+	result = EXI_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
+	// enable emergency stop
 	exp_result = 1;
-	mdin_value[m_din.emergency_pin] = 1;
+	mdin_value[m_din.emergency_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
-	result = EXI_DI_handleDin();
+	exp_result = 0;
+	result = EXI_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
+
+	// clear emergency
+	mdin_value[m_din.emergency_pin] = EXT_DI_INACTIVE;
 
 	// set pin 1 as external_trip
 	index = 1;
 	func_set = DIN_external_trip;
-	mdin_value[m_din.emergency_pin] = 0; // clear emergency
+	prev_trip = EXT_DI_INACTIVE;
 	exp_pin = index;
 	exp_result = 1;
 	result = EXT_DI_setupMultiFuncDin(index, func_set, REQ_FROM_TEST);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_pin, m_din.trip_pin);
-	mdin_value[m_din.trip_pin] = 0;
-	exp_result = 0; // not sending
-	result = EXI_DI_handleDin();
+	mdin_value[m_din.trip_pin] = EXT_DI_INACTIVE;
+	exp_result = 1; // do nothing
+	result = EXI_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
-	exp_result = 1;
-	mdin_value[m_din.trip_pin] = 1;
+	exp_result = 0;
+	mdin_value[m_din.trip_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
-	result = EXI_DI_handleDin();
+	result = EXI_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
+
+	// clear emergency and ext_trip
+	mdin_value[m_din.emergency_pin] = EXT_DI_INACTIVE;
+	mdin_value[m_din.trip_pin] = EXT_DI_INACTIVE;
 
 	// set pin 2 as run_pin
 	index = 2;
 	func_set = DIN_run;
-	mdin_value[m_din.emergency_pin] = 0;
-	mdin_value[m_din.trip_pin] = 0;
 	exp_pin = index;
 	exp_result = 1;
 	result = EXT_DI_setupMultiFuncDin(index, func_set, REQ_FROM_TEST);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_pin, m_din.run_pin);
-	mdin_value[m_din.run_pin] = 0; //STOP
-	exp_result = 0; // not send command
-	result = EXI_DI_handleDin();
+	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE; //STOP
+	exp_result = 1; // do nothing
+	result = EXI_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
-	mdin_value[m_din.run_pin] = 1; //RUN
-	exp_result = 0; // not send command, ctrl_in != DIN
-	result = EXI_DI_handleDin();
+	mdin_value[m_din.run_pin] = EXT_DI_ACTIVE; //RUN
+	exp_result = 1; // do nothing
+	result = EXI_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
+}
 
-	// set pin 1 as dir_pin
-	index = 1;
-	func_set = DIN_direction;
-	exp_pin = index;
-	exp_result = 1;
-	result = EXT_DI_setupMultiFuncDin(index, func_set, REQ_FROM_TEST);
-	TEST_ASSERT_EQUAL_INT(exp_result, result);
-	TEST_ASSERT_EQUAL_INT(exp_pin, m_din.dir_pin);
-	mdin_value[m_din.dir_pin] = 0;
-	exp_result = 0; // not send command
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_EQUAL_INT(exp_result, result);
+/*
+ * 		test item : EXI_DI_handleDin
+ *
+ * 		1. set run_pin=0, do nothing, run_pin=1,  send RUN_CMD,
+ * 		2. set dir_pin=1 in run state, send DIR_F
+ *
+ */
+void test_handleDin(void)
+{
+	int8_t result, exp_result;
+	COMM_CMD_t exp_cmd;
+	uint8_t exp_step;
 
-	mdin_value[m_din.dir_pin] = 1;
-	exp_result = 0; // not send command
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_EQUAL_INT(exp_result, result);
+	table_setStatusValue(run_status1_type, 1, REQ_FROM_TEST); // stop, forward
+	state_run_stop = CMD_STOP;
+	state_direction = CMD_DIR_F;
 
+	// initial setting
+	// DI_0 : DIN_run
+	// DI_1 : DIN_direction
+	EXT_DI_setupMultiFuncDin(0, DIN_run, REQ_FROM_TEST);
+	EXT_DI_setupMultiFuncDin(1, DIN_direction, REQ_FROM_TEST);
+	EXT_DI_setupMultiFuncDin(2, DIN_unuse, REQ_FROM_TEST);
 
-	mdin_value[m_din.emergency_pin] = 0;
-	mdin_value[m_din.dir_pin] = 0;
-	mdin_value[m_din.run_pin] = 0;
+	// initial test set
+	test_cmd = SPICMD_TEST_CMD;
+	prev_run = EXT_DI_INACTIVE;
+	prev_dir = EXT_DI_INACTIVE;
+	mdin_value[m_din.dir_pin] = EXT_DI_INACTIVE;
+	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE;
+
 	// set ctrl_in = DIN, STOP, FORWARD
-	table_setValue(ctrl_in_type, CTRL_IN_Digital, REQ_FROM_TEST);
-
-	// DIN config : emerg= 0, dir=1, run=2
-	exp_result = 0; // not send command, no change
-	result = EXI_DI_handleDin();
+	exp_result = 0; // do nothing
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// run
-	mdin_value[m_din.run_pin] = 1;
+	mdin_value[m_din.run_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_RUN;
-	exp_result = 0; // send RUN
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_NOT_EQUAL(exp_result, result);
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 4, REQ_FROM_TEST); // run
-	state_run_stop = CMD_RUN;
-	exp_result = 0; // not send command, no change
-	result = EXI_DI_handleDin();
+	exp_result = 0; // no change
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
-
 
 	// dir R
-	mdin_value[m_din.dir_pin] = 1;
+	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_DIR_R;
-	exp_result = 0; // send DIR_R
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_NOT_EQUAL(exp_result, result);
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x104, REQ_FROM_TEST); // run + R
-	state_direction = CMD_DIR_R;
-	exp_result = 0; // not send command, no change
-	result = EXI_DI_handleDin();
+	exp_result = 0; // no change
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
+	// dir F
+	mdin_value[m_din.dir_pin] = EXT_DI_INACTIVE;
+	exp_cmd = SPICMD_CTRL_DIR_F;
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
+
+	table_setStatusValue(run_status1_type, 0x4, REQ_FROM_TEST); // run + F
+	exp_result = 0; // no change
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// stop
-	mdin_value[m_din.run_pin] = 0;
+	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
-	exp_result = 0; // send STOP
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_NOT_EQUAL(exp_result, result);
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
+
+	table_setStatusValue(run_status1_type, 0x1, REQ_FROM_TEST); // stop + F
+	exp_result = 0; // no change
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_result, result);
+
+	table_setValueDir(dir_domain_type, DIR_FORWARD_ONLY, REQ_FROM_TEST); // set forward only
+
+	// dir R not working
+	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
+	exp_result = 0; // do nothing
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_result, result);
+
+	// restore dir F
+	mdin_value[m_din.dir_pin] = EXT_DI_INACTIVE;
+	exp_result = 0; // do nothing
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_result, result);
+
+	table_setValueDir(dir_domain_type, DIR_ALL, REQ_FROM_TEST); // set bi-directional
+
+	// dir R
+	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
+	exp_cmd = SPICMD_CTRL_DIR_R;
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x101, REQ_FROM_TEST); // stop + R
-	state_run_stop = CMD_STOP;
+	exp_result = 0; // no change
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
-	// set bit_H = 0, bit_L=1, run=2,
-	exp_result = 1;
-	result = EXT_DI_setupMultiFuncDin(0, DIN_freq_high, REQ_FROM_TEST);
+	table_setValueDir(dir_domain_type, DIR_REVERSE_ONLY, REQ_FROM_TEST); // set reverse only
+
+	// dir F not working
+	mdin_value[m_din.dir_pin] = EXT_DI_INACTIVE;
+	exp_result = 0; // do nothing
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
-	result = EXT_DI_setupMultiFuncDin(1, DIN_freq_low, REQ_FROM_TEST);
+
+	// restore dir R
+	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
+	exp_result = 0; // do nothing
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
-	mdin_value[m_din.bit_L] = 0;
-	mdin_value[m_din.bit_H] = 0;
+
+	table_setValueDir(dir_domain_type, DIR_ALL, REQ_FROM_TEST); // set bi-directional
+
+	table_setStatusValue(run_status1_type, 0x101, REQ_FROM_TEST); // stop + R
+	exp_result = 0; // no change
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_result, result);
+
+
+	// DI_0 : bit_H
+	// DI_1 : bit_L
+	// DI_2 : run-stop
+	EXT_DI_setupMultiFuncDin(0, DIN_freq_high, REQ_FROM_TEST);
+	EXT_DI_setupMultiFuncDin(1, DIN_freq_low, REQ_FROM_TEST);
+	EXT_DI_setupMultiFuncDin(2, DIN_run, REQ_FROM_TEST);
+	mdin_value[m_din.bit_L] = EXT_DI_INACTIVE;
+	mdin_value[m_din.bit_H] = EXT_DI_INACTIVE;
+	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE;
+	table_setMultiFreqValue(multi_val_1_type, 300, REQ_FROM_TEST);
+	table_setMultiFreqValue(multi_val_4_type, 400, REQ_FROM_TEST);
+	table_setMultiFreqValue(multi_val_5_type, 500, REQ_FROM_TEST);
 
 	// run
-	mdin_value[m_din.run_pin] = 1;
+	mdin_value[m_din.run_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_RUN;
-	exp_result = 0; // send RUN
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_NOT_EQUAL(exp_result, result);
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x104, REQ_FROM_TEST); // run + R
-	state_run_stop = CMD_RUN;
 
-	mdin_value[m_din.bit_H] = 1;
+	mdin_value[m_din.bit_H] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_PARAM_W;
-	exp_result = 1; // send freq
 	exp_step = 4;
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_EQUAL_INT(exp_result, result);
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
+	test_cmd = SPICMD_TEST_CMD;
 
-	mdin_value[m_din.bit_L] = 1;
+	mdin_value[m_din.bit_L] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_PARAM_W;
-	exp_result = 1; // send freq
 	exp_step = 5;
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_EQUAL_INT(exp_result, result);
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
+	test_cmd = SPICMD_TEST_CMD;
 
-	mdin_value[m_din.bit_H] = 0;
-	mdin_value[m_din.bit_L] = 0;
+	mdin_value[m_din.bit_H] = EXT_DI_INACTIVE;
+	mdin_value[m_din.bit_L] = EXT_DI_INACTIVE;
 	exp_cmd = SPICMD_PARAM_W;
-	exp_result = 1; // send freq
 	exp_step = 0;
-	result = EXI_DI_handleDin();
-	TEST_ASSERT_EQUAL_INT(exp_result, result);
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
+	test_cmd = SPICMD_TEST_CMD;
 
 	// stop
-	mdin_value[m_din.run_pin] = 0;
+	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
 	exp_result = 1; // send STOP
-	result = EXI_DI_handleDin();
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
+	test_cmd = SPICMD_TEST_CMD;
+
+	// stop is in progress, no step change is applied
+	mdin_value[m_din.bit_H] = EXT_DI_INACTIVE;
+	mdin_value[m_din.bit_L] = EXT_DI_ACTIVE;
+	exp_cmd = SPICMD_TEST_CMD;
+	exp_step = 0;
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
+	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
 
 	table_setStatusValue(run_status1_type, 0x101, REQ_FROM_TEST); // stop + R
-	state_run_stop = CMD_STOP;
 
+	// end of STOP than apply change
+	exp_cmd = SPICMD_PARAM_W;
+	exp_step = 1;
+	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
+	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
 }
 
 #endif

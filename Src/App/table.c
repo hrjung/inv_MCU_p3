@@ -139,14 +139,14 @@ STATIC Param_t param_table[] =
 	{ multi_Din_0_type,		0x300,	40300,	0,		0,		8,		1,	1, 		1, 	none_dsp,		table_setDinValue	},
 	{ multi_Din_1_type,		0x304,	40301,	0,		0,		8,		1,	1, 		1, 	none_dsp,		table_setDinValue	},
 	{ multi_Din_2_type,		0x308,	40302,	0,		0,		8,		1,	1, 		1, 	none_dsp,		table_setDinValue	},
-	{ multi_val_0_type,		0x30C,	40303,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
-	{ multi_val_1_type,		0x310,	40304,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
-	{ multi_val_2_type,		0x314,	40305,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
-	{ multi_val_3_type,		0x318,	40306,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
-	{ multi_val_4_type,		0x31C,	40307,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
-	{ multi_val_5_type,		0x320,	40308,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
-	{ multi_val_6_type,		0x324,	40309,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
-	{ multi_val_7_type,		0x328,	40310,	200,	100,	800,	1, 	10, 	1, 	none_dsp,			table_setMultiFreqValue, },
+	{ multi_val_0_type,		0x30C,	40303,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
+	{ multi_val_1_type,		0x310,	40304,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
+	{ multi_val_2_type,		0x314,	40305,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
+	{ multi_val_3_type,		0x318,	40306,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
+	{ multi_val_4_type,		0x31C,	40307,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
+	{ multi_val_5_type,		0x320,	40308,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
+	{ multi_val_6_type,		0x324,	40309,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
+	{ multi_val_7_type,		0x328,	40310,	200,	100,	800,	1, 	10, 	1, 	none_dsp,		table_setMultiFreqValue, },
 	{ multi_Dout_0_type,	0x32C,	40311,	0,		0,		5,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ multi_Dout_1_type,	0x330,	40312,	0,		0,		5,		1,	1, 		1, 	none_dsp,		table_setValue	},
 	{ v_in_min_type,		0x334,	40313,	10,		0,		100,	1,	10, 	1, 	none_dsp,		table_setAinValue	},
@@ -711,6 +711,7 @@ int8_t table_initializeBlankEEPROM(void)
 
 	//NVM_clear();
 	//printf("initialize blank EEPROM...\r\n");
+	// initialize all parameter in table
 	for(i=0; i<PARAM_TABLE_SIZE; i++)
 	{
 		status = NVM_writeParam((PARAM_IDX_t)i, param_table[i].initValue);
@@ -725,33 +726,18 @@ int8_t table_initializeBlankEEPROM(void)
 
 	kprintf(PORT_DEBUG, "0: err=%d\r\n", errflag);
 
-	// initialize error, status
-	for(i=err_code_1_type; i<PARAM_TABLE_SIZE; i++)
-	{
-		status = NVM_writeParam((PARAM_IDX_t)i, param_table[i].initValue);
-		if(status == 0) errflag++;
-
-		table_data[i] = param_table[i].initValue;
-		//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
-#ifdef SUPPORT_TASK_WATCHDOG
-		watchdog_f= 0x1F; // WATCHDOG_ALL; to kick watchdog in case of no NFC B/D
-#endif
-	}
-
-	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
-
 	// init system param
 	status = NVM_initSystemParam();
 	if(status == 0) errflag++;
 
 	HDLR_clearBackupFlag();
 
-	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
+	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 
 	status = NVM_initTime();
 	if(status == 0) errflag++;
 
-	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
+	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
 
 	NVM_setInit();
 

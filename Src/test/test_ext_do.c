@@ -27,8 +27,7 @@ extern uint8_t mdout_value[];
 extern void test_clear(void);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 //extern int32_t table_getStatusValue(int16_t index);
-extern void table_setStatusValue(int16_t index, int32_t value, int16_t option);
-
+extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option);
 /*
  * 		test item : EXT_DO_handleDout
  *

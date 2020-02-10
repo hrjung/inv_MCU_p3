@@ -322,10 +322,12 @@ extern void test_sendCommand(void);
 //ext_io
 extern void test_setupMultiFuncDin(void);
 extern void test_convertMultiStep(void);
+extern void test_handleDinEmergency(void);
 extern void test_handleDin(void);
 extern void test_handleDout(void);
 extern void test_getFreq(void);
 extern void test_handleAin(void);
+extern void test_handleDAin(void);
 // table
 extern void test_setFreqValue(void);
 extern void test_setFreqRange(void);
@@ -1425,7 +1427,7 @@ STATIC int utest_ser(uint8_t dport)
 
 	UNITY_BEGIN();
 
-#if 1
+#if 0
 	// add nvm_queue test
 	RUN_TEST(test_nfc_q_basic);
 	RUN_TEST(test_nfc_q_muliple);
@@ -1442,13 +1444,13 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_parseValue);
 	RUN_TEST(test_parseMessage);
 	RUN_TEST(test_sendCommand);
-
 #endif
 
-#if 1
-	// ext_di_
+#if 0
+	// ext_di
 	RUN_TEST(test_setupMultiFuncDin);
 	RUN_TEST(test_convertMultiStep);
+	RUN_TEST(test_handleDinEmergency);
 	RUN_TEST(test_handleDin);
 
 	//ext_do
@@ -1458,15 +1460,19 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_getFreq);
 	RUN_TEST(test_handleAin);
 #endif
+	RUN_TEST(test_handleDAin);
+
+
+#if 0
 	// table
 	RUN_TEST(test_NvmAddr);
 	RUN_TEST(test_ModbusAddr);
 	RUN_TEST(test_setFreqRange);
 	RUN_TEST(test_setFreqValue);
 	RUN_TEST(test_setValue);
+#endif
 
-
-#if 1
+#if 0
 	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);
@@ -1478,12 +1484,13 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_modbusFC06);
 	//RUN_TEST(test_modbusFC16);
 #endif
+
 	UNITY_END();
 
 	kputs(dport, " End of Unit Test!\r\n Reset Device!!\r\n");
 
 	//UARTFlushTx(0);
-	while(1); // cause device reset by watchdog
+	//while(1); // cause device reset by watchdog
 
 	return 0;
 }

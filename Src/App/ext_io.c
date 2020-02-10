@@ -214,7 +214,7 @@ int8_t EXI_DI_handleEmergency(void)
 			ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
 			prev_emergency = mdin_value[m_din.emergency_pin];
 
-			return 1;
+			return 0;
 		}
 		prev_emergency = mdin_value[m_din.emergency_pin];
 	}
@@ -228,7 +228,7 @@ int8_t EXI_DI_handleEmergency(void)
 			ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
 			prev_trip = mdin_value[m_din.trip_pin];
 
-			return 1;
+			return 0;
 		}
 		prev_trip = mdin_value[m_din.trip_pin];
 	}
@@ -248,7 +248,7 @@ int8_t EXI_DI_setMultiFreqValue(void)
 		freq_value = table_getValue(multi_val_0_type+step);
 		step_cmd = step; // for test
 
-		if(di_freq_val != freq_value)
+		if(di_freq_val != freq_value) // if current multi-step is step, then apply this change to di_freq_val
 		{
 			status = table_setFreqValue(value_type, freq_value, REQ_FROM_EXTIO);
 			kprintf(PORT_DEBUG, "table_setMultiFreqValue di_freq_val = %d \r\n", freq_value);
@@ -307,7 +307,7 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 	int32_t dir_ctrl;
 	int32_t freq_step;
 	uint8_t step=0;
-	int8_t status;
+	int8_t status, result=1;
 	uint16_t dummy[3] = {0,0,0};
 
 	if(ctrl_in == CTRL_IN_Digital) // only DI control
@@ -362,12 +362,11 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 			status = COMM_sendMessage(test_cmd, dummy);
 			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
 #endif
-			{
-				//HDLR_setStartRunTime(); // set Run start time, count
-				HDLR_setStopFlag(0);
-				prev_run = mdin_value[m_din.run_pin];
-			}
+			HDLR_setStopFlag(0);
+			prev_run = mdin_value[m_din.run_pin];
 		}
+		else
+			result = 0;
 
 		//prev_run = mdin_value[m_din.run_pin];
 	}
@@ -375,6 +374,7 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 	// handle direction
 	if(m_din.dir_pin != EXT_DIN_COUNT)
 	{
+		//kprintf(PORT_DEBUG, "CMD_DIR: dir_pin=%d, prev=%d, direct=%d \r\n", mdin_value[m_din.dir_pin], prev_dir, state_direction);
 		dir_ctrl = table_getValue(dir_domain_type);
 		if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE
 			&& prev_dir == EXT_DI_ACTIVE
@@ -394,11 +394,13 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 #endif
 					prev_dir = mdin_value[m_din.dir_pin];
 			}
+			else
+				result = 0;
 
 		}
 		else if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE
 				&& prev_dir == EXT_DI_INACTIVE
-				&& state_direction != CMD_DIR_R)	// // forward -> reverse
+				&& state_direction != CMD_DIR_R)	// forward -> reverse
 		{
 			// send RVS cmd
 			if(dir_ctrl != DIR_FORWARD_ONLY)
@@ -414,10 +416,14 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 #endif
 					prev_dir = mdin_value[m_din.dir_pin];
 			}
+			else
+				result = 0;
 		}
+		else
+			result = 0;
 	}
 
-	return 1;
+	return result;
 }
 
 int EXT_DO_isValid(void)
@@ -557,8 +563,6 @@ int32_t EXT_AI_getFreq(uint16_t adc_val)
 
 	if(adc_val <= 60) return 0; // stop for minimum adc value
 
-	if(adc_val <= 60) return 0; // stop for minimum adc value
-
 	if(V_val >= V_ai_max) { freq_l = (int32_t)(freq_max*10.0 + 0.05); return freq_l; }
 
 	if(V_val <= V_ai_min) { freq_l = (int32_t)(freq_min*10.0 + 0.05); return 0; } // below Vmin then stop
@@ -577,7 +581,7 @@ int8_t EXT_AI_handleAin(void)
 	uint16_t value;
 	int32_t freq, diff=0;
 	uint16_t dummy[3] = {0,0,0};
-	int8_t status;
+	int8_t status=1;
 
 	// read config, can be updated during running
 	EXT_AI_setConfig();
@@ -644,7 +648,7 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 {
 	uint16_t value;
 	int32_t freq, diff=0;
-	int8_t status;
+	int8_t status, result=1;
 
 	// read config, can be updated during running
 	EXT_AI_setConfig();
@@ -665,12 +669,12 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 #ifndef SUPPORT_UNIT_TEST
 		status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
 		if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-#endif
 		else // if error, not update
+#endif
 			prev_adc_cmd = freq;
 	}
 
-	EXI_DI_handleDin(ctrl_in);
+	result = EXI_DI_handleDin(ctrl_in);
 
-	return 1;
+	return result;
 }

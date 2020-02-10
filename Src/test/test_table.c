@@ -78,9 +78,10 @@ void test_setFreqRange(void)
 
 	table_setStatusValue(run_status1_type, 1, REQ_FROM_TEST); // STOP
 
+	// set valid min_freq=15Hz
 	index = freq_min_type;
-	freq = 50;
-	exp_freq = 50;
+	freq = 150;
+	exp_freq = 150;
 	exp_status = 1;
 	status = table_runFunc(index, freq, REQ_FROM_TEST);
 	TEST_ASSERT_EQUAL_INT(exp_status, status);
@@ -90,8 +91,8 @@ void test_setFreqRange(void)
 		TEST_ASSERT_EQUAL_INT(exp_freq, param_table[r_idx[i]].minValue);
 
 	// range error, no change
-	freq = 5;
-	exp_freq = 50;
+	freq = 50; // 5Hz
+	exp_freq = 150;
 	exp_status = 0;
 	status = table_runFunc(index, freq, REQ_FROM_TEST);
 	value = table_getValue(index);
@@ -99,7 +100,7 @@ void test_setFreqRange(void)
 	TEST_ASSERT_EQUAL_INT(exp_freq, value);
 
 	// cannot set freq under freq_min
-	freq = 30;
+	freq = 100; // set 10Hz
 	exp_freq = table_getValue(value_type);
 	exp_status = 0;
 	status = table_runFunc(value_type, freq, REQ_FROM_TEST);
@@ -114,10 +115,10 @@ void test_setFreqRange(void)
 	status = table_runFunc(value_type, freq, REQ_FROM_TEST);
 	TEST_ASSERT_EQUAL_INT(exp_status, status);
 
-
+	// set valid max_freq = 70Hz
 	index = freq_max_type;
-	freq = 800;
-	exp_freq = 800;
+	freq = 700;
+	exp_freq = 700;
 	exp_status = 1;
 	status = table_runFunc(index, freq, REQ_FROM_TEST);
 	TEST_ASSERT_EQUAL_INT(exp_status, status);
@@ -127,8 +128,8 @@ void test_setFreqRange(void)
 		TEST_ASSERT_EQUAL_INT(exp_freq, param_table[r_idx[i]].maxValue);
 
 	// range error, no change
-	freq = 2050;
-	exp_freq = 800;
+	freq = 850; // 75Hz
+	exp_freq = 700;
 	exp_status = 0;
 	status = table_runFunc(index, freq, REQ_FROM_TEST);
 	value = table_getValue(index);
@@ -136,7 +137,7 @@ void test_setFreqRange(void)
 	TEST_ASSERT_EQUAL_INT(exp_freq, value);
 
 	// cannot set freq over freq_max
-	freq = 850;
+	freq = 750; // 75Hz
 	exp_freq = table_getValue(value_type);
 	exp_status = 0;
 	status = table_runFunc(value_type, freq, REQ_FROM_TEST);
@@ -145,7 +146,7 @@ void test_setFreqRange(void)
 	TEST_ASSERT_EQUAL_INT(exp_freq, value); // not changed
 
 	// cannot set on running
-	state_run_stop = 1; // RUN
+	state_run_stop = CMD_RUN; // RUN
 	freq = 600;
 	exp_freq = table_getValue(index);
 	exp_status = 0;
@@ -767,19 +768,13 @@ void test_setValue(void)
 
 
 	// try set value of read only parameter, NOK
-	index = noload_current_type;
-	set_val = 20;
-	exp_status = 0;
-	status = table_runFunc(index, set_val, REQ_FROM_TEST);
-	TEST_ASSERT_EQUAL_INT(exp_status, status);
-
 	index = gear_ratio_type;
 	set_val = 20;
 	exp_status = 0;
 	status = table_runFunc(index, set_val, REQ_FROM_TEST);
 	TEST_ASSERT_EQUAL_INT(exp_status, status);
 
-	index = err_current_0_type;
+	index = err_current_1_type;
 	set_val = 20;
 	exp_status = 0;
 	status = table_runFunc(index, set_val, REQ_FROM_TEST);
@@ -853,7 +848,7 @@ void test_NvmAddr(void)
 	uint16_t exp_addr;
 
 	exp_addr = param_table[value_type].addr;
-	for(index=value_type; index<=acc_base_set_type; index++)
+	for(index=value_type; index<=dir_domain_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].addr);
 		exp_addr += 4;
@@ -867,7 +862,7 @@ void test_NvmAddr(void)
 	}
 
 	exp_addr = param_table[ovl_warn_limit_type].addr;
-	for(index=ovl_warn_limit_type; index<=fan_onoff_type; index++)
+	for(index=ovl_warn_limit_type; index<=modify_lock_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].addr);
 		exp_addr += 4;
@@ -880,29 +875,22 @@ void test_NvmAddr(void)
 		exp_addr += 4;
 	}
 
-	exp_addr = param_table[Rs_type].addr;
-	for(index=Rs_type; index<=rated_freq_type; index++)
-	{
-		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].addr);
-		exp_addr += 4;
-	}
-
 	exp_addr = param_table[model_type].addr;
-	for(index=model_type; index<=operating_hour_type; index++)
+	for(index=model_type; index<=fw_ver_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].addr);
 		exp_addr += 4;
 	}
 
-	exp_addr = param_table[err_date_0_type].addr;
-	for(index=err_date_0_type; index<=err_freq_4_type; index++)
+	exp_addr = param_table[err_code_1_type].addr;
+	for(index=err_code_1_type; index<=err_freq_5_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].addr);
 		exp_addr += 4;
 	}
 
 	exp_addr = param_table[run_status1_type].addr;
-	for(index=run_status1_type; index<=mtr_temperature_type; index++)
+	for(index=run_status1_type; index<=operating_hour_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].addr);
 		exp_addr += 4;
@@ -915,7 +903,7 @@ void test_ModbusAddr(void)
 	uint16_t exp_addr;
 
 	exp_addr = param_table[value_type].mb_addr;
-	for(index=value_type; index<=acc_base_set_type; index++)
+	for(index=value_type; index<=dir_domain_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].mb_addr);
 		exp_addr++;
@@ -929,7 +917,7 @@ void test_ModbusAddr(void)
 	}
 
 	exp_addr = param_table[ovl_warn_limit_type].mb_addr;
-	for(index=ovl_warn_limit_type; index<=fan_onoff_type; index++)
+	for(index=ovl_warn_limit_type; index<=modify_lock_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].mb_addr);
 		exp_addr++;
@@ -942,29 +930,22 @@ void test_ModbusAddr(void)
 		exp_addr++;
 	}
 
-	exp_addr = param_table[Rs_type].mb_addr;
-	for(index=Rs_type; index<=rated_freq_type; index++)
-	{
-		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].mb_addr);
-		exp_addr++;
-	}
-
 	exp_addr = param_table[model_type].mb_addr;
-	for(index=model_type; index<=operating_hour_type; index++)
+	for(index=model_type; index<=fw_ver_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].mb_addr);
 		exp_addr++;
 	}
 
-	exp_addr = param_table[err_date_0_type].mb_addr;
-	for(index=err_date_0_type; index<=err_freq_4_type; index++)
+	exp_addr = param_table[err_code_1_type].mb_addr;
+	for(index=err_code_1_type; index<=err_freq_5_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].mb_addr);
 		exp_addr++;
 	}
 
 	exp_addr = param_table[run_status1_type].mb_addr;
-	for(index=run_status1_type; index<=mtr_temperature_type; index++)
+	for(index=run_status1_type; index<=operating_hour_type; index++)
 	{
 		TEST_ASSERT_EQUAL_INT(exp_addr, param_table[index].mb_addr);
 		exp_addr++;

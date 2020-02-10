@@ -131,12 +131,14 @@ int8_t HDLR_handleDspError(void)
 		}
 		else
 		{
+#ifndef SUPPORT_UNIT_TEST
 			// request DSP error info
 			status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
 			if(status == COMM_SUCCESS)
 			{
 				err_code = table_getValue(err_code_1_type);
 			}
+#endif
 #if 0
 			// store dev_on_time, in case of power off
 			if(err_code == TRIP_REASON_VDC_UNDER)
@@ -167,9 +169,11 @@ int8_t HDLR_readDspStatus(void)
 
 	 if(!ERR_isCommError()) // no comm error
 	 {
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_REQ_ST, dummy);
 		if(status == COMM_FAILED)
 			kputs(PORT_DEBUG, "HDLR_readDspStatus error!!\r\n");
+#endif
 
 		//kprintf(PORT_DEBUG, "HDLR_readDspStatus send SPICMD_REQ_ST status=%d\r\n", status);
 	 }
@@ -209,6 +213,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 	{
 	case RUN_STOP_FLAG_RUN:
 		// send run to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
@@ -217,11 +222,13 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 			prev_run_stop = run_stop;
 			//HDLR_setStartRunTime(); // set Run start time
 		}
+#endif
 		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
 		break;
 
 	case RUN_STOP_FLAG_STOP:
 		// send stop to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
@@ -229,6 +236,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 			NVM_clearRunStopFlag();
 			prev_run_stop = run_stop;
 		}
+#endif
 		kprintf(PORT_DEBUG, "STOP Flag, send to DSP status=%d\r\n", status);
 		break;
 
@@ -258,9 +266,11 @@ int8_t HDLR_handleRunStopFlagModbus(void)
 	case RUN_STOP_FLAG_RUN:
 		HDLR_setStopFlag(0); // clear stop
 		// send run to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
+#endif
 		{
 			HDLR_clearRunStopFlagModbus();
 			//HDLR_setStartRunTime(); // set Run start time
@@ -271,9 +281,11 @@ int8_t HDLR_handleRunStopFlagModbus(void)
 	case RUN_STOP_FLAG_STOP:
 		HDLR_setStopFlag(1); // start stop
 		// send stop to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
+#endif
 		{
 			HDLR_clearRunStopFlagModbus();
 		}
