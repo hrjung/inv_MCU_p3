@@ -51,6 +51,10 @@ extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
 
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern int8_t table_initStatusError(uint16_t index);
+
+extern int8_t table_getMotorType(void);
+extern int8_t table_updateFwVersion(void);
+
 #ifdef SUPPORT_TASK_WATCHDOG
 extern void main_kickWatchdogNFC(void);
 #endif
@@ -530,6 +534,10 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 
 	NVM_setCRC();
 
+	status = table_getMotorType(); //initialize motor_type
+
+	status = table_updateFwVersion(); // initialize FW version
+
 	kprintf(PORT_DEBUG, "HDLR_initNVM() Done \r\n");
 
 	if(errflag) return 0;
@@ -676,33 +684,9 @@ int8_t HDLR_isBackupEnabled(void)
 	return (mb_backup_mode_f != 0 || NVM_isBackupCmd() != 0);
 }
 
-int8_t HDLR_setBackupAvailableFlag(int32_t flag)
-{
-	int8_t nvm_status;
-	int32_t addr=0;
-
-	addr = NVM_BACKUP_FLAG_ADDR;
-	nvm_status = NVM_write(addr, flag);
-	if(nvm_status == 0) return 0;
-
-	return 1;
-}
-
 int8_t HDLR_clearBackupFlag(void)
 {
-	return HDLR_setBackupAvailableFlag((int32_t)0);
-}
-
-int HDLR_isBackupAvailable(void)
-{
-	int8_t nvm_status;
-	int32_t addr=0, value=0;
-
-	addr = NVM_BACKUP_FLAG_ADDR;
-	nvm_status = NVM_read(addr, &value);
-	if(nvm_status == 0) return 0;
-
-	return (value == NVM_BACKUP_AVAILABLE_F);
+	return NVM_setBackupAvailableFlag((int32_t)0);
 }
 
 // store table parameter to backup area in EEPROM
@@ -723,7 +707,7 @@ int8_t HDLR_backupParameter(void)
 		osDelay(5);
 	}
 
-	nvm_status = HDLR_setBackupAvailableFlag(NVM_BACKUP_AVAILABLE_F);
+	nvm_status = NVM_setBackupAvailableFlag(NVM_BACKUP_AVAILABLE_F);
 	if(nvm_status == 0) {kprintf(PORT_DEBUG,"set NVM backup flag error\r\n"); errflag++;}
 
 	kprintf(PORT_DEBUG,"NVM backup finished err=%d\r\n", errflag);

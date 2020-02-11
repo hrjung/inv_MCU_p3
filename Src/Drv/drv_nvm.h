@@ -9,8 +9,12 @@
 #ifndef SRC_DRV_NVM_H_
 #define SRC_DRV_NVM_H_
 
+
 #define 	NVM_NOK		0
 #define 	NVM_OK		1
+
+#define NVM_BACKUP_START_ADDR	0x600
+#define NVM_BACKUP_AVAILABLE_F	(0x5555)
 
 enum
 {
@@ -69,5 +73,7 @@ extern void NVM_clearInitParamCmd(void);
 extern uint8_t NVM_isBackupCmd(void);
 extern int8_t NVM_getBackupCmdNfc(void);
 extern void NVM_clearBackupCmd(void);
+extern int8_t NVM_setBackupAvailableFlag(int32_t flag);
+extern int NVM_isBackupAvailable(void);
 
 #endif /* SRC_DRV_NVM_H_ */

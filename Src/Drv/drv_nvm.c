@@ -18,8 +18,7 @@
 #include "drv_nvm.h"
 
 
-//#define INTERNAL_DEV_COUNTER		0x5A0
-//#define INTERNAL_RUN_REMAIN_TIME	0x5A4
+#define NVM_BACKUP_FLAG_ADDR	0x5F8
 
 //#define TABLE_SIZE_MAX	250
 #if 0
@@ -582,6 +581,30 @@ void NVM_clearInitParamCmd(void)
 		if(status == 1)
 			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_INIT_NVM);
 	}
+}
+
+int8_t NVM_setBackupAvailableFlag(int32_t flag)
+{
+	int8_t nvm_status;
+	int32_t addr=0;
+
+	addr = NVM_BACKUP_FLAG_ADDR;
+	nvm_status = NVM_write(addr, flag);
+	if(nvm_status == 0) return 0;
+
+	return 1;
+}
+
+int NVM_isBackupAvailable(void)
+{
+	int8_t nvm_status;
+	int32_t addr=0, value=0;
+
+	addr = NVM_BACKUP_FLAG_ADDR;
+	nvm_status = NVM_read(addr, &value);
+	if(nvm_status == 0) return 0;
+
+	return (value == NVM_BACKUP_AVAILABLE_F);
 }
 
 void NVM_clearBackupCmd(void)

@@ -492,7 +492,7 @@ int8_t COMM_parseMessage(void)
 		table_setExtStatusValue();
 
 		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST run_freq=%d freq=%f \r\n", (int32_t)run_freq_index, (int32_t)run_freq_f);
-#ifdef SUPPORT_NFC_OLD
+
 		// update EEPROM while NFC tagged
 		if(NVM_isNfcMonitoring())
 		{
@@ -507,10 +507,6 @@ int8_t COMM_parseMessage(void)
 		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 		time_cnt = sTime.Seconds;
 		kprintf(PORT_DEBUG, "cnt=%d : SPICMD_RESP_ST freq=%d \r\n",time_cnt, (int32_t)(10.0*run_freq_index + 0.05));
-#endif
-
-#else
-		// TODO: update mailbox
 #endif
 
 

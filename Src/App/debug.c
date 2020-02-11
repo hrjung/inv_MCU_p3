@@ -819,7 +819,7 @@ STATIC int backup_ser(uint8_t dport)
 
 	if(arg_c == 1)
 	{
-		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_isBackupEnabled(), HDLR_isBackupAvailable());
+		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_isBackupEnabled(), NVM_isBackupAvailable());
 		return -1;
 	}
 	else if(arg_c == 2)

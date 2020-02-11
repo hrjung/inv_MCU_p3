@@ -190,8 +190,8 @@ int MB_isValidRecvPacket(void)
 void MB_TaskFunction(void)
 {
 	int8_t result=0;
-	RTC_TimeTypeDef sTime;
-	uint8_t time_val;
+//	RTC_TimeTypeDef sTime;
+//	uint8_t time_val;
 
 	// get data from 485
 	if(mb_frame_received)

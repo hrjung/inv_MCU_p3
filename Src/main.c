@@ -1334,7 +1334,7 @@ void NfcNvmTaskFunc(void const * argument)
 				  status = HDLR_backupParameter();
 				  if(status == 0) kputs(PORT_DEBUG, "HDLR_backupParameter ERROR\r\n");
 			  }
-			  else if(nvm_backup == MB_BACKUP_RESTORE && HDLR_isBackupAvailable()) // restore
+			  else if(nvm_backup == MB_BACKUP_RESTORE && NVM_isBackupAvailable()) // restore
 			  {
 				  status = HDLR_restoreParameter(); // restore NVM
 				  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
