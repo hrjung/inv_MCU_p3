@@ -30,10 +30,12 @@ uint8_t dtm_test_val=0;
 
 LED_status_t LED_state[3] =
 {
-	{0, GPIO_PIN_RESET},
-	{0, GPIO_PIN_RESET},
-	{0, GPIO_PIN_RESET},
+	{0, GPIO_PIN_RESET},	// R
+	{0, GPIO_PIN_RESET},	// G
+	{0, GPIO_PIN_RESET},	// B
 };
+
+static uint8_t LED_update_f=0;
 
 static uint8_t din[EXT_DIN_COUNT][EXT_DIN_SAMPLE_CNT] = {0};
 static uint8_t dtm[2][EXT_DIN_SAMPLE_CNT] = {0};
@@ -67,6 +69,12 @@ void UTIL_setTestPin(uint8_t index, uint8_t onoff)
 // support only 1 color or off
 void UTIL_setLED(uint8_t color, uint8_t blink_on)
 {
+	static uint8_t color_state=LED_COLOR_OFF;
+	static uint8_t blink_state=0;
+
+	if(color == color_state && blink_on == blink_state) return; // no change
+
+	LED_update_f = 1;
 	switch(color)
 	{
 	case LED_COLOR_OFF:
@@ -142,6 +150,9 @@ void UTIL_setLED(uint8_t color, uint8_t blink_on)
 	default :
 		break;
 	}
+
+	color_state = color;
+	blink_state = blink_on;
 }
 
 void UTIL_handleLED(void)
@@ -155,6 +166,8 @@ void UTIL_handleLED(void)
 	{
 		UTIL_setLED(LED_COLOR_R, 1);
 	}
+
+	if(LED_update_f == 0) return ; // no change
 
 	if(LED_state[0].onoff == GPIO_PIN_SET)
 	{
@@ -178,13 +191,15 @@ void UTIL_handleLED(void)
 
 	if(LED_state[2].onoff == GPIO_PIN_SET)
 	{
-		if(LED_state[1].blink)
+		if(LED_state[2].blink)
 			HAL_GPIO_TogglePin(B_LED_GPIO_Port, B_LED_Pin);
 		else
 			HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_SET);
 	}
 	else
 		HAL_GPIO_WritePin(B_LED_GPIO_Port, B_LED_Pin, GPIO_PIN_RESET);
+
+	LED_update_f=0; // clear after update done.
 }
 
 uint8_t UTIL_readDTMpin(void)

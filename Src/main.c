@@ -183,6 +183,7 @@ uint32_t timer_100ms=0;
 uint32_t device_min_cnt=0;
 uint32_t dev_start_time=0;
 
+uint16_t led_blink_cnt=0;
 
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
@@ -1131,6 +1132,7 @@ void main_kickWatchdogNFC(void)
 	watchdog_f |= WATCHDOG_NFC;
 }
 #endif
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1142,16 +1144,22 @@ void main_kickWatchdogNFC(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
-
   /* USER CODE BEGIN 5 */
+  uint16_t led_count=0;
+
   osDelay(800);
   kputs(PORT_DEBUG, "start DefaultTask\r\n");
   /* Infinite loop */
   for(;;)
   {
+    if(led_count != led_blink_cnt) // every 1sec
+    {
+    	UTIL_handleLED(); // handling 3 color LED
+    	led_count = led_blink_cnt;
+    }
 
 #ifdef SUPPORT_TASK_WATCHDOG
-	if(main_handler_f == 0)
+	if(main_handler_f == 0) // only mainHandler task available
 	{
 		HAL_IWDG_Refresh(&hiwdg); // kick
 	}
@@ -1166,7 +1174,7 @@ void StartDefaultTask(void const * argument)
 #endif
 
 	default_cnt++;
-    osDelay(50);
+    osDelay(100);
   }
   /* USER CODE END 5 */ 
 }
@@ -1749,7 +1757,8 @@ void AccReadTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN AccReadTimerCallback */
 
-  UTIL_handleLED(); // handling 3 color LED
+  led_blink_cnt++;
+  if(led_blink_cnt > 30000) led_blink_cnt=0;
 
   //HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
   /* USER CODE END AccReadTimerCallback */
