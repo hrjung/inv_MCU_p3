@@ -626,6 +626,8 @@ int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 		//state_run_stop = (value>>8)&0x01;
 
 		state_direction = (value>>8)&0x01; 	// forward/backward
+
+		NVM_setMotorStatus((int32_t)state_run_stop); // set NFC App flag
 	}
 	else if(index == run_status2_type)
 	{

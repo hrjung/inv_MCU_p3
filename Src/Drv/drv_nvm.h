@@ -63,6 +63,7 @@ extern int8_t NVM_setMotorRunTimeMinute(uint32_t r_time);
 extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
 extern void NVM_setCRC(void);
 
+extern void NVM_setMotorStatus(int32_t status);
 extern int NVM_getSysParamUpdateIndex(void);
 
 extern void NVM_getCommandParam(void);

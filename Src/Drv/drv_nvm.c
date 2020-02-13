@@ -62,7 +62,7 @@ STATIC Param_sys_t sys_table[] =
 		{ SYSTEM_PARAM_CRC_VALUE, 			404,	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_IS_INITIATED, 		408, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_HAS_SYSTEM_ERROR, 	412, 	NO_CHANGE,		0},
-		{ SYSTEM_PARAM_ENABLE_NFC_WRITER,	416, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_ENABLE_NFC_WRITER,	416, 	NO_CHANGE,		0}, // flag for motor running
 
 		{ SYSTEM_PARAM_NFC_TRYED, 			420, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_ON_MONITORING, 		424, 	NO_CHANGE,		0},
@@ -72,7 +72,7 @@ STATIC Param_sys_t sys_table[] =
 
 };
 
-int32_t sys_data[SYSTEM_PARAM_SIZE] = {0,0,0,0,0, 0,0,0,0};
+int32_t sys_data[SYSTEM_PARAM_SIZE] = {0,0,0,0,0, 0,0,0,0,0};
 
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
@@ -532,6 +532,17 @@ int8_t NVM_setMotorDevCounter(uint32_t r_time)
 }
 #endif
 
+void NVM_setMotorStatus(int32_t status)
+{
+	if(sys_data[SYSTEM_PARAM_ENABLE_NFC_WRITER] != status)
+	{
+		sys_data[SYSTEM_PARAM_ENABLE_NFC_WRITER] = status;
+		sys_table[SYSTEM_PARAM_ENABLE_NFC_WRITER].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_ENABLE_NFC_WRITER].addr, sys_data[SYSTEM_PARAM_ENABLE_NFC_WRITER]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_ENABLE_NFC_WRITER);
+	}
+}
 
 uint8_t NVM_isInitNvmNfc(void)
 {
