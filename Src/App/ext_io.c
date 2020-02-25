@@ -665,14 +665,17 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 	{
 		if(freq == 0) freq = (int32_t)(freq_min*10.0 + 0.05); // set minumum freq value
 
-		test_cmd = SPICMD_PARAM_W;
-		kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
-#ifndef SUPPORT_UNIT_TEST
-		status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-		if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-		else // if error, not update
-#endif
+		if(prev_adc_cmd != freq) // send minimum value one time
+		{
+			test_cmd = SPICMD_PARAM_W;
+			kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
+	#ifndef SUPPORT_UNIT_TEST
+			status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
+			if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+			else // if error, not update
+	#endif
 			prev_adc_cmd = freq;
+		}
 	}
 
 	result = EXI_DI_handleDin(ctrl_in);

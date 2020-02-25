@@ -395,7 +395,7 @@ int8_t HDLR_updateParamNVM(void)
 
 void HDLR_retryUpdate(int *fail_list, int count)
 {
-	int i, read_fail[55], fail_cnt=0;
+	int i, read_fail[baudrate_type+1], fail_cnt=0;
 	int32_t nvm_value;
 	uint8_t nvm_status=0;
 	int8_t status=1;

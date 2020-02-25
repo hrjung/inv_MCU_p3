@@ -75,7 +75,7 @@ Param_sys_t sys_table[] =
 
 };
 
-int32_t sys_data[SYSTEM_PARAM_SIZE] = {0,0,0,0,0, 0,0,0,0,0};
+int32_t sys_data[SYSTEM_PARAM_SIZE] = {0,0,0,0,0, 0,0,0,0};
 
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
@@ -369,17 +369,22 @@ int8_t NVM_isNfcMonitoring(void)
 {
 	int32_t isMonitoring=0;
 	uint8_t status;
+	static int8_t retry_cnt=0;
 
 	if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) return (int8_t)isMonitoring;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_ON_MONITORING].addr, &isMonitoring);
 	if(status!=NVM_OK)
 	{
-		kputs(PORT_DEBUG, "read monitoring error\r\n");
+		kprintf(PORT_DEBUG, "read monitoring error cnt=%d\r\n", retry_cnt++);
+		if(retry_cnt > NVM_SYS_PARAM_UPDATE_RETRY_MAX)
+			ERR_setErrorState(TRIP_REASON_MCU_SETVALUE);
+
 		return 0; // default not monitoring
 	}
 
 	sys_data[SYSTEM_PARAM_ON_MONITORING] = isMonitoring;
+	retry_cnt=0;
 
 	return (int8_t)isMonitoring;
 }
@@ -713,8 +718,8 @@ void NVM_clearBackupCmd(void)
 void NVM_initSystemFlagStartup(void)
 {
 	int32_t run_stop=0, run_stop_f=0;
-	int32_t reset_f=0, init_param_f=0;
-	//int32_t	backup_f=0;
+	int32_t init_param_f=0;
+	//int32_t reset_f=0, backup_f=0;
 	int8_t status;
 
 	// init run_stop_cmd
