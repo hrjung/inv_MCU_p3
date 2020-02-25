@@ -55,6 +55,8 @@ extern int8_t table_initStatusError(uint16_t index);
 extern int8_t table_getMotorType(void);
 extern int8_t table_updateFwVersion(void);
 
+extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
+
 #ifdef SUPPORT_TASK_WATCHDOG
 extern void main_kickWatchdogNFC(void);
 #endif
@@ -359,7 +361,7 @@ int8_t HDLR_updateParamNVM(void)
 {
 	int32_t value, nvm_value;
 	int8_t empty, status;
-	uint8_t nvm_status;
+	uint8_t nvm_status=0;
 	uint16_t addr;
 	int16_t errflag=0;
 
@@ -391,29 +393,75 @@ int8_t HDLR_updateParamNVM(void)
 	return 1;
 }
 
+void HDLR_retryUpdate(int *fail_list, int count)
+{
+	int i, read_fail[55], fail_cnt=0;
+	int32_t nvm_value;
+	uint8_t nvm_status=0;
+	int8_t status=1;
+
+	fail_cnt=0;
+	for(i=0; i<=baudrate_type; i++) read_fail[i] = 0;
+
+	for(i=0; i<count; i++)
+	{
+		osDelay(5);
+		nvm_status = NVM_readParam((PARAM_IDX_t)fail_list[i], &nvm_value);
+		if(nvm_status == 0)
+		{
+			kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", i);
+			read_fail[fail_cnt++] = fail_list[i];
+		}
+		else
+		{
+			if(nvm_value != table_getValue(i))
+			{
+				status = NVMQ_enqueueTableQ(i, nvm_value);
+				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", fail_list[i]); }
+				kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", fail_list[i], nvm_value, status);
+			}
+		}
+	}
+
+	kprintf(PORT_DEBUG,"HDLR_retryUpdate() count=%d, fail_cnt=%d \r\n", count, fail_cnt);
+}
+
 // EEPROM is updated by NFC -> inform to table to update
 int8_t HDLR_updatebyNfc(void)
 {
 	PARAM_IDX_t index=value_type;
+	int i, read_fail[55], fail_cnt=0;
 	int32_t nvm_value;
 	uint8_t nvm_status;
 	int8_t status;
 	int16_t errflag=0;
 
+	fail_cnt=0;
+	for(i=0; i<=baudrate_type; i++) read_fail[i] = 0;
+
 	while(index <= baudrate_type) // only writable parameter
 	{
 		osDelay(5);
 		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;}
-
-		if(nvm_value != table_getValue(index))
+		if(nvm_status == 0)
 		{
-			status = NVMQ_enqueueTableQ(index, nvm_value);
-			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
-			kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+			kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;
+			read_fail[fail_cnt++] = (int)index;
+		}
+		else
+		{
+			if(nvm_value != table_getValue(index))
+			{
+				status = NVMQ_enqueueTableQ(index, nvm_value);
+				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
+				kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+			}
 		}
 		index++;
 	}
+
+	if(fail_cnt > 0) // read error then retry
+		HDLR_retryUpdate(read_fail, fail_cnt);
 
 	kprintf(PORT_DEBUG, "HDLR_updatebyNfc\r\n");
 
@@ -638,8 +686,14 @@ int8_t HDLR_updateSysParam(int index)
 	addr = NVM_getSystemParamAddr(index);
 	value = NVM_getSystemParamValue(index);
 	status = NVM_write(addr, value);
-	if(status == 1)
+	if(status == 1) // write OK
 		NVM_clearSysParamUpdateFlag(index);
+	else
+	{
+		NVM_increaseSysParamRetryCnt(index);
+		if(NVM_getSysParamRetryCnt(index) > NVM_SYS_PARAM_UPDATE_RETRY_MAX)
+			ERR_setErrorState(TRIP_REASON_MCU_SETVALUE);
+	}
 
 	kprintf(PORT_DEBUG, "HDLR_updateSysParam() index=%d status=%d\r\n", index, status);
 

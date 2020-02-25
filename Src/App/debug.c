@@ -264,6 +264,7 @@ extern volatile int8_t ADC_error;
 extern int32_t table_nvm[];
 extern int32_t table_data[];
 extern int32_t sys_data[];
+extern Param_sys_t sys_table[];
 
 extern uint8_t reset_cmd_send_f;
 extern uint8_t reset_requested_f;
@@ -597,7 +598,7 @@ STATIC int read_nv_ser(uint8_t dport)
 	if(arg_c == 2)
 	{
 		i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
-		kprintf(dport, "\r\n read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);
+		kprintf(dport, "\r\n read EEPROM addr=%d, 0x%x, value=%d, status=%d", addr, addr, i2c_rvalue, i2c_status);
 	}
 
 	return 0;
@@ -1156,7 +1157,8 @@ STATIC int test_ser(uint8_t dport)
     	{
     		addr = NVM_getSystemParamAddr(i);
     		status = NVM_read(addr, &value);
-    		kprintf(dport, "\r\n sys_data[%d]=%d, nvm=%d, update=%d, status=%d", i, sys_data[i], value, NVM_isSysParamNeedUpdate(i), status);
+    		kprintf(dport, "\r\n sys_data[%d]=%d, addr=%d, nvm=%d, update=%d, status=%d", \
+    				i, sys_data[i], sys_table[i].addr, value, NVM_isSysParamNeedUpdate(i), status);
     		//kprintf(dport, "\r\n update_index=%d", NVM_getSysParamUpdateIndex());
     	}
     }

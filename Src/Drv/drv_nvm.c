@@ -16,6 +16,7 @@
 
 #include "drv_ST25DV.h"
 #include "drv_nvm.h"
+#include "error.h"
 
 
 #define NVM_BACKUP_FLAG_ADDR	0x5F8
@@ -56,8 +57,8 @@ static int32_t nvm_table[1024];
 int32_t table_nvm[PARAM_TABLE_SIZE];
 
 
-STATIC Param_sys_t sys_table[] =
-{		// SYSTEM_PARAM_t					addr	need_update		done
+Param_sys_t sys_table[] =
+{		// SYSTEM_PARAM_t					addr	need_update		retry_cnt
 		{ SYSTEM_PARAM_NFC_TAGGED, 			400, 	NO_CHANGE, 		0},
 		{ SYSTEM_PARAM_CRC_VALUE, 			404,	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_IS_INITIATED, 		408, 	NO_CHANGE,		0},
@@ -68,7 +69,9 @@ STATIC Param_sys_t sys_table[] =
 		{ SYSTEM_PARAM_ON_MONITORING, 		424, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_RUN1_STOP2, 			428, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_INIT_NVM, 			432, 	NO_CHANGE,		0},
+#ifdef SUPPORT_PARAMETER_BACKUP
 		{ SYSTEM_PARAM_BACKUP_CMD, 			436, 	NO_CHANGE,		0},
+#endif
 
 };
 
@@ -263,9 +266,20 @@ int32_t NVM_getSystemParamValue(uint16_t index)
 	return sys_data[index];
 }
 
+void NVM_increaseSysParamRetryCnt(uint16_t index)
+{
+	sys_table[index].retry_cnt++;
+}
+
+int8_t NVM_getSysParamRetryCnt(uint16_t index)
+{
+	return sys_table[index].retry_cnt;
+}
+
 void NVM_clearSysParamUpdateFlag(uint16_t index)
 {
 	sys_table[index].need_update = NO_CHANGE;
+	sys_table[index].retry_cnt=0;
 }
 
 int NVM_isSysParamNeedUpdate(uint16_t index)
@@ -356,6 +370,8 @@ int8_t NVM_isNfcMonitoring(void)
 	int32_t isMonitoring=0;
 	uint8_t status;
 
+	if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) return (int8_t)isMonitoring;
+
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_ON_MONITORING].addr, &isMonitoring);
 	if(status!=NVM_OK)
 	{
@@ -419,11 +435,11 @@ void NVM_clearNfcStatus(void)
 	if(status == 1)
 		NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_NFC_TAGGED);
 
-	sys_data[SYSTEM_PARAM_NFC_TRYED] = 0;
-	sys_table[SYSTEM_PARAM_NFC_TRYED].need_update = WRITE_TO_NVM;
-	status = NVM_write(sys_table[SYSTEM_PARAM_NFC_TRYED].addr, sys_data[SYSTEM_PARAM_NFC_TRYED]);
-	if(status == 1)
-		NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_NFC_TRYED);
+//	sys_data[SYSTEM_PARAM_NFC_TRYED] = 0;
+//	sys_table[SYSTEM_PARAM_NFC_TRYED].need_update = WRITE_TO_NVM;
+//	status = NVM_write(sys_table[SYSTEM_PARAM_NFC_TRYED].addr, sys_data[SYSTEM_PARAM_NFC_TRYED]);
+//	if(status == 1)
+//		NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_NFC_TRYED);
 
 }
 
@@ -532,6 +548,18 @@ int8_t NVM_setMotorDevCounter(uint32_t r_time)
 }
 #endif
 
+int8_t NVM_getMotorStatusFlag(int32_t *run_stop_f)
+{
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_ENABLE_NFC_WRITER].addr, run_stop_f);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	sys_data[SYSTEM_PARAM_ENABLE_NFC_WRITER] = *run_stop_f;
+
+	return NVM_OK;
+}
+
 void NVM_setMotorStatus(int32_t status)
 {
 	if(sys_data[SYSTEM_PARAM_ENABLE_NFC_WRITER] != status)
@@ -554,29 +582,55 @@ uint8_t NVM_getInitSysParam(void)
 	return (uint8_t)sys_data[SYSTEM_PARAM_INIT_NVM];
 }
 
-uint8_t NVM_isBackupCmd(void)
+int8_t NVM_getInitParamFlag(int32_t *param_init_f)
 {
-	return (uint8_t)(sys_data[SYSTEM_PARAM_BACKUP_CMD] != 0);
-}
+	uint8_t status;
 
-int8_t NVM_getBackupCmdNfc(void)
-{
-	return (int8_t)sys_data[SYSTEM_PARAM_BACKUP_CMD];
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_INIT_NVM].addr, param_init_f);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	sys_data[SYSTEM_PARAM_INIT_NVM] = *param_init_f;
+
+	return NVM_OK;
 }
 
 void NVM_getCommandParam(void)
 {
-	int32_t init_nvm=0, bk_cmd=0;
+	int32_t init_nvm=0;
+	//int32_t bk_cmd=0;
 	uint8_t status;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_INIT_NVM].addr, &init_nvm);
 	if(status == NVM_OK)
 		sys_data[SYSTEM_PARAM_INIT_NVM] = init_nvm;
 
+#ifdef SUPPORT_PARAMETER_BACKUP
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, &bk_cmd);
 	if(status == NVM_OK)
 		sys_data[SYSTEM_PARAM_BACKUP_CMD] = bk_cmd;
+#endif
 
+	if(init_nvm > 0 //|| reset_cmd > 0
+#ifdef SUPPORT_PARAMETER_BACKUP
+		|| bk_cmd > 0
+#endif
+	)
+	{
+		//kprintf(PORT_DEBUG, "NVM_getCommandParam init=%d, bkup=%d reset=%d, status=%d\r\n", init_nvm, bk_cmd, reset_cmd, status);
+		//kprintf(PORT_DEBUG, "NVM_getCommandParam init=%d, reset=%d, status=%d\r\n", init_nvm, reset_cmd, status);
+		kprintf(PORT_DEBUG, "NVM_getCommandParam init=%d, status=%d\r\n", init_nvm, status);
+		if(!table_isMotorStop()) // if motor run then clear command
+		{
+			if(init_nvm > 0) NVM_clearInitParamCmd();
+
+		//	if(reset_cmd > 0) NVM_clearResetCmd();
+
+#ifdef SUPPORT_PARAMETER_BACKUP
+			if(bk_cmd > 0)	NVM_clearBackupCmd();
+#endif
+
+		}
+	}
 }
 
 
@@ -592,6 +646,29 @@ void NVM_clearInitParamCmd(void)
 		if(status == 1)
 			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_INIT_NVM);
 	}
+}
+
+#ifdef SUPPORT_PARAMETER_BACKUP
+uint8_t NVM_isBackupCmd(void)
+{
+	return (uint8_t)(sys_data[SYSTEM_PARAM_BACKUP_CMD] != 0);
+}
+
+int8_t NVM_getBackupCmdNfc(void)
+{
+	return (int8_t)sys_data[SYSTEM_PARAM_BACKUP_CMD];
+}
+
+int8_t NVM_getBackupCommandFlag(int32_t *backup_f)
+{
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, backup_f);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	sys_data[SYSTEM_PARAM_BACKUP_CMD] = *backup_f;
+
+	return NVM_OK;
 }
 
 int8_t NVM_setBackupAvailableFlag(int32_t flag)
@@ -630,5 +707,41 @@ void NVM_clearBackupCmd(void)
 		if(status == 1)
 			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_BACKUP_CMD);
 	}
+}
+#endif
+
+void NVM_initSystemFlagStartup(void)
+{
+	int32_t run_stop=0, run_stop_f=0;
+	int32_t reset_f=0, init_param_f=0;
+	//int32_t	backup_f=0;
+	int8_t status;
+
+	// init run_stop_cmd
+	status = NVM_getRunStopFlag(&run_stop);
+	if(run_stop != 0 || status == 0)
+		NVM_clearRunStopFlag();
+
+	// clear motor run status
+	status = NVM_getMotorStatusFlag(&run_stop_f);
+	if(run_stop_f != 0 || status == 0)
+		NVM_setMotorStatus(0);
+
+	// clear reset command
+//	status = NVM_getResetCommandFlag(&reset_f);
+//	if(reset_f != 0 || status == 0)
+//		NVM_clearResetCmd();
+
+	// clear parameter init command
+	status = NVM_getInitParamFlag(&init_param_f);
+	if(init_param_f != 0 || status == 0)
+		NVM_clearInitParamCmd();
+
+#ifdef SUPPORT_PARAMETER_BACKUP
+	// clear backup/restore command
+	status = NVM_getBackupCommandFlag(&backup_f);
+	if(backup_f != 0 || status == 0)
+		NVM_clearBackupCmd();
+#endif
 }
 

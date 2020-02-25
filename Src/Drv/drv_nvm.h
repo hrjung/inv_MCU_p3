@@ -13,8 +13,9 @@
 #define 	NVM_NOK		0
 #define 	NVM_OK		1
 
-#define NVM_BACKUP_START_ADDR	0x600
-#define NVM_BACKUP_AVAILABLE_F	(0x5555)
+#define 	NVM_SYS_PARAM_UPDATE_RETRY_MAX	10
+//#define NVM_BACKUP_START_ADDR	0x600
+//#define NVM_BACKUP_AVAILABLE_F	(0x5555)
 
 enum
 {
@@ -27,7 +28,7 @@ typedef struct {
 	const SYSTEM_PARAM_t idx;
 	const uint16_t addr;	// EEPROM address
 	int8_t	need_update;	// require NVM write
-	int8_t 	done;			// process done
+	int8_t 	retry_cnt;		// write retry count
 } Param_sys_t;
 
 extern void NVM_clear(void);
@@ -56,6 +57,9 @@ extern int32_t NVM_getSystemParamValue(uint16_t index);
 extern void NVM_clearSysParamUpdateFlag(uint16_t index);
 extern int NVM_isSysParamNeedUpdate(uint16_t index);
 
+extern void NVM_increaseSysParamRetryCnt(uint16_t index);
+extern int8_t NVM_getSysParamRetryCnt(uint16_t index);
+
 extern int8_t NVM_setMotorRunCount(uint32_t run_count);
 extern int8_t NVM_setMotorDevCounter(uint32_t r_time);
 extern int8_t NVM_setMotorRunTimeMinute(uint32_t r_time);
@@ -76,5 +80,7 @@ extern int8_t NVM_getBackupCmdNfc(void);
 extern void NVM_clearBackupCmd(void);
 extern int8_t NVM_setBackupAvailableFlag(int32_t flag);
 extern int NVM_isBackupAvailable(void);
+
+extern void NVM_initSystemFlagStartup(void);
 
 #endif /* SRC_DRV_NVM_H_ */

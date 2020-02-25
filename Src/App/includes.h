@@ -11,7 +11,7 @@
 #include    <stdarg.h>
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		37
+#define VERSION_MIN		38
 
 
 #define SUPPORT_TASK_WATCHDOG
@@ -20,7 +20,7 @@
 
 #define SUPPORT_PASSWORD
 
-#define SUPPORT_PARAMETER_BACKUP
+//#define SUPPORT_PARAMETER_BACKUP
 
 #define SUPPORT_INIT_PARAM
 

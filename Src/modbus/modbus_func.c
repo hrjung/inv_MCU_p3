@@ -517,21 +517,27 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 	case MB_CTRL_BACKUP_FLAG_ADDR:
 		if(value == MB_BACKUP_SAVE || value == MB_BACKUP_RESTORE)
 		{
-			HDLR_setBackupFlagModbus(value);
-			modbusTx.wp = 0;
-			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-			modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+			if(table_isMotorStop())
+			{
+				HDLR_setBackupFlagModbus(value);
+				modbusTx.wp = 0;
+				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 
-			result = MOD_EX_NO_ERR;
-			kprintf(PORT_DEBUG, "set backup_addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+				result = MOD_EX_NO_ERR;
+				kprintf(PORT_DEBUG, "set backup_addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			}
+			else
+				result = MOD_EX_SLAVE_FAIL; // motor is running
 		}
 		else
 			result = MOD_EX_DataVAL;
 
+		kprintf(PORT_DEBUG, "MB_CTRL_BACKUP_FLAG_ADDR, value=%d, result=%d \r\n", (uint16_t)value, result);
 		break;
 #endif
 	case MB_CTRL_FACTORY_MODE_ADDR: // enable/disable factory mode

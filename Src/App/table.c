@@ -114,7 +114,7 @@ STATIC Param_t param_table[] =
 	{ jmp_enable2_type,		0x224,	40209,	0,		0,		1,		1, 	1, 		0, 	jmp_enable2_dsp,	table_setValue,	},
 	{ jmp_low2_type,		0x228,	40210,	100,	100,	800,	1, 	10, 	0, 	jmp_low2_dsp, 		table_setFreqValue,},
 	{ jmp_high2_type,		0x22C,	40211,	100,	100,	800,	1, 	10, 	0, 	jmp_high2_dsp, 		table_setFreqValue,},
-	{ brake_type_type,		0x230,	40212,	0,		0,		2,		1, 	1, 		0, 	brake_type_dsp,		table_setValue	},
+	{ brake_type_type,		0x230,	40212,	0,		0,		2,		1, 	1, 		1, 	brake_type_dsp,		table_setValue	},
 	{ brake_freq_type,		0x234,	40213,	10,		10,		600,	1, 	10, 	0, 	brake_freq_dsp,		table_setFreqValue	},
 	{ dci_brk_freq_type,	0x238,	40214,	30,		10,		600,	1, 	10, 	0, 	dci_brk_freq_dsp,	table_setFreqValue	},
 	{ dci_brk_hold_type,	0x23C,	40215,	10,		0,		600,	1,	10, 	0, 	dci_brk_hold_dsp,	table_setValue	},
@@ -732,7 +732,9 @@ int8_t table_initializeBlankEEPROM(void)
 	status = NVM_initSystemParam();
 	if(status == 0) errflag++;
 
+#ifdef SUPPORT_PARAMETER_BACKUP
 	HDLR_clearBackupFlag();
+#endif
 
 	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 
@@ -848,7 +850,7 @@ int8_t table_updateRange(void)
 
 int8_t table_getMotorType(void)
 {
-	int8_t status;
+	int8_t status=1;
 	int32_t motor_type, value;
 
 	// read motor type from DSP
@@ -856,6 +858,7 @@ int8_t table_getMotorType(void)
 	if(status == 0)
 	{
 		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		kprintf(PORT_DEBUG, " getType error status=%d \r\n", status);
 		return status;
 	}
 
@@ -903,7 +906,6 @@ int8_t table_init(void)
 {
 	int8_t status, errflag=0;
 	int i;
-	int32_t run_stop=0;
 	uint16_t buf[3]={0,0,0}; // index + int32 or float
 
 	status = table_updateRange();
@@ -928,10 +930,8 @@ int8_t table_init(void)
 	// sync EEPROM data and table data
 	for(i=0; i<PARAM_TABLE_SIZE; i++) table_nvm[i] = table_data[i];
 
-	// clear run/stop flag at init
-	status = NVM_getRunStopFlag(&run_stop);
-	if(run_stop != 0 || status == 0)
-		NVM_clearRunStopFlag();
+	// clear system flag at init
+	NVM_initSystemFlagStartup();
 
 	status = NVM_readTime();
 	if(status == 0) errflag++;
@@ -1232,7 +1232,7 @@ int8_t table_updateCommError(uint16_t err_code)
 int8_t table_updatebyTableQ(void)
 {
 	int32_t value;
-	int8_t empty, status;
+	int8_t empty, status=1;
 	PARAM_IDX_t index;
 	int16_t errflag=0;
 

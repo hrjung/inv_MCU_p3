@@ -1219,7 +1219,7 @@ void NfcNvmUpdateParam(int32_t tag_end)
 				if(status == 0)
 				{
 					kputs(PORT_DEBUG, "nfc tag update error\r\n");
-					UTIL_setLED(LED_COLOR_B, 1);
+					//UTIL_setLED(LED_COLOR_B, 1);
 				}
 				else
 					UTIL_setLED(LED_COLOR_G, 0);
@@ -1281,6 +1281,9 @@ void NfcNvmTaskFunc(void const * argument)
 	  else
 		  NfcNvmUpdateParam(tag_end);
 
+
+	  if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) continue;
+
 	  // no tag state,
 	  //	handle NVM update request
 	  if(!NVMQ_isEmptyNfcQ())
@@ -1303,7 +1306,7 @@ void NfcNvmTaskFunc(void const * argument)
 		  if(status == 0) kprintf(PORT_DEBUG, "HDLR_updateSysParam index=%d ERROR\r\n", sys_index);
 
 		  UTIL_setLED(LED_COLOR_G, 0);
-		  kputs(PORT_DEBUG, "HDLR_updateParamNVM called\r\n");
+		  kputs(PORT_DEBUG, "HDLR_updateSysParam called\r\n");
 	  }
 
 
@@ -1440,10 +1443,13 @@ int8_t mainHandlerState(void)
 		break;
 
 	case MAIN_DSP_STATE:
-		// read DSP error flag and status info
-		HDLR_handleDspError();
 
-		HDLR_readDspStatus();
+		if(HDLR_isNeedInitialize() == 0) // skip DSP status, error request during parameter initialization
+		{
+			// read DSP error flag and status info
+			HDLR_handleDspError();
+			HDLR_readDspStatus();
+		}
 
 		DSP_status_read_flag = 0; // clear flag
 
@@ -1502,7 +1508,11 @@ int8_t mainHandlerState(void)
 		  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
 		}
 
-		if(reset_enabled_f) main_SwReset(); // SW reset
+		if(reset_enabled_f)
+		{
+			status = main_SwReset(); // SW reset
+			reset_enabled_f = 0;
+		}
 
 		sct_state = MAIN_IDLE_STATE;
 		break;

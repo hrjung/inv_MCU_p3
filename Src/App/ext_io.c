@@ -555,7 +555,8 @@ uint16_t EXT_AI_readADC(void)
 int32_t EXT_AI_getFreq(uint16_t adc_val)
 {
 	//float V_val = (EXT_AIN_ADC_MIN/EXT_AIN_ADC_MAX)*(float)adc_val;
-	float V_val = 0.0031*(float)adc_val - 0.1548;
+	//float V_val = 0.0031*(float)adc_val - 0.1548;
+	float V_val = 0.0031*(float)adc_val - 0.2139; // for P4+ using calibrator
 	float freq_calc;
 	int32_t freq_l;
 

@@ -239,6 +239,7 @@ void MB_TaskFunction(void)
 		{
 			osDelay(500); // delay till sending response
 			reset_enabled_f=1;
+			reset_requested_f=0;
 		}
 
 //		kprintf(PORT_DEBUG, "TX: 0x%x 0x%x 0x%x 0x%x 0x%x\r\n",

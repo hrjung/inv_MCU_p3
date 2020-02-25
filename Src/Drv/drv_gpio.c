@@ -330,7 +330,7 @@ uint16_t UTIL_getMaxADC(void)
 uint16_t UTIL_getMinADC(void)
 {
 	int i;
-	uint16_t min=0;
+	uint16_t min=65535; // fix bug
 
 	for(i=0; i<EXT_AIN_SAMPLE_CNT; i++)
 	{
