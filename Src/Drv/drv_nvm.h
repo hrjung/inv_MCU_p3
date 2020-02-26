@@ -75,6 +75,9 @@ extern uint8_t NVM_isInitNvmNfc(void);
 extern uint8_t NVM_getInitSysParam(void);
 extern void NVM_clearInitParamCmd(void);
 
+extern uint8_t NVM_isResetEnabled(void);
+extern void NVM_clearResetCmd(void);
+
 extern uint8_t NVM_isBackupCmd(void);
 extern int8_t NVM_getBackupCmdNfc(void);
 extern void NVM_clearBackupCmd(void);

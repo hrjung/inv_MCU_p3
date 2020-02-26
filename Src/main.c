@@ -1357,6 +1357,17 @@ void NfcNvmTaskFunc(void const * argument)
 			  HDLR_clearBackupFlagModbus(); // clear flag
 		  }
 #endif
+		  // handle reset command via NFC
+		  if(NVM_isResetEnabled())
+		  {
+			  kputs(PORT_DEBUG, "RESET !!\r\n");
+			  NVM_clearResetCmd();
+			  if(table_isMotorStop()) // only on motor not running
+			  {
+				  osDelay(100); // small delay
+				  reset_enabled_f=1;
+			  }
+		  }
 	  }
 
 	  // time info update

@@ -508,6 +508,7 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 	uint8_t nvm_status;
 	int8_t status;
 	int16_t errflag=0;
+	uint16_t buf[3]={0,0,0};
 
 	if(init_type == NVM_INIT_PARAM_ALL || init_type == NVM_INIT_PARAM_CONFIG)
 	{
@@ -526,6 +527,16 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 				status = NVMQ_enqueueTableQ(index, init_value);
 				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
 				//kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+
+				// send default value to DSP
+				if(table_getDspAddr(index) == none_dsp) continue;
+
+				COMM_convertValue((uint16_t)index, buf);
+
+				status = COMM_sendMessage(SPICMD_PARAM_W, buf);
+				kprintf(PORT_DEBUG, "HDLR_initNVM() DSP COMM : status=%d, idx=%d, value=%d, param=%d\r\n", \
+						status, index, (int)nvm_value, init_value);
+				if(status == 0) errflag++;
 			}
 			index++;
 

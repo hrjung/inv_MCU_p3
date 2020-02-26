@@ -68,14 +68,15 @@ Param_sys_t sys_table[] =
 		{ SYSTEM_PARAM_NFC_TRYED, 			420, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_ON_MONITORING, 		424, 	NO_CHANGE,		0},
 		{ SYSTEM_PARAM_RUN1_STOP2, 			428, 	NO_CHANGE,		0},
-		{ SYSTEM_PARAM_INIT_NVM, 			432, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_RESET_CMD, 			432, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_INIT_NVM, 			436, 	NO_CHANGE,		0},
 #ifdef SUPPORT_PARAMETER_BACKUP
-		{ SYSTEM_PARAM_BACKUP_CMD, 			436, 	NO_CHANGE,		0},
+		{ SYSTEM_PARAM_BACKUP_CMD, 			440, 	NO_CHANGE,		0},
 #endif
 
 };
 
-int32_t sys_data[SYSTEM_PARAM_SIZE] = {0,0,0,0,0, 0,0,0,0};
+int32_t sys_data[SYSTEM_PARAM_SIZE] = {0,0,0,0,0, 0,0,0,0,0};
 
 extern uint32_t motor_run_cnt;
 extern uint32_t motor_run_hour;
@@ -577,6 +578,37 @@ void NVM_setMotorStatus(int32_t status)
 	}
 }
 
+uint8_t NVM_isResetEnabled(void)
+{
+	return (uint8_t)(sys_data[SYSTEM_PARAM_RESET_CMD] == 1); // reset command
+}
+
+int8_t NVM_getResetCommandFlag(int32_t *reset_f)
+{
+	uint8_t status;
+
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_RESET_CMD].addr, reset_f);
+	if(status!=NVM_OK) return NVM_NOK;
+
+	sys_data[SYSTEM_PARAM_RESET_CMD] = *reset_f;
+
+	return NVM_OK;
+}
+
+void NVM_clearResetCmd(void)
+{
+	uint8_t status;
+
+	if(sys_data[SYSTEM_PARAM_RESET_CMD] != 0)
+	{
+		sys_data[SYSTEM_PARAM_RESET_CMD] = 0;
+		sys_table[SYSTEM_PARAM_RESET_CMD].need_update = WRITE_TO_NVM;
+		status = NVM_write(sys_table[SYSTEM_PARAM_RESET_CMD].addr, sys_data[SYSTEM_PARAM_RESET_CMD]);
+		if(status == 1)
+			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_RESET_CMD);
+	}
+}
+
 uint8_t NVM_isInitNvmNfc(void)
 {
 	return (uint8_t)(sys_data[SYSTEM_PARAM_INIT_NVM] > 0);
@@ -601,7 +633,7 @@ int8_t NVM_getInitParamFlag(int32_t *param_init_f)
 
 void NVM_getCommandParam(void)
 {
-	int32_t init_nvm=0;
+	int32_t init_nvm=0, reset_cmd=0;
 	//int32_t bk_cmd=0;
 	uint8_t status;
 
@@ -609,26 +641,29 @@ void NVM_getCommandParam(void)
 	if(status == NVM_OK)
 		sys_data[SYSTEM_PARAM_INIT_NVM] = init_nvm;
 
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_RESET_CMD].addr, &reset_cmd);
+	if(status == NVM_OK)
+		sys_data[SYSTEM_PARAM_RESET_CMD] = reset_cmd;
+
 #ifdef SUPPORT_PARAMETER_BACKUP
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_BACKUP_CMD].addr, &bk_cmd);
 	if(status == NVM_OK)
 		sys_data[SYSTEM_PARAM_BACKUP_CMD] = bk_cmd;
 #endif
 
-	if(init_nvm > 0 //|| reset_cmd > 0
+	if(init_nvm > 0 || reset_cmd > 0
 #ifdef SUPPORT_PARAMETER_BACKUP
 		|| bk_cmd > 0
 #endif
 	)
 	{
 		//kprintf(PORT_DEBUG, "NVM_getCommandParam init=%d, bkup=%d reset=%d, status=%d\r\n", init_nvm, bk_cmd, reset_cmd, status);
-		//kprintf(PORT_DEBUG, "NVM_getCommandParam init=%d, reset=%d, status=%d\r\n", init_nvm, reset_cmd, status);
-		kprintf(PORT_DEBUG, "NVM_getCommandParam init=%d, status=%d\r\n", init_nvm, status);
+		kprintf(PORT_DEBUG, "NVM_getCommandParam init=%d, reset=%d, status=%d\r\n", init_nvm, reset_cmd, status);
 		if(!table_isMotorStop()) // if motor run then clear command
 		{
 			if(init_nvm > 0) NVM_clearInitParamCmd();
 
-		//	if(reset_cmd > 0) NVM_clearResetCmd();
+			if(reset_cmd > 0) NVM_clearResetCmd();
 
 #ifdef SUPPORT_PARAMETER_BACKUP
 			if(bk_cmd > 0)	NVM_clearBackupCmd();
@@ -718,8 +753,8 @@ void NVM_clearBackupCmd(void)
 void NVM_initSystemFlagStartup(void)
 {
 	int32_t run_stop=0, run_stop_f=0;
-	int32_t init_param_f=0;
-	//int32_t reset_f=0, backup_f=0;
+	int32_t reset_f=0, init_param_f=0;
+	//int32_t	backup_f=0;
 	int8_t status;
 
 	// init run_stop_cmd
@@ -733,9 +768,9 @@ void NVM_initSystemFlagStartup(void)
 		NVM_setMotorStatus(0);
 
 	// clear reset command
-//	status = NVM_getResetCommandFlag(&reset_f);
-//	if(reset_f != 0 || status == 0)
-//		NVM_clearResetCmd();
+	status = NVM_getResetCommandFlag(&reset_f);
+	if(reset_f != 0 || status == 0)
+		NVM_clearResetCmd();
 
 	// clear parameter init command
 	status = NVM_getInitParamFlag(&init_param_f);
