@@ -1097,11 +1097,19 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_verifyCRC(crc32_calc);
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
     }
-    else if(test_case == 'D') // show Din value
+    else if(test_case == 'D') // ask DSP error info
     {
-    	//test_DinConfig();
-    	EXT_DI_printConfig();
-    	EXT_DI_printStatus();
+    	uint16_t dummy[] = {0,0,0};
+    	int8_t status;
+    	int32_t err_code=0, run_stop=0;
+
+		status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
+		if(status == COMM_SUCCESS)
+		{
+			err_code = table_getValue(err_code_1_type);
+		}
+		kprintf(dport, " read DSP error code=%d, dsp_err=%d", (int)err_code, (int)UTIL_isDspError());
+
     }
     else if(test_case == 'E') // show error data
     {
