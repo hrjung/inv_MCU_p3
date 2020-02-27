@@ -51,6 +51,7 @@ extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
 
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern int8_t table_initStatusError(uint16_t index);
+extern int table_checkValidityNFC(PARAM_IDX_t idx, int32_t value);
 
 extern int8_t table_getMotorType(void);
 extern int8_t table_updateFwVersion(void);
@@ -435,6 +436,7 @@ int8_t HDLR_updatebyNfc(void)
 	uint8_t nvm_status;
 	int8_t status;
 	int16_t errflag=0;
+	int valid=0;
 
 	fail_cnt=0;
 	for(i=0; i<=baudrate_type; i++) read_fail[i] = 0;
@@ -450,12 +452,21 @@ int8_t HDLR_updatebyNfc(void)
 		}
 		else
 		{
-			if(nvm_value != table_getValue(index))
+			valid = table_checkValidityNFC(index, nvm_value); // valid range check
+			if(valid == 0) // wrong value than restore NVM
 			{
-				status = NVMQ_enqueueTableQ(index, nvm_value);
-				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
-				kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+				status = NVM_writeParam(index, table_getValue(index));
+				if(status == 0) {kprintf(PORT_DEBUG,"ERROR NVM restore error index=%d\n", index); errflag++;}
 			}
+			else // correct value to update table
+			{
+				if(nvm_value != table_getValue(index))
+				{
+					status = NVMQ_enqueueTableQ(index, nvm_value);
+					if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
+				}
+			}
+			kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, valid=%d \r\n", index, nvm_value, valid);
 		}
 		index++;
 	}

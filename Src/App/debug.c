@@ -648,6 +648,7 @@ STATIC int din_ser(uint8_t dport)
 	for(i=0; i<20; i++) {UTIL_readDin(); osDelay(10);}
 
 	EXT_DI_printConfig();
+	EXT_DI_printStatus();
 
 	return 0;
 }
@@ -1115,10 +1116,10 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 'F') // run parameter function of each parameter
     {
-    	idx = (int)atoi(arg_v[2]);
-    	value = (int32_t)atoi(arg_v[3]);
-    	status = table_runFunc(idx, (int32_t)value, REQ_FROM_MODBUS);
-    	kprintf(dport, "\r\n idx=%d, value=%d, status=%d, ", idx, value, status);
+    	//idx = (int)atoi(arg_v[2]);
+    	value = (int32_t)atoi(arg_v[2]);
+    	status = table_runFunc(value_type, (int32_t)value, REQ_FROM_MODBUS);
+    	kprintf(dport, "\r\n set command freq value=%d, status=%d, ", value, status);
     }
     else if(test_case == 'G') // test DOUT
     {
@@ -1333,7 +1334,7 @@ STATIC int test_ser(uint8_t dport)
     	}
     }
 #endif
-    else if(test_case == 'T') // show time info
+    else if(test_case == 'T') // enable monitoring
     {
     	kprintf(dport, "\r\n set monitoring flag !!");
     	NVM_setNfcMonitoring();

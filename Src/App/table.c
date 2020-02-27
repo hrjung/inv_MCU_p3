@@ -239,6 +239,41 @@ static int table_checkFreqValidity(PARAM_IDX_t idx, int32_t value)
 	return 1;
 }
 
+int table_checkValidityNFC(PARAM_IDX_t idx, int32_t value)
+{
+	int freq_index[] = {
+			value_type,
+			multi_val_0_type,
+			multi_val_1_type,
+			multi_val_2_type,
+			multi_val_3_type,
+
+			multi_val_4_type,
+			multi_val_5_type,
+			multi_val_6_type,
+			multi_val_7_type,
+			v_in_min_freq_type,
+	};
+	int i, check_cnt=10;
+
+
+	if(value < param_table[idx].minValue || value > param_table[idx].maxValue)
+	{
+		for(i=0; i<check_cnt; i++) // freq value could be 0 freq
+		{
+			if(idx == freq_index[i])
+			{
+				if(value == 0) return 1;
+			}
+		}
+
+		kprintf(PORT_DEBUG,"idx=%d value=%d is not valid\r\n", idx, value);
+		return 0;
+	}
+
+	return 1;
+}
+
 static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t status;

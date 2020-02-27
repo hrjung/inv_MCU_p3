@@ -11,7 +11,7 @@
 #include    <stdarg.h>
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		39
+#define VERSION_MIN		40
 
 
 #define SUPPORT_TASK_WATCHDOG
@@ -29,7 +29,7 @@
 
 //#define SUPPORT_UNIT_TEST
 
-#define SUPPORT_PRODUCTION_TEST_MODE
+//#define SUPPORT_PRODUCTION_TEST_MODE
 
 #ifdef SUPPORT_UNIT_TEST
 	#define STATIC
