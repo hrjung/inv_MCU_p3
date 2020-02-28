@@ -202,6 +202,9 @@ extern void gen_crc_table(void);
 extern void MB_init(void);
 extern void MB_TaskFunction(void);
 extern int8_t MB_handlePacket(void);
+#ifdef SUPPORT_PASSWORD
+extern void table_clearPassEnable(void);
+#endif
 
 extern int8_t NVM_setMotorRunCount(uint32_t run_count);
 //extern int8_t COMM_sendMotorType(void);
@@ -1133,6 +1136,15 @@ void main_kickWatchdogNFC(void)
 }
 #endif
 
+#ifdef SUPPORT_PASSWORD
+uint32_t pass_start_time=0;
+void main_setPassCounterStart(void)
+{
+	pass_start_time = timer_100ms;
+	if(pass_start_time == 0) pass_start_time=1;
+}
+#endif
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1546,7 +1558,7 @@ int8_t mainHandlerState(void)
 void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
-  int8_t com_status, nv_status;
+  int8_t nv_status;
 //	uint16_t addr=408;
 //	int32_t i2c_rvalue=0;
 //	uint8_t i2c_status;
@@ -1582,11 +1594,6 @@ void mainHandlerTaskFunc(void const * argument)
   if(nv_status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
 
-//  com_status = COMM_sendMotorType();
-//  if(com_status == 0)
-//	  ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
-//
-//  kprintf(PORT_DEBUG, "nv_status = %d, com_status=%d\r\n", nv_status, com_status);
   kprintf(PORT_DEBUG, "nv_status = %d \r\n", nv_status);
 #endif
 
@@ -1596,14 +1603,8 @@ void mainHandlerTaskFunc(void const * argument)
 
   main_handler_f = 1;
 
-  //TODO : hrjung init parameters setting for ctrl_in
+  //init parameters setting for ctrl_in
   table_initParam();
-
-//  nv_status = NVM_clearRunStopFlag(); // set idle flag
-//  if(nv_status == 0)
-//  {
-//	  kprintf(PORT_DEBUG, "NFC idle flag set error=%d\r\n", nv_status);
-//  }
 
   osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 1 min to inverter operation time
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
@@ -1704,6 +1705,14 @@ void YstcTriggerTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN YstcTriggerTimerCallback */
   timer_100ms++;
+
+#ifdef SUPPORT_PASSWORD
+  if(pass_start_time != 0 && (timer_100ms-pass_start_time > 600)) // 60 sec timeout
+  {
+	  table_clearPassEnable();
+	  pass_start_time=0;
+  }
+#endif
   /* USER CODE END YstcTriggerTimerCallback */
 }
 

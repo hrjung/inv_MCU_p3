@@ -75,8 +75,9 @@ MODBUS_addr_st mb_device, mb_err, mb_status;
 
 extern void HDLR_setRunStopFlagModbus(int8_t flag);
 extern void HDLR_setFactoryModeFlagModbus(int8_t flag);
+
 #ifdef SUPPORT_PASSWORD
-extern int table_isPasswordAddrModbus(uint16_t mb_addr);
+extern int table_isPasswordAddrModbus(addr);
 #endif
 extern int8_t table_setValueFactoryMode(PARAM_IDX_t idx, int32_t value);
 
@@ -420,6 +421,10 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	index = MB_convModbusAddr(addr, cnt, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC03_ERR; }
 
+#ifdef SUPPORT_PASSWORD // block reading password
+	if(table_isPasswordAddrModbus(addr)) {result = MOD_EX_SLAVE_FAIL; goto FC03_ERR; }
+#endif
+
 	modbusTx.wp = 0;
 	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
 	modbusTx.buf[modbusTx.wp++] = func_code;
@@ -448,7 +453,7 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 FC03_ERR:
 	if(result != MOD_EX_NO_ERR)
 	{
-		MB_generateErrorResp(MOD_FC03_RD_HREG, result);
+		MB_generateErrorResp(func_code, result);
 	}
 
 	return result;
@@ -702,36 +707,6 @@ FC06_ERR:
 	return result;
 }
 
-#ifdef SUPPORT_PASSWORD
-int lock_pass_ok=0;
-int MB_handleLockReq(uint16_t addr, uint16_t count, uint16_t *value)
-{
-	int ret, result=MOD_EX_NO_ERR;
-	uint16_t password, lock;
-	int32_t stored_password=0;
-
-	password = value[0];
-	lock = value[1];
-
-	stored_password = table_getValue(password_type);
-	if(stored_password != (int32_t)password) return MOD_EX_SLAVE_FAIL;
-	else lock_pass_ok = 1; // password OK
-
-	ret = table_runFunc(modify_lock_type, (int32_t)lock, REQ_FROM_MODBUS);
-	if(ret == 0) return MOD_EX_SLAVE_FAIL;
-
-	modbusTx.wp = 0;
-	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-	modbusTx.buf[modbusTx.wp++] = MOD_FC16_WRM_REG;
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)((count&0xFF00) >> 8);
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)(count&0x00FF);
-
-	return result;
-}
-#endif
 
 int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 {
@@ -745,16 +720,9 @@ int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 	 * - function cannot be processed : MOD_EX_SLAVE_FAIL
 	 */
 
-#ifdef SUPPORT_PASSWORD
-	if(table_isPasswordAddrModbus(addr) && count == 2)
-	{
-		result = MB_handleLockReq(addr, count, value);
-	}
-	else
-		result = MOD_EX_SLAVE_FAIL;
-
-	goto FC16_ERR; // multi write is not supported
-#endif
+	// multi write is not supported !!
+	result=MOD_EX_SLAVE_FAIL;
+	goto FC16_ERR;
 
 	// count is over 123 or not matched with byte size
 	if(count == MODBUS_COUNT_ERR) {result = MOD_EX_DataVAL; goto FC16_ERR; }

@@ -49,7 +49,7 @@ extern uint8_t watchdog_f;
 #endif
 
 #ifdef SUPPORT_PASSWORD
-extern int lock_pass_ok;
+int password_enabled=0;
 #endif
 
 TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
@@ -65,6 +65,7 @@ STATIC int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t opt);
 STATIC int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t opt);
 int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
 #ifdef SUPPORT_PASSWORD
+STATIC int8_t table_setPassword(PARAM_IDX_t idx, int32_t value, int16_t option);
 STATIC int8_t table_setLockValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 #endif
 STATIC int8_t table_setDinValue(PARAM_IDX_t idx, int32_t value, int16_t option);
@@ -79,6 +80,10 @@ int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_initTimer(int32_t b_index);
 extern void MB_setSlaveAddress(uint8_t addr);
+
+#ifdef SUPPORT_PASSWORD
+extern void main_setPassCounterStart(void);
+#endif
 
 extern int8_t COMM_getMotorType(int8_t *status);
 
@@ -131,7 +136,7 @@ STATIC Param_t param_table[] =
 	{ regen_band_type,		0x298,	40286,	10,		0,		80,		1,	1, 		0, 	regen_band_dsp,		table_setValue	},
 	{ fan_onoff_type,		0x29C,	40287,	0,		0,		1,		1,	1, 		1, 	fan_onoff_dsp,		table_setValue	},
 #ifdef SUPPORT_PASSWORD
-	{ password_type,		0x2A0,	40288,	0,		0,		9999,	1,	1, 		1, 	none_dsp,			table_setValue	},
+	{ password_type,		0x2A0,	40288,	0,		0,		9999,	1,	1, 		1, 	none_dsp,			table_setPassword	},
 	{ modify_lock_type,		0x2A4,	40289,	0,		0,		1,		1,	1, 		1, 	none_dsp,			table_setLockValue	},
 #endif
 
@@ -519,19 +524,53 @@ int table_isLocked(void)
 	return (table_getValue(modify_lock_type) != (int32_t)0);
 }
 
-int table_isPasswordAddrModbus(uint16_t mb_addr)
+int table_isPasswordAddrModbus(addr)
 {
-	return (param_table[password_type].mb_addr == mb_addr);
+	return (param_table[password_type].mb_addr == addr);
+}
+
+void table_clearPassEnable(void)
+{
+	password_enabled=0;
+}
+
+int table_isPassEnabled(void)
+{
+	return (password_enabled == 1);
+}
+
+int8_t table_setPassword(PARAM_IDX_t idx, int32_t value, int16_t option)
+{
+	int8_t status;
+
+	if(table_isPassEnabled()) // update password
+	{
+		// check validity
+		if(table_checkValidity(idx, value) == 0) return 0;
+
+		status = table_setValueAPI(idx, value, option);
+	}
+	else
+	{
+		if(value == (uint16_t)table_getValue(password_type))
+		{
+			password_enabled = 1;
+			main_setPassCounterStart();
+			status = 1; // OK
+		}
+		else
+			status = 0; // not correct password
+	}
+	return status;
 }
 
 int8_t table_setLockValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t status=1;
 
-	if(lock_pass_ok == 0) return 0; // check password is correct
+	if(!table_isPassEnabled()) return 0; // check password is enabled
 
 	status = table_setValue(idx, value, option);
-	lock_pass_ok = 0; // clear flag
 	if(status == 0) return 0;
 
 	return status;

@@ -779,30 +779,29 @@ STATIC int uio_enable_ser(uint8_t dport)
 #endif
 
 #ifdef SUPPORT_PASSWORD
+extern int password_enabled;
 STATIC int pass_ser(uint8_t dport)
 {
-	int32_t	old_pass=0, new_pass, stored_pass;
-	int8_t status=0;
+	int32_t	new_pass, stored_pass;
+	int8_t ret=0;
 
 	if(arg_c == 1)
 	{
 		stored_pass = table_getValue(password_type);
-		kprintf(dport, "\r\n password=%d", stored_pass);
+		kprintf(dport, "\r\n password=%d, flag=%d", stored_pass, password_enabled);
 		return -1;
 	}
-	else if(arg_c == 3)
+	else if(arg_c == 2)
 	{
-		old_pass = (uint8_t)atoi(arg_v[1]);
-		new_pass = (uint8_t)atoi(arg_v[2]);
-		stored_pass = table_getValue(password_type);
-		if(stored_pass != old_pass)
+		new_pass = (int32_t)atoi(arg_v[1]);
+		ret = table_runFunc(password_type, new_pass, REQ_FROM_MODBUS);
+		if(ret == 0)
 		{
 			kprintf(dport, "\r\n password is not correct !!");
 			return -1;
 		}
-
-		status = NVMQ_enqueueNfcQ(password_type, new_pass);
-		kprintf(dport, "\r\n set password=%d status=%d", new_pass, status);
+		else
+			kprintf(dport, "\r\n set password=%d enabled=%d", new_pass, password_enabled);
 	}
 	else
 	{
@@ -1101,7 +1100,7 @@ STATIC int test_ser(uint8_t dport)
     {
     	uint16_t dummy[] = {0,0,0};
     	int8_t status;
-    	int32_t err_code=0, run_stop=0;
+    	int32_t err_code=0;
 
 		status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
 		if(status == COMM_SUCCESS)
