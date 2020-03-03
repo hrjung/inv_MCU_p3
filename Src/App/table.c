@@ -524,9 +524,14 @@ int table_isLocked(void)
 	return (table_getValue(modify_lock_type) != (int32_t)0);
 }
 
-int table_isPasswordAddrModbus(addr)
+int table_isPasswordAddrModbus(uint16_t addr)
 {
 	return (param_table[password_type].mb_addr == addr);
+}
+
+int table_isLockAddrModbus(uint16_t addr)
+{
+	return (param_table[modify_lock_type].mb_addr == addr);
 }
 
 void table_clearPassEnable(void)
@@ -536,7 +541,11 @@ void table_clearPassEnable(void)
 
 int table_isPassEnabled(void)
 {
-	return (password_enabled == 1);
+	if(table_getValue(password_type) == 0) return 1; // password is not set
+
+	if(password_enabled == 1) return 1; // check password is enabled
+
+	return 0;
 }
 
 int8_t table_setPassword(PARAM_IDX_t idx, int32_t value, int16_t option)

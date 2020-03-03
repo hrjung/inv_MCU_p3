@@ -266,7 +266,7 @@ int8_t COMM_recvfromDSP(int16_t recv_len)
 	int8_t isCrcError = SPI_isChecksumError(recvMsg, recv_len);
 	if(isCrcError)
 	{
-		kputs(PORT_DEBUG, "[COMM_DSP] CRC ERROR!");
+		//kputs(PORT_DEBUG, "[COMM_DSP] CRC ERROR!\r\n");
 		return COMM_FAILED;
 	}
 

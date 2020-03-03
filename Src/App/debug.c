@@ -110,7 +110,13 @@ const char	*uio_test_msg[] = {
 #ifdef SUPPORT_PASSWORD
 const char	*pass_msg[] = {
 	"PASS",
-	"Usage: PASS old new",
+	"Usage: PASS password",
+	0
+};
+
+const char	*lock_msg[] = {
+	"LOCK",
+	"Usage: LOCK 0/1",
 	0
 };
 #endif
@@ -167,6 +173,7 @@ STATIC int ain_ser(uint8_t dport);
 //STATIC int uio_enable_ser(uint8_t dport);
 #ifdef SUPPORT_PASSWORD
 STATIC int pass_ser(uint8_t dport);
+STATIC int lock_ser(uint8_t dport);
 #endif
 #ifdef SUPPORT_PARAMETER_BACKUP
 STATIC int backup_ser(uint8_t dport);
@@ -195,6 +202,7 @@ const COMMAND	Cmd_List[] =
 //	{ 1,  	"UIOT",			2,		uio_enable_ser,		uio_test_msg},
 #ifdef SUPPORT_PASSWORD
 	{ 1,  	"PASS",			2,		pass_ser,			pass_msg	},
+	{ 1,  	"LOCK",			2,		lock_ser,			lock_msg	},
 #endif
 #ifdef SUPPORT_PARAMETER_BACKUP
 	{ 1,  	"BKUP",			2,		backup_ser,			backup_msg	},
@@ -714,69 +722,6 @@ STATIC int ain_ser(uint8_t dport)
 	return 0;
 }
 
-#if 0
-STATIC int aout_ser(uint8_t dport)
-{
-	uint8_t enable;
-	uint32_t duty;
-
-	if(arg_c != 2 && arg_c != 3)
-	{
-		kprintf(dport, "\r\nInvalid number of parameters");
-		return -1;
-	}
-
-	enable = (uint8_t)atoi(arg_v[1]);
-	if(enable != 0 && enable != 1) return 1;
-
-	if(arg_c == 2)
-	{
-		set_AO_duty(enable, 0);
-		kprintf(dport, "\r\n AO enable=%d ", enable);
-	}
-	else if(arg_c == 3)
-	{
-		duty = (uint32_t)atoi(arg_v[2]);
-		if(duty >=0 && duty <= 100)
-		{
-			set_AO_duty(enable, duty);
-			kprintf(dport, "\r\n set AO enable=%d, duty=%d ", enable, duty);
-		}
-		else
-		{
-			kprintf(dport, "\r\n ERROR! duty should be 0 ~ 100 ");
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-
-STATIC int uio_enable_ser(uint8_t dport)
-{
-	uint8_t on_off=0;
-
-	if(arg_c != 2)
-	{
-		kprintf(dport, "\r\nInvalid number of parameters");
-		return -1;
-	}
-
-	on_off = (uint8_t)atoi(arg_v[1]);
-	if(on_off != 0 && on_off != 1)
-	{
-		kprintf(dport, "\r\n only 0(off) and 1(on) available!");
-		return -1;
-	}
-
-	debugIoFlag = on_off;
-
-	kprintf(dport, "\r\n set debugIo %d", debugIoFlag);
-
-	return 0;
-}
-#endif
 
 #ifdef SUPPORT_PASSWORD
 extern int password_enabled;
@@ -802,6 +747,38 @@ STATIC int pass_ser(uint8_t dport)
 		}
 		else
 			kprintf(dport, "\r\n set password=%d enabled=%d", new_pass, password_enabled);
+	}
+	else
+	{
+		kprintf(dport, "\r\nInvalid number of parameters");
+		return -1;
+	}
+
+	return 0;
+}
+
+STATIC int lock_ser(uint8_t dport)
+{
+	int32_t lock_val;
+	int8_t ret=0;
+
+	if(arg_c == 1)
+	{
+		lock_val = table_getValue(modify_lock_type);
+		kprintf(dport, "\r\n lock=%d, flag=%d", lock_val, password_enabled);
+		return -1;
+	}
+	else if(arg_c == 2)
+	{
+		lock_val = (int32_t)atoi(arg_v[1]);
+		ret = table_runFunc(modify_lock_type, lock_val, REQ_FROM_MODBUS);
+		if(ret == 0)
+		{
+			kprintf(dport, "\r\n password should be opened before change lock !!");
+			return -1;
+		}
+		else
+			kprintf(dport, "\r\n set lock=%d enabled=%d", lock_val, password_enabled);
 	}
 	else
 	{

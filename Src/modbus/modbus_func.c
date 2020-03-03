@@ -77,7 +77,8 @@ extern void HDLR_setRunStopFlagModbus(int8_t flag);
 extern void HDLR_setFactoryModeFlagModbus(int8_t flag);
 
 #ifdef SUPPORT_PASSWORD
-extern int table_isPasswordAddrModbus(addr);
+extern int table_isPasswordAddrModbus(uint16_t addr);
+extern int table_isLockAddrModbus(uint16_t addr);
 #endif
 extern int8_t table_setValueFactoryMode(PARAM_IDX_t idx, int32_t value);
 
@@ -677,8 +678,10 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 
 	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : read only
 
-#ifdef SUPPORT_PASSWORD
-	if(table_isLocked()) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : parameter locked
+#ifdef SUPPORT_PASSWORD  // error : parameter locked, except pass and lock
+	if(table_isLocked()
+	   && (!table_isPasswordAddrModbus(addr) && !table_isLockAddrModbus(addr))
+	   ) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; }
 #endif
 
 	modbusTx.wp = 0;
