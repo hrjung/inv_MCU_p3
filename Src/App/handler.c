@@ -211,8 +211,8 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 	static int32_t prev_run_stop=0;
 	uint16_t dummy[3] = {0,0,0};
 
-	status = NVM_getRunStopFlag(&run_stop);
-	if(status == 0) return 0;
+
+	run_stop = NVM_readRunStopSysFlag();
 
 	if(prev_run_stop == run_stop) return 0; //no change
 
@@ -464,9 +464,10 @@ int8_t HDLR_updatebyNfc(void)
 				{
 					status = NVMQ_enqueueTableQ(index, nvm_value);
 					if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
+
+					kprintf(PORT_DEBUG,"HDLR_updatebyNfc updated index=%d, value=%d, valid=%d \r\n", index, nvm_value, valid);
 				}
 			}
-			kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, valid=%d \r\n", index, nvm_value, valid);
 		}
 		index++;
 	}
@@ -475,8 +476,6 @@ int8_t HDLR_updatebyNfc(void)
 		HDLR_retryUpdate(read_fail, fail_cnt);
 
 	kprintf(PORT_DEBUG, "HDLR_updatebyNfc\r\n");
-
-	NVM_getCommandParam(); // read command parameter
 
 //	CRC is updated by NFC App
 //	NVM_setCRC();

@@ -42,7 +42,7 @@ int16_t comm_err_cnt=0;
 //extern int16_t test_run_stop_f;
 uint8_t time_cnt=0;
 
-extern int8_t NVM_isNfcMonitoring(void);
+extern int8_t NVM_isMonitoring(void);
 
 extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 
@@ -494,7 +494,7 @@ int8_t COMM_parseMessage(void)
 		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST run_freq=%d freq=%f \r\n", (int32_t)run_freq_index, (int32_t)run_freq_f);
 
 		// update EEPROM while NFC tagged
-		if(NVM_isNfcMonitoring())
+		if(NVM_isMonitoring())
 		{
 			kprintf(PORT_DEBUG, "update Status to EEPROM\r\n");
 			if(table_setStatusDSP() == 0)

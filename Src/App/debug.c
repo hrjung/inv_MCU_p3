@@ -298,6 +298,7 @@ extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 extern void NVM_setNfcMonitoring(void); // test only
+extern int8_t NVM_isMonitoring(void);
 
 extern int8_t main_SwReset(void);
 
@@ -979,7 +980,7 @@ STATIC int test_ser(uint8_t dport)
     {
 		kprintf(dport, "\r\n error code=%d, i2c_rd_err=%d, i2c_wr_err=%d", (int)ERR_getErrorState(), i2c_rd_error, i2c_wr_error);
 		kprintf(dport, "\r\n motor_on_cnt=%d, device_on_hour=%d, motor_run_hour=%d", (int)motor_run_cnt, (int)device_on_hour, (int)motor_run_hour);
-		kprintf(dport, "\r\n monitor=%d, run_stop=%d", NVM_isNfcMonitoring(), state_run_stop);
+		kprintf(dport, "\r\n monitor=%d, run_stop=%d", NVM_isMonitoring(), state_run_stop);
     }
     else if(test_case == 7) // change ctrl_in
     {

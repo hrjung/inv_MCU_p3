@@ -1209,33 +1209,26 @@ void NfcNvmUpdateParam(int32_t tag_end)
 		//	check parameter table
 		//	check system parameter
 		osDelay(5);
-		if(NVM_isNfcMonitoring())
+#ifdef SUPPORT_PASSWORD
+		if(table_isLocked()) // in case of lock, parameter should be restored
 		{
-			UTIL_setLED(LED_COLOR_B, 0);
+			osDelay(5);
+			status = HDLR_restoreNVM();
+			if(status == 0) {kputs(PORT_DEBUG, "locked!! nfc tag restore error\r\n"); }
+
+			UTIL_setLED(LED_COLOR_G, 0);
 		}
 		else
 		{
-#ifdef SUPPORT_PASSWORD
-			if(table_isLocked()) // in case of lock, parameter should be restored
+#endif
+			status = HDLR_updatebyNfc(); // EEPROM updated -> table update
+			if(status == 0)
 			{
-				osDelay(5);
-				status = HDLR_restoreNVM();
-				if(status == 0) {kputs(PORT_DEBUG, "locked!! nfc tag restore error\r\n"); }
-
-				UTIL_setLED(LED_COLOR_G, 0);
+				kputs(PORT_DEBUG, "nfc tag update error\r\n");
+				//UTIL_setLED(LED_COLOR_B, 1);
 			}
 			else
-			{
-#endif
-				status = HDLR_updatebyNfc(); // EEPROM updated -> table update
-				if(status == 0)
-				{
-					kputs(PORT_DEBUG, "nfc tag update error\r\n");
-					//UTIL_setLED(LED_COLOR_B, 1);
-				}
-				else
-					UTIL_setLED(LED_COLOR_G, 0);
-		  }
+				UTIL_setLED(LED_COLOR_G, 0);
 
 		  kputs(PORT_DEBUG, "nfc tag processed!\r\n");
 		}
@@ -1253,6 +1246,7 @@ void NfcNvmUpdateParam(int32_t tag_end)
 	}
 	else
 		UTIL_setLED(LED_COLOR_G, 0);
+
 }
 
 /* USER CODE END Header_NfcNvmTaskFunc */
@@ -1261,7 +1255,7 @@ void NfcNvmTaskFunc(void const * argument)
   /* USER CODE BEGIN NfcNvmTaskFunc */
   int sys_index=SYSTEM_PARAM_SIZE;
   int32_t tag_end=0;
-  int8_t status, nvm_backup=0;
+  int8_t status;
   static uint32_t prev_time_tick;
   static uint32_t bk_cnt=0;
 
@@ -1279,19 +1273,29 @@ void NfcNvmTaskFunc(void const * argument)
 #endif
 
 #ifndef SUPPORT_UNIT_TEST
-	  // read NFC tag flag
-	  tag_end=0;
-	  status = NVM_getNfcStatus(&tag_end);
-	  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); continue;}
-
 	  if(NFC_Access_flag)
 	  {
+		  int32_t run_stop=0;
+
 		  UTIL_setLED(LED_COLOR_B, 0);
 		  osDelay(10);
-		  //continue; // it can skip below EEPROM access until NFC untagged
+
+		  NVM_getRunStopFlag(&run_stop); // read run_stop
+
+		  // read NFC tag flag
+		  tag_end=0;
+		  status = NVM_getNfcStatus(&tag_end);
+		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); tag_end=0;}
+
+		  NVM_getNfcMonitoring(); // read monitoring flag
+
+		  NVM_getCommandParam(); // read command
 	  }
 	  else
+	  {
 		  NfcNvmUpdateParam(tag_end);
+		  tag_end=0;
+	  }
 
 
 	  if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) continue;
@@ -1350,6 +1354,8 @@ void NfcNvmTaskFunc(void const * argument)
 #ifdef SUPPORT_PARAMETER_BACKUP
 		  if(HDLR_isBackupEnabled())
 		  {
+			  int8_t nvm_backup=0;
+
 			  nvm_backup = HDLR_getBackupFlag();
 			  kprintf(PORT_DEBUG, "HDLR_backupParameter cmd=%d\r\n", nvm_backup);
 			  if(nvm_backup == MB_BACKUP_SAVE) // backup
@@ -1466,8 +1472,9 @@ int8_t mainHandlerState(void)
 		break;
 
 	case MAIN_DSP_STATE:
-
+#ifdef SUPPORT_INIT_PARAM
 		if(HDLR_isNeedInitialize() == 0) // skip DSP status, error request during parameter initialization
+#endif
 		{
 			// read DSP error flag and status info
 			HDLR_handleDspError();

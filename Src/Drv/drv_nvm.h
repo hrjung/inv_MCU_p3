@@ -45,7 +45,7 @@ extern int8_t NVM_initError(void);
 extern int8_t NVM_initSystemParam(void);
 extern void NVM_setInit(void);
 extern int8_t NVM_isInit(void);
-extern int8_t NVM_isNfcMonitoring(void);
+extern int8_t NVM_getNfcMonitoring(void);
 extern void NVM_clearNfcMonitoring(void);
 extern int8_t NVM_getNfcStatus(int32_t *tag_end);
 extern void NVM_clearNfcStatus(void);
@@ -71,18 +71,22 @@ extern void NVM_setMotorStatus(int32_t status);
 extern int NVM_getSysParamUpdateIndex(void);
 
 extern void NVM_getCommandParam(void);
+#ifdef SUPPORT_INIT_PARAM
 extern uint8_t NVM_isInitNvmNfc(void);
 extern uint8_t NVM_getInitSysParam(void);
 extern void NVM_clearInitParamCmd(void);
+#endif
 
 extern uint8_t NVM_isResetEnabled(void);
 extern void NVM_clearResetCmd(void);
 
+#ifdef SUPPORT_PARAMETER_BACKUP
 extern uint8_t NVM_isBackupCmd(void);
 extern int8_t NVM_getBackupCmdNfc(void);
 extern void NVM_clearBackupCmd(void);
 extern int8_t NVM_setBackupAvailableFlag(int32_t flag);
 extern int NVM_isBackupAvailable(void);
+#endif
 
 extern void NVM_initSystemFlagStartup(void);
 
