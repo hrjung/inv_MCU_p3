@@ -48,6 +48,7 @@ void HDLR_saveMotorRunTime(void);
 
 extern int8_t NVM_setMotorRunTime(uint32_t run_time);
 extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
+extern int8_t NVM_readRunStopSysFlag(void);
 
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern int8_t table_initStatusError(uint16_t index);
@@ -206,7 +207,7 @@ int8_t HDLR_restoreRunStopFlagNFC(void)
 
 int8_t HDLR_handleRunStopFlagNFC(void)
 {
-	int8_t status;
+	int8_t status=1;
 	int32_t run_stop=0;
 	static int32_t prev_run_stop=0;
 	uint16_t dummy[3] = {0,0,0};
