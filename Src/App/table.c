@@ -205,7 +205,7 @@ STATIC Param_t param_table[] =
 	{ torque_percent_type,	0x98,	40166,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
 #endif
 	{ ipm_temperature_type,	0x9C,	40167,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
-	{ mtr_temperature_type,	0xA0,	40168,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
+	{ mtr_temperature_type,	0xA0,	40168,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
 	{ di_status_type,		0xA4,	40169,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
 	{ do_status_type,		0xA8,	40170,	0,		0,		0,		0, 	1,		0, 	none_dsp,		table_setStatusValue},
 	{ ai_status_type,		0xAC,	40171,	0,		0,		0,		0, 	10,		0, 	none_dsp,		table_setStatusValue},
@@ -726,7 +726,7 @@ int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 	}
 	else if(index == mtr_temperature_type)
 	{
-		if(value == MOTOR_TEMP_WARNNING) //
+		if(value > MOTOR_TEMP_WARNNING) // over 130 degree than warning
 			st_mtr_temp_warning = 1;
 		else
 			st_mtr_temp_warning = 0;

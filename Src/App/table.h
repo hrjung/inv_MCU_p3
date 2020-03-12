@@ -11,7 +11,8 @@
 
 #define NVM_TABLE_VERSION		0x401
 
-#define IPM_TEMPERATURE_WARNNING	(900)
+#define IPM_TEMPERATURE_WARNNING	(900)	// 90 degree
+#define MOTOR_TEMP_WARNNING			(1300)  // 130 degree
 
 typedef enum{
 	value_type,
@@ -282,12 +283,12 @@ enum {
 
 };
 
-enum {
-    MOTOR_TEMP_NORMAL = 0,
-    MOTOR_TEMP_WARNNING,
-    MOTOR_TEMP_ERROR,
-    MOTOR_TEMP_NO_CONNECT,
-};
+//enum {
+//    MOTOR_TEMP_NORMAL = 0,
+//    MOTOR_TEMP_WARNNING,
+//    MOTOR_TEMP_ERROR,
+//    MOTOR_TEMP_NO_CONNECT,
+//};
 
 
 extern int8_t table_isInit(void);

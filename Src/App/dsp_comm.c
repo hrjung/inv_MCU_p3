@@ -384,7 +384,7 @@ int8_t COMM_parseMessage(void)
 	float run_freq_index = 0.f;
 	float dc_voltage_index = 0.f;
 	float ipm_temp_index = 0.f;
-	int32_t motor_temp_index = 0;
+	float motor_temp_index = 0.f;
 #ifdef SUPPORT_STATUS_TORQUE
 	float torque_index = 0.f;
 	float torque_percent_index = 0.f;
@@ -437,7 +437,7 @@ int8_t COMM_parseMessage(void)
 		memcpy(&run_freq_index, &recvMsg[5+4], sizeof(float));
 		memcpy(&dc_voltage_index, &recvMsg[5+6], sizeof(float));
 		memcpy(&ipm_temp_index, &recvMsg[5+8], sizeof(float));
-		memcpy(&motor_temp_index, &recvMsg[5+10], sizeof(long));
+		memcpy(&motor_temp_index, &recvMsg[5+10], sizeof(float));
 #ifdef SUPPORT_STATUS_TORQUE
 		memcpy(&torque_index, &recvMsg[5+12], sizeof(float));
 		memcpy(&torque_percent_index, &recvMsg[5+14], sizeof(float));
@@ -483,7 +483,7 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index + 0.05), REQ_FROM_DSP);
 		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index), REQ_FROM_DSP);
 		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index + 0.05), REQ_FROM_DSP);
-		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index), REQ_FROM_DSP);
+		table_setStatusValue(mtr_temperature_type, (int32_t)(10.0*motor_temp_index + 0.05), REQ_FROM_DSP);
 #ifdef SUPPORT_STATUS_TORQUE
 		table_setStatusValue(torque_value_type, (int32_t)(10.0*torque_index + 0.05), REQ_FROM_DSP);
 		table_setStatusValue(torque_percent_type, (int32_t)(10.0*torque_percent_index + 0.05), REQ_FROM_DSP);
