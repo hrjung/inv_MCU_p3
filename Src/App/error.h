@@ -81,6 +81,7 @@ typedef struct {
 
 extern uint8_t ERR_isErrorState(void);
 extern uint8_t ERR_isCommError(void);
+extern uint16_t ERR_isNvmError(void);
 extern uint8_t ERR_getErrorState(void);
 extern void ERR_setErrorState(TRIP_REASON_t err_code);
 

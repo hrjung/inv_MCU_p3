@@ -185,6 +185,8 @@ uint32_t dev_start_time=0;
 
 uint16_t led_blink_cnt=0;
 
+int8_t reset_flag=0; // flag for MCU force reset
+
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
 #endif
@@ -1298,7 +1300,7 @@ void NfcNvmTaskFunc(void const * argument)
 	  }
 
 
-	  if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) continue;
+	  //if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) continue;
 
 	  // no tag state,
 	  //	handle NVM update request
@@ -1432,12 +1434,14 @@ void userIoTaskFunc(void const * argument)
 
 /* USER CODE BEGIN Header_mainHandlerTaskFunc */
 
-int8_t main_SwReset(void)
+int8_t main_SwReset(int flag)
 {
-	int8_t status;
+	int8_t status=1;
+
 	reset_cmd_send_f = 1;
 
-	status = COMM_sendTestCmd(SPI_TEST_CMD_RESET);
+	if(flag==0)
+		status = COMM_sendTestCmd(SPI_TEST_CMD_RESET);
 
 	if(status)
 	{
@@ -1448,6 +1452,27 @@ int8_t main_SwReset(void)
 	return status;
 }
 
+#ifdef SUPPORT_FORCE_RESET
+int8_t main_isForceReset(void)
+{
+	return (reset_flag != 1);
+}
+
+int8_t main_isMcuReset(void)
+{
+	uint16_t dummy[] = {0,0,0};
+	int8_t status=1, result=0;
+
+	status = COMM_sendMessage(SPICMD_REQ_ST, dummy);
+	if(status == 1)
+	{
+		if(!table_isMotorStop()) // motor is running
+			result = 1;
+	}
+
+	return result;
+}
+#endif
 
 int8_t mainHandlerState(void)
 {
@@ -1540,7 +1565,7 @@ int8_t mainHandlerState(void)
 
 		if(reset_enabled_f)
 		{
-			status = main_SwReset(); // SW reset
+			status = main_SwReset(0); // SW reset
 			reset_enabled_f = 0;
 		}
 
@@ -1589,6 +1614,10 @@ void mainHandlerTaskFunc(void const * argument)
 //	i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
 //	kprintf(PORT_DEBUG, "read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);
 
+#ifdef SUPPORT_FORCE_RESET
+  reset_flag = main_isMcuReset();
+#endif
+
   UTIL_setLED(LED_COLOR_G, 0);
 #ifndef SUPPORT_UNIT_TEST
   nv_status = table_initNVM();
@@ -1601,7 +1630,7 @@ void mainHandlerTaskFunc(void const * argument)
   if(nv_status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
 
-  kprintf(PORT_DEBUG, "nv_status = %d \r\n", nv_status);
+  kprintf(PORT_DEBUG, "nv_status = %d  reset=%d\r\n", nv_status, reset_flag);
 #endif
 
   // init queue

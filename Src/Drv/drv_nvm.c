@@ -88,6 +88,8 @@ extern uint32_t run_minutes;
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 extern uint32_t table_calcCRC(void);
 
+extern int8_t main_SwReset(int flag);
+
 uint8_t NVM_read(uint16_t addr, int32_t *value)
 {
 	uint8_t status=NVM_OK;
@@ -379,7 +381,12 @@ int8_t NVM_getNfcMonitoring(void)
 	{
 		kprintf(PORT_DEBUG, "read monitoring error cnt=%d\r\n", retry_cnt++);
 		if(retry_cnt > NVM_SYS_PARAM_UPDATE_RETRY_MAX)
-			ERR_setErrorState(TRIP_REASON_MCU_SETVALUE);
+		{
+			//ERR_setErrorState(TRIP_REASON_MCU_SETVALUE);
+#ifdef SUPPORT_FORCE_RESET
+			main_SwReset(1); // force reset
+#endif
+		}
 
 		return 0; // default not monitoring
 	}

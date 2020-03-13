@@ -11,7 +11,7 @@
 #include    <stdarg.h>
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		44
+#define VERSION_MIN		45
 
 
 #define SUPPORT_TASK_WATCHDOG
@@ -26,6 +26,8 @@
 
 // add torque value to status info from DSP
 #define SUPPORT_STATUS_TORQUE
+
+#define SUPPORT_FORCE_RESET
 
 //#define SUPPORT_UNIT_TEST
 

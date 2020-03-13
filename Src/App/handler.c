@@ -147,14 +147,6 @@ int8_t HDLR_handleDspError(void)
 				err_code = table_getValue(err_code_1_type);
 			}
 #endif
-#if 0
-			// store dev_on_time, in case of power off
-			if(err_code == TRIP_REASON_VDC_UNDER)
-			{
-				status = NVM_setMotorDevCounter(device_min_cnt);
-				HDLR_saveMotorRunTime();
-			}
-#endif
 
 			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 		}
@@ -537,7 +529,7 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 
 				status = NVMQ_enqueueTableQ(index, init_value);
 				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
-				//kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+				//kprintf(PORT_DEBUG,"HDLR_initNVM index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
 
 				// send default value to DSP
 				if(table_getDspAddr(index) == none_dsp) continue;
@@ -633,7 +625,7 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 	static int16_t prev_state_run_stop=CMD_STOP;
 
 	// process On time
-	if(cur_time%60 == 0 && cur_time != dev_start_time) // 1 hour
+	if(cur_time%60 == 0) // && cur_time != dev_start_time) // 1 hour
 	{
 		device_on_hour++;
 		status = NVM_setDeviceOnTime(device_on_hour);
@@ -714,7 +706,12 @@ int8_t HDLR_updateSysParam(int index)
 	{
 		NVM_increaseSysParamRetryCnt(index);
 		if(NVM_getSysParamRetryCnt(index) > NVM_SYS_PARAM_UPDATE_RETRY_MAX)
-			ERR_setErrorState(TRIP_REASON_MCU_SETVALUE);
+		{
+			//ERR_setErrorState(TRIP_REASON_MCU_SETVALUE);
+#ifdef SUPPORT_FORCE_RESET
+			main_SwReset(1); // force reset
+#endif
+		}
 	}
 
 	kprintf(PORT_DEBUG, "HDLR_updateSysParam() index=%d status=%d\r\n", index, status);

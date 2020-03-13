@@ -9,7 +9,7 @@
 #define SRC_TABLE_H_
 
 
-#define NVM_TABLE_VERSION		0x401
+#define NVM_TABLE_VERSION		0x501
 
 #define IPM_TEMPERATURE_WARNNING	(900)	// 90 degree
 #define MOTOR_TEMP_WARNNING			(1300)  // 130 degree

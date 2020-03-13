@@ -300,7 +300,7 @@ extern uint16_t NVM_getSystemParamAddr(uint16_t index);
 extern void NVM_setNfcMonitoring(void); // test only
 extern int8_t NVM_isMonitoring(void);
 
-extern int8_t main_SwReset(void);
+extern int8_t main_SwReset(int flag);
 
 extern void test_initDbgTableValue(void);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
@@ -505,12 +505,15 @@ STATIC int help_ser(uint8_t dport)
 STATIC int reset_ser(uint8_t dport)
 {
 	int8_t status;
+	int flag=0;
 
-	kputs(dport, "\r\n\r\n---Reset---\r\n\r\n");
+	flag = (int)atoi(arg_v[1]);
 
-	status = main_SwReset();
+	kprintf(dport, "\r\n\r\n ---Reset--- flag=%d\r\n\r\n", flag);
+	status = main_SwReset(flag);
 	if(status==0)
 		kputs(dport, "\r\n\r\n---Reset Error---\r\n\r\n");
+
 	return 0;
 }
 

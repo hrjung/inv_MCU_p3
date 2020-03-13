@@ -30,6 +30,11 @@ uint8_t ERR_isCommError(void)
 	return (err_state == TRIP_REASON_MCU_COMM_FAIL);
 }
 
+uint16_t ERR_isNvmError(void)
+{
+	return (err_state == TRIP_REASON_MCU_INIT);
+}
+
 uint8_t ERR_getErrorState(void)
 {
 	return err_state;

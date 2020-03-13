@@ -494,6 +494,7 @@ int8_t COMM_parseMessage(void)
 		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST run_freq=%d freq=%f \r\n", (int32_t)run_freq_index, (int32_t)run_freq_f);
 
 		// update EEPROM while NFC tagged
+		//if(NVM_getNfcMonitoring())
 		if(NVM_isMonitoring())
 		{
 			kprintf(PORT_DEBUG, "update Status to EEPROM\r\n");

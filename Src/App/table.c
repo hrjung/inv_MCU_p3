@@ -81,6 +81,7 @@ extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_initTimer(int32_t b_index);
 extern void MB_setSlaveAddress(uint8_t addr);
 
+extern int8_t main_isForceReset(void);
 #ifdef SUPPORT_PASSWORD
 extern void main_setPassCounterStart(void);
 #endif
@@ -97,7 +98,7 @@ extern void EXT_DI_initStopFlag(void);
 
 STATIC Param_t param_table[] =
 {   //    idx,				addr,	modbus, init,	min,	max,	RW,ratio,WRonRun, dsp_idx			param_func
-	{ value_type,			0x100,	40100,	200,	100,	800,	1, 	10,		1, 	value_dsp,			table_setCommandFreqValue, },
+	{ value_type,			0x100,	40100,	0,		100,	800,	1, 	10,		1, 	value_dsp,			table_setCommandFreqValue, },
 	{ freq_min_type,		0x104,	40101,	100,	100,	800,	1, 	10, 	0, 	none_dsp,			table_setValueMin, },
 	{ freq_max_type,		0x108,	40102,	800,	100,	800,	1, 	10, 	0, 	freq_max_dsp,		table_setValueMax,},
 	{ accel_time_type,		0x10C,	40103,	100,	10,		6000,	1, 	10, 	1, 	accel_time_dsp,		table_setValue,},
@@ -994,19 +995,22 @@ int8_t table_init(void)
 	status = table_updateRange();
 	if(status == 0) return 0;
 
-	for(i=0; i<=baudrate_type; i++)
+	if( !main_isForceReset() ) // no mcu force reset, then send DSP
 	{
-		// if value is not initial value than send DSP to sync
-		if(table_data[i] != param_table[i].initValue)
+		for(i=0; i<=baudrate_type; i++)
 		{
-			if(table_getDspAddr(i) == none_dsp) continue;
+			// if value is not initial value than send DSP to sync
+			if(table_data[i] != param_table[i].initValue)
+			{
+				if(table_getDspAddr(i) == none_dsp) continue;
 
-			COMM_convertValue((uint16_t)i, buf);
+				COMM_convertValue((uint16_t)i, buf);
 
-			status = COMM_sendMessage(SPICMD_PARAM_W, buf);
-			kprintf(PORT_DEBUG, "DSP COMM : status=%d, idx=%d, value=%d, param=%d\r\n", \
-					status, i, (int)table_data[i], param_table[i].initValue);
-			if(status == 0) errflag++;
+				status = COMM_sendMessage(SPICMD_PARAM_W, buf);
+				kprintf(PORT_DEBUG, "DSP COMM : status=%d, idx=%d, value=%d, param=%d\r\n", \
+						status, i, (int)table_data[i], param_table[i].initValue);
+				if(status == 0) errflag++;
+			}
 		}
 	}
 
@@ -1014,7 +1018,8 @@ int8_t table_init(void)
 	for(i=0; i<PARAM_TABLE_SIZE; i++) table_nvm[i] = table_data[i];
 
 	// clear system flag at init
-	NVM_initSystemFlagStartup();
+	if( !main_isForceReset() )
+		NVM_initSystemFlagStartup();
 
 	status = NVM_readTime();
 	if(status == 0) errflag++;
@@ -1218,14 +1223,17 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 
 #if 1
 		// update EEPROM
-		index = err_code_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
-		index = err_status_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
-		index = err_current_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
-		index = err_freq_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		if(!ERR_isNvmError())
+		{
+			index = err_code_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+			index = err_status_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+			index = err_current_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+			index = err_freq_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		}
 #endif
 	}
 
@@ -1250,10 +1258,13 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 
 #if 1
 	// update EEPROM
-	nvm_status = NVMQ_enqueueNfcQ(err_code_1_type, table_data[err_code_1_type]);
-	nvm_status = NVMQ_enqueueNfcQ(err_status_1_type, table_data[err_status_1_type]);
-	nvm_status = NVMQ_enqueueNfcQ(err_current_1_type, table_data[err_current_1_type]);
-	nvm_status = NVMQ_enqueueNfcQ(err_freq_1_type, table_data[err_freq_1_type]);
+	if(!ERR_isNvmError())
+	{
+		nvm_status = NVMQ_enqueueNfcQ(err_code_1_type, table_data[err_code_1_type]);
+		nvm_status = NVMQ_enqueueNfcQ(err_status_1_type, table_data[err_status_1_type]);
+		nvm_status = NVMQ_enqueueNfcQ(err_current_1_type, table_data[err_current_1_type]);
+		nvm_status = NVMQ_enqueueNfcQ(err_freq_1_type, table_data[err_freq_1_type]);
+	}
 #endif
 
 	return 1;
