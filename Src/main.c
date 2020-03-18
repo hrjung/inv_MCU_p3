@@ -1455,7 +1455,7 @@ int8_t main_SwReset(int flag)
 #ifdef SUPPORT_FORCE_RESET
 int8_t main_isForceReset(void)
 {
-	return (reset_flag != 1);
+	return (reset_flag == 1);
 }
 
 int8_t main_isMcuReset(void)

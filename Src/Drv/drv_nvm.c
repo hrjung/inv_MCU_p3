@@ -374,7 +374,7 @@ int8_t NVM_getNfcMonitoring(void)
 	uint8_t status;
 	static int8_t retry_cnt=0;
 
-	if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) return (int8_t)isMonitoring;
+	//if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) return (int8_t)isMonitoring;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_ON_MONITORING].addr, &isMonitoring);
 	if(status!=NVM_OK)
