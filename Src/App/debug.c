@@ -966,6 +966,16 @@ STATIC int test_ser(uint8_t dport)
     		ERR_setErrorState(TRIP_REASON_MCU_ERR_TEST);
     		kputs(dport, "\r\n set MCU ERR TEST");
     		break;
+
+    	case 3:
+    		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+    		kputs(dport, "\r\n set MCU COMM ERR TEST");
+    		break;
+
+    	case 4:
+    		ERR_setErrorState(TRIP_REASON_NONE);
+    		kputs(dport, "\r\n set ERR=0");
+    		break;
     	}
     }
     else if(test_case == 5) // read table value

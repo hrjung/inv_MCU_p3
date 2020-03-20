@@ -146,13 +146,23 @@ int8_t HDLR_handleDspError(void)
 			{
 				err_code = table_getValue(err_code_1_type);
 			}
+			else
+			{
+				osDelay(50);
+				status = COMM_sendMessage(SPICMD_REQ_ERR, dummy); // try again
+				if(status == COMM_SUCCESS)
+				{
+					err_code = table_getValue(err_code_1_type);
+				}
+			}
 #endif
 
 			kprintf(PORT_DEBUG, "HDLR_handleDspError send SPICMD_REQ_ERR e=%d \r\n", err_code);
 		}
 		ERR_setErrorState(err_code);
 		//UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
-		err_state_f = 1;
+
+		err_state_f = 1; // only one error accepted
 
 		status = NVM_getRunStopFlag(&run_stop);
 		if(run_stop != 0 || status == 0)

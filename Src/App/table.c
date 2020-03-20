@@ -698,6 +698,13 @@ int8_t table_setTimeValue(PARAM_IDX_t index, int32_t value, int16_t option)
 	return 1;
 }
 
+void table_getStatusFromTable(int32_t *status, float *current, float *freq)
+{
+	*status = (table_data[run_status1_type]&0x0F);
+	*current = (float)table_data[I_rms_type]/10.0;
+	*freq = (float)table_data[run_freq_type]/10.0;
+}
+
 int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t option)
 {
 	table_data[index] = value;
@@ -941,13 +948,18 @@ int8_t table_getMotorType(void)
 	motor_type = COMM_getMotorType(&status);
 	if(status == 0)
 	{
-		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
-		kprintf(PORT_DEBUG, " getType error status=%d \r\n", status);
-		return status;
+		osDelay(50);
+		motor_type = COMM_getMotorType(&status); // try again
+		if(status == 0)
+		{
+			ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+			kprintf(PORT_DEBUG, " getType error status=%d \r\n", status);
+			return status;
+		}
 	}
 
 	value = table_getValue(motor_type_type);
-	if(value == MOTOR_NONE_TYPE)
+	if(motor_type != value) // if mis-matched, update NVM
 	{
 		// valid motor type value
 		if(motor_type > MOTOR_NONE_TYPE && motor_type < MOTOR_MAX_TYPE)
@@ -958,13 +970,8 @@ int8_t table_getMotorType(void)
 		else
 			status = 0;
 	}
-	else
-	{
-		// type is mis-matched
-		if(motor_type != value)	status = 0;
-	}
 
-	kprintf(PORT_DEBUG, " read motor type=%d, value=%d, status=%d  \r\n", motor_type, value, status);
+	kprintf(PORT_DEBUG, " read motor type=%d, table_val=%d, status=%d  \r\n", motor_type, value, status);
 
 	return status;
 }

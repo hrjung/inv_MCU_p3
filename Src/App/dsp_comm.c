@@ -35,6 +35,7 @@ int16_t st_brake = 0;
 int16_t gear_ratio = 1;
 
 int16_t comm_err_cnt=0;
+int16_t status_comm_err_cnt=0;
 
 //RTC_TimeTypeDef sTime;
 //extern RTC_HandleTypeDef hrtc;
@@ -652,17 +653,29 @@ int8_t COMM_sendParamWrite(const uint16_t* data)
 	return COMM_SUCCESS;
 }
 
-void COMM_handleError(int8_t result)
+void COMM_handleError(COMM_CMD_t cmd, int8_t result)
 {
-	if(result == COMM_SUCCESS)
+	if(cmd == SPICMD_REQ_ST) // in case of status error treat as separate error
 	{
-		if(comm_err_cnt > 0) comm_err_cnt--;
+		if(result == COMM_FAILED)
+		{
+			status_comm_err_cnt++;
+			if(status_comm_err_cnt > COMM_STATUS_ERR_CNT_LIMIT) // 10 errors
+				ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		}
+		else
+			status_comm_err_cnt = 0;
 	}
-	else if(result == COMM_FAILED)
+	else // except status error
 	{
-		comm_err_cnt++;
-		if(comm_err_cnt > COMM_ERR_COUNT_LIMIT)
-			ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		if(result == COMM_FAILED)
+		{
+			comm_err_cnt++;
+			if(comm_err_cnt > COMM_ERR_COUNT_LIMIT)	// 5 errors
+				ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		}
+		else
+			comm_err_cnt=0;
 	}
 }
 
@@ -680,7 +693,7 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 #endif
 		result = COMM_sendCommand(cmd, data);
 
-	COMM_handleError(result);
+	COMM_handleError(cmd, result);
 
 	return (result == COMM_SUCCESS);
 }
