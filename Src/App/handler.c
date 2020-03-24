@@ -42,14 +42,26 @@ extern uint32_t device_min_cnt;
 extern uint32_t run_minutes;
 extern uint32_t dev_start_time;
 
+extern uint8_t param_init_requested_f;
+
 void HDLR_saveMotorRunTime(void);
 
 extern int8_t NVM_setMotorRunTime(uint32_t run_time);
 extern int8_t NVM_setDeviceOnTime(uint32_t on_time);
+extern int8_t NVM_readRunStopSysFlag(void);
 
 extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern int8_t table_initStatusError(uint16_t index);
+extern int table_checkValidityNFC(PARAM_IDX_t idx, int32_t value);
+
+extern int8_t table_getMotorType(void);
+extern int8_t table_updateFwVersion(void);
+
+extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
+
+#ifdef SUPPORT_TASK_WATCHDOG
 extern void main_kickWatchdogNFC(void);
+#endif
 
 #ifdef SUPPORT_PARAMETER_BACKUP
 extern uint16_t table_getAddr(PARAM_IDX_t index);
@@ -115,7 +127,7 @@ int8_t HDLR_handleDspError(void)
 {
 	uint16_t dummy[] = {0,0,0};
 	int8_t status;
-	int32_t err_code=0;
+	int32_t err_code=0, run_stop=0;
 
 	if((UTIL_isDspError() || ERR_isErrorState()) && err_state_f == 0)
 	{
@@ -127,18 +139,21 @@ int8_t HDLR_handleDspError(void)
 		}
 		else
 		{
+#ifndef SUPPORT_UNIT_TEST
 			// request DSP error info
 			status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
 			if(status == COMM_SUCCESS)
 			{
-				err_code = table_getValue(err_code_0_type);
+				err_code = table_getValue(err_code_1_type);
 			}
-#if 0
-			// store dev_on_time, in case of power off
-			if(err_code == TRIP_REASON_VDC_UNDER)
+			else
 			{
-				status = NVM_setMotorDevCounter(device_min_cnt);
-				HDLR_saveMotorRunTime();
+				osDelay(50);
+				status = COMM_sendMessage(SPICMD_REQ_ERR, dummy); // try again
+				if(status == COMM_SUCCESS)
+				{
+					err_code = table_getValue(err_code_1_type);
+				}
 			}
 #endif
 
@@ -146,7 +161,12 @@ int8_t HDLR_handleDspError(void)
 		}
 		ERR_setErrorState(err_code);
 		//UTIL_setLED(LED_COLOR_R, 1); //R LED blinking
-		err_state_f = 1;
+
+		err_state_f = 1; // only one error accepted
+
+		status = NVM_getRunStopFlag(&run_stop);
+		if(run_stop != 0 || status == 0)
+			NVM_clearRunStopFlag(); // clear run/stop flag at trip condition
 	}
 
 	return 1;
@@ -159,9 +179,11 @@ int8_t HDLR_readDspStatus(void)
 
 	 if(!ERR_isCommError()) // no comm error
 	 {
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_REQ_ST, dummy);
 		if(status == COMM_FAILED)
 			kputs(PORT_DEBUG, "HDLR_readDspStatus error!!\r\n");
+#endif
 
 		//kprintf(PORT_DEBUG, "HDLR_readDspStatus send SPICMD_REQ_ST status=%d\r\n", status);
 	 }
@@ -187,13 +209,13 @@ int8_t HDLR_restoreRunStopFlagNFC(void)
 
 int8_t HDLR_handleRunStopFlagNFC(void)
 {
-	int8_t status;
+	int8_t status=1;
 	int32_t run_stop=0;
 	static int32_t prev_run_stop=0;
 	uint16_t dummy[3] = {0,0,0};
 
-	status = NVM_getRunStopFlag(&run_stop);
-	if(status == 0) return 0;
+
+	run_stop = NVM_readRunStopSysFlag();
 
 	if(prev_run_stop == run_stop) return 0; //no change
 
@@ -201,6 +223,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 	{
 	case RUN_STOP_FLAG_RUN:
 		// send run to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
@@ -209,11 +232,13 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 			prev_run_stop = run_stop;
 			//HDLR_setStartRunTime(); // set Run start time
 		}
+#endif
 		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
 		break;
 
 	case RUN_STOP_FLAG_STOP:
 		// send stop to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
@@ -221,6 +246,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 			NVM_clearRunStopFlag();
 			prev_run_stop = run_stop;
 		}
+#endif
 		kprintf(PORT_DEBUG, "STOP Flag, send to DSP status=%d\r\n", status);
 		break;
 
@@ -250,9 +276,11 @@ int8_t HDLR_handleRunStopFlagModbus(void)
 	case RUN_STOP_FLAG_RUN:
 		HDLR_setStopFlag(0); // clear stop
 		// send run to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
+#endif
 		{
 			HDLR_clearRunStopFlagModbus();
 			//HDLR_setStartRunTime(); // set Run start time
@@ -263,9 +291,11 @@ int8_t HDLR_handleRunStopFlagModbus(void)
 	case RUN_STOP_FLAG_STOP:
 		HDLR_setStopFlag(1); // start stop
 		// send stop to DSP
+#ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
 		// clear flag to idle
 		if(status != COMM_FAILED)
+#endif
 		{
 			HDLR_clearRunStopFlagModbus();
 		}
@@ -314,6 +344,9 @@ int8_t HDLR_restoreNVM(void)
 			}
 		}
 		index++;
+#ifdef SUPPORT_TASK_WATCHDOG
+		main_kickWatchdogNFC();
+#endif
 	}
 
 	// restore CRC as well
@@ -332,7 +365,7 @@ int8_t HDLR_updateParamNVM(void)
 {
 	int32_t value, nvm_value;
 	int8_t empty, status;
-	uint8_t nvm_status;
+	uint8_t nvm_status=0;
 	uint16_t addr;
 	int16_t errflag=0;
 
@@ -342,19 +375,16 @@ int8_t HDLR_updateParamNVM(void)
 		if(status == 0) {kprintf(PORT_DEBUG,"ERROR NfcQ dequeue \r\n"); errflag++;}
 
 		nvm_status = NVM_read(addr, &nvm_value);
-		if(nvm_status == 0)
+		if(nvm_status == 0 || nvm_value != value)
 		{
-			kprintf(PORT_DEBUG,"ERROR NVM read error addr=0x%x\r\n", addr); errflag++;
-		}
-		else
-		{
-			if(nvm_value != value)
-			{
-				nvm_status = NVM_write(addr, value);
-				if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error addr=0x%x\r\n", addr); errflag++;}
-			}
+			//kprintf(PORT_DEBUG,"ERROR NVM read error addr=0x%x\r\n", addr); errflag++;
+			nvm_status = NVM_write(addr, value);
+			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error addr=0x%x\r\n", addr); errflag++;}
 		}
 		osDelay(5);
+#ifdef SUPPORT_TASK_WATCHDOG
+		main_kickWatchdogNFC();
+#endif
 
 		empty = NVMQ_isEmptyNfcQ();
 	} while(empty == 0); // not empty
@@ -367,33 +397,88 @@ int8_t HDLR_updateParamNVM(void)
 	return 1;
 }
 
+void HDLR_retryUpdate(int *fail_list, int count)
+{
+	int i, read_fail[baudrate_type+1], fail_cnt=0;
+	int32_t nvm_value;
+	uint8_t nvm_status=0;
+	int8_t status=1;
+
+	fail_cnt=0;
+	for(i=0; i<=baudrate_type; i++) read_fail[i] = 0;
+
+	for(i=0; i<count; i++)
+	{
+		osDelay(5);
+		nvm_status = NVM_readParam((PARAM_IDX_t)fail_list[i], &nvm_value);
+		if(nvm_status == 0)
+		{
+			kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", i);
+			read_fail[fail_cnt++] = fail_list[i];
+		}
+		else
+		{
+			if(nvm_value != table_getValue(i))
+			{
+				status = NVMQ_enqueueTableQ(i, nvm_value);
+				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", fail_list[i]); }
+				kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", fail_list[i], nvm_value, status);
+			}
+		}
+	}
+
+	kprintf(PORT_DEBUG,"HDLR_retryUpdate() count=%d, fail_cnt=%d \r\n", count, fail_cnt);
+}
+
 // EEPROM is updated by NFC -> inform to table to update
 int8_t HDLR_updatebyNfc(void)
 {
 	PARAM_IDX_t index=value_type;
+	int i, read_fail[55], fail_cnt=0;
 	int32_t nvm_value;
 	uint8_t nvm_status;
 	int8_t status;
 	int16_t errflag=0;
+	int valid=0;
+
+	fail_cnt=0;
+	for(i=0; i<=baudrate_type; i++) read_fail[i] = 0;
 
 	while(index <= baudrate_type) // only writable parameter
 	{
 		osDelay(5);
 		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;}
-
-		if(nvm_value != table_getValue(index))
+		if(nvm_status == 0)
 		{
-			status = NVMQ_enqueueTableQ(index, nvm_value);
-			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
-			kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+			kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;
+			read_fail[fail_cnt++] = (int)index;
+		}
+		else
+		{
+			valid = table_checkValidityNFC(index, nvm_value); // valid range check
+			if(valid == 0) // wrong value than restore NVM
+			{
+				status = NVM_writeParam(index, table_getValue(index));
+				if(status == 0) {kprintf(PORT_DEBUG,"ERROR NVM restore error index=%d\n", index); errflag++;}
+			}
+			else // correct value to update table
+			{
+				if(nvm_value != table_getValue(index))
+				{
+					status = NVMQ_enqueueTableQ(index, nvm_value);
+					if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
+
+					kprintf(PORT_DEBUG,"HDLR_updatebyNfc updated index=%d, value=%d, valid=%d \r\n", index, nvm_value, valid);
+				}
+			}
 		}
 		index++;
 	}
 
-	kprintf(PORT_DEBUG, "HDLR_updatebyNfc\r\n");
+	if(fail_cnt > 0) // read error then retry
+		HDLR_retryUpdate(read_fail, fail_cnt);
 
-	NVM_getCommandParam(); // read command parameter
+	kprintf(PORT_DEBUG, "HDLR_updatebyNfc\r\n");
 
 //	CRC is updated by NFC App
 //	NVM_setCRC();
@@ -406,52 +491,107 @@ int8_t HDLR_updatebyNfc(void)
 }
 
 #ifdef SUPPORT_INIT_PARAM
-int8_t HDLR_initNVM(void)
+
+uint8_t HDLR_isNeedInitialize(void)
+{
+
+	if(param_init_requested_f == 0 && NVM_isInitNvmNfc() == 0) return NVM_INIT_PARAM_NONE;
+
+	if(param_init_requested_f) return param_init_requested_f;
+
+	if(NVM_isInitNvmNfc())
+	{
+		if(table_isMotorStop())
+		{
+			return NVM_getInitSysParam();
+		}
+		else
+		{
+			NVM_clearInitParamCmd();
+		}
+	}
+
+	return NVM_INIT_PARAM_NONE;
+}
+
+int8_t HDLR_initNVM(NVM_INIT_t init_type)
 {
 	PARAM_IDX_t index=value_type;
 	int32_t nvm_value, init_value;
 	uint8_t nvm_status;
 	int8_t status;
 	int16_t errflag=0;
+	uint16_t buf[3]={0,0,0};
 
-	while(index <= baudrate_type) // only writable parameter
+	if(init_type == NVM_INIT_PARAM_ALL || init_type == NVM_INIT_PARAM_CONFIG)
 	{
-		osDelay(5);
-		nvm_status = NVM_readParam(index, &nvm_value);
-		if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;}
-
-		init_value = table_getInitValue(index);
-		if(nvm_value != init_value)
+		while(index <= baudrate_type) // only writable parameter
 		{
-			nvm_status = NVM_writeParam(index, init_value);
-			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error index=0x%x\r\n", index); errflag++;}
+			osDelay(5);
+			nvm_status = NVM_readParam(index, &nvm_value);
+			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", index); errflag++;}
 
-			status = NVMQ_enqueueTableQ(index, init_value);
-			if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
-			//kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
-		}
-		index++;
+			init_value = table_getInitValue(index);
+			if(nvm_value != init_value)
+			{
+				nvm_status = NVM_writeParam(index, init_value);
+				if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error index=0x%x\r\n", index); errflag++;}
+
+				status = NVMQ_enqueueTableQ(index, init_value);
+				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", index); errflag++;}
+				//kprintf(PORT_DEBUG,"HDLR_initNVM index=%d, value=%d, status=%d \r\n", index, nvm_value, status);
+
+				// send default value to DSP
+				if(table_getDspAddr(index) == none_dsp) continue;
+
+				COMM_convertValue((uint16_t)index, buf);
+
+				status = COMM_sendMessage(SPICMD_PARAM_W, buf);
+				kprintf(PORT_DEBUG, "HDLR_initNVM() DSP COMM : status=%d, idx=%d, value=%d, param=%d\r\n", \
+						status, index, (int)nvm_value, init_value);
+				if(status == 0) errflag++;
+			}
+			index++;
 
 #ifdef SUPPORT_TASK_WATCHDOG
-		main_kickWatchdogNFC();
+			main_kickWatchdogNFC();
 #endif
+		}
+		kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 	}
 
-	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
+	init_value = table_getInitValue(motor_type_type);
+	status = NVM_writeParam((PARAM_IDX_t)motor_type_type, init_value);
+	if(status == 0) errflag++;
 
-	// initialize error, status
-	for(index=err_date_0_type; index<PARAM_TABLE_SIZE; index++)
+	if(init_type == NVM_INIT_PARAM_ALL || init_type == NVM_INIT_PARAM_ERROR)
 	{
-		init_value = table_getInitValue(index);
-		status = NVM_writeParam((PARAM_IDX_t)index, init_value);
-		if(status == 0) errflag++;
+		// initialize error, status
+		for(index=err_code_1_type; index<PARAM_TABLE_SIZE; index++)
+		{
+			init_value = table_getInitValue(index);
+			status = NVM_writeParam((PARAM_IDX_t)index, init_value);
+			if(status == 0) errflag++;
 
-		table_initStatusError(index);
-		//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
+			table_initStatusError(index);
+			//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
+
+#ifdef SUPPORT_TASK_WATCHDOG
+			main_kickWatchdogNFC();
+#endif
+		}
+		kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
+	}
+
+	if(init_type == NVM_INIT_PARAM_ALL || init_type == NVM_INIT_PARAM_TIME)
+	{
+		status = NVM_initTime();
+		if(status == 0) errflag++;
 
 #ifdef SUPPORT_TASK_WATCHDOG
 		main_kickWatchdogNFC();
 #endif
+		kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
 	}
 
 	// init system param
@@ -462,20 +602,13 @@ int8_t HDLR_initNVM(void)
 	main_kickWatchdogNFC();
 #endif
 
-	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
-
-	status = NVM_initTime();
-	if(status == 0) errflag++;
-
-#ifdef SUPPORT_TASK_WATCHDOG
-	main_kickWatchdogNFC();
-#endif
-
-	kprintf(PORT_DEBUG, "3: err=%d\r\n", errflag);
-
 	NVM_setInit();
 
 	NVM_setCRC();
+
+	status = table_getMotorType(); //initialize motor_type
+
+	status = table_updateFwVersion(); // initialize FW version
 
 	kprintf(PORT_DEBUG, "HDLR_initNVM() Done \r\n");
 
@@ -502,7 +635,7 @@ int8_t HDLR_updateTime(uint32_t cur_time)
 	static int16_t prev_state_run_stop=CMD_STOP;
 
 	// process On time
-	if(cur_time%60 == 0 && cur_time != dev_start_time) // 1 hour
+	if(cur_time%60 == 0) // && cur_time != dev_start_time) // 1 hour
 	{
 		device_on_hour++;
 		status = NVM_setDeviceOnTime(device_on_hour);
@@ -577,8 +710,19 @@ int8_t HDLR_updateSysParam(int index)
 	addr = NVM_getSystemParamAddr(index);
 	value = NVM_getSystemParamValue(index);
 	status = NVM_write(addr, value);
-	if(status == 1)
+	if(status == 1) // write OK
 		NVM_clearSysParamUpdateFlag(index);
+	else
+	{
+		NVM_increaseSysParamRetryCnt(index);
+		if(NVM_getSysParamRetryCnt(index) > NVM_SYS_PARAM_UPDATE_RETRY_MAX)
+		{
+			//ERR_setErrorState(TRIP_REASON_MCU_SETVALUE);
+#ifdef SUPPORT_FORCE_RESET
+			main_SwReset(1); // force reset
+#endif
+		}
+	}
 
 	kprintf(PORT_DEBUG, "HDLR_updateSysParam() index=%d status=%d\r\n", index, status);
 
@@ -623,33 +767,9 @@ int8_t HDLR_isBackupEnabled(void)
 	return (mb_backup_mode_f != 0 || NVM_isBackupCmd() != 0);
 }
 
-int8_t HDLR_setBackupAvailableFlag(int32_t flag)
-{
-	int8_t nvm_status;
-	int32_t addr=0;
-
-	addr = NVM_BACKUP_FLAG_ADDR;
-	nvm_status = NVM_write(addr, flag);
-	if(nvm_status == 0) return 0;
-
-	return 1;
-}
-
 int8_t HDLR_clearBackupFlag(void)
 {
-	return HDLR_setBackupAvailableFlag((int32_t)0);
-}
-
-int HDLR_isBackupAvailable(void)
-{
-	int8_t nvm_status;
-	int32_t addr=0, value=0;
-
-	addr = NVM_BACKUP_FLAG_ADDR;
-	nvm_status = NVM_read(addr, &value);
-	if(nvm_status == 0) return 0;
-
-	return (value == NVM_BACKUP_AVAILABLE_F);
+	return NVM_setBackupAvailableFlag((int32_t)0);
 }
 
 // store table parameter to backup area in EEPROM
@@ -670,7 +790,7 @@ int8_t HDLR_backupParameter(void)
 		osDelay(5);
 	}
 
-	nvm_status = HDLR_setBackupAvailableFlag(NVM_BACKUP_AVAILABLE_F);
+	nvm_status = NVM_setBackupAvailableFlag(NVM_BACKUP_AVAILABLE_F);
 	if(nvm_status == 0) {kprintf(PORT_DEBUG,"set NVM backup flag error\r\n"); errflag++;}
 
 	kprintf(PORT_DEBUG,"NVM backup finished err=%d\r\n", errflag);

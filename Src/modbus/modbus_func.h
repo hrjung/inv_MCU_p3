@@ -37,38 +37,43 @@
 #define MB_BACKUP_RESTORE		2
 
 // special purpose parameter for PC application
-#define MB_CTRL_RESET_ADDR			(40090)	// inverter reset command
-#define MB_CTRL_NVM_INIT_ADDR		(40091) // EEPROM initialize command
-#define MB_CTRL_FACTORY_MODE_ADDR	(40092) // enter into factory mode to write RO inverter parameter
-#define MB_CTRL_BACKUP_FLAG_ADDR	(40093) // backup parameter settings
-#define MB_CTRL_RUN_STOP_ADDR		(40095) // inverter run/stop command
+#define MB_CTRL_RUN_STOP_ADDR		(40060) // inverter run/stop command
+#define MB_CTRL_RESET_ADDR			(40061)	// inverter reset command
+#define MB_CTRL_NVM_INIT_ADDR		(40062) // EEPROM initialize command
+//#define MB_CTRL_BACKUP_FLAG_ADDR	(40063) // backup parameter settings
+
+// internal flag
 #define MB_CTRL_CONN_CHECK_ADDR		(40096) // connection check command
 #define MB_CTRL_READ_NVM_VER		(40097) // get parameter version
+#define MB_CTRL_FACTORY_MODE_ADDR	(40098) // enter into factory mode to write RO inverter parameter
 
 // normal parameter address range
 #define MB_DRIVER_START_ADDR		(40100)
-#define MB_DRIVER_END_ADDR			(40124)
+#define MB_DRIVER_END_ADDR			(40107)
 
 #define MB_CONFIG_START_ADDR		(40200)
-#define MB_CONFIG_END_ADDR			(40208)
+#define MB_CONFIG_END_ADDR			(40217)
 
 #define MB_PROTECT_START_ADDR		(40280)
-#define MB_PROTECT_END_ADDR			(40287)
+#define MB_PROTECT_END_ADDR			(40289)
 
 #define MB_EXT_IO_START_ADDR		(40300)
-#define MB_EXT_IO_END_ADDR			(40313)
+#define MB_EXT_IO_END_ADDR			(40318)
 
-#define MB_MOTOR_START_ADDR			(40020)
-#define MB_MOTOR_END_ADDR			(40027)
+#define MB_DEVICE_START_ADDR		(40020)
+#define MB_DEVICE_END_ADDR			(40023)
 
-#define MB_DEVICE_START_ADDR		(40060)
-#define MB_DEVICE_END_ADDR			(40065)
 
-#define MB_ERROR_START_ADDR			(40400)
-#define MB_ERROR_END_ADDR			(40424)
+#define MB_ERROR_START_ADDR			(40401)
+#define MB_ERROR_END_ADDR			(40420)
 
+#ifdef SUPPORT_STATUS_TORQUE
 #define MB_STATUS_START_ADDR		(40160)
-#define MB_STATUS_END_ADDR			(40169)
+#define MB_STATUS_END_ADDR			(40174)
+#else
+#define MB_STATUS_START_ADDR		(40160)
+#define MB_STATUS_END_ADDR			(40172)
+#endif
 
 
 /*

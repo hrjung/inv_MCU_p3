@@ -24,14 +24,14 @@ static void init_table_data_error(void)
 {
 	int i;
 
-	for(i=err_code_0_type; i<=err_freq_4_type; i++)
+	for(i=err_code_1_type; i<=err_freq_5_type; i++)
 		table_data[i] = (int32_t)0;
 
-	table_data[err_code_0_type] = TRIP_REASON_NONE;
 	table_data[err_code_1_type] = TRIP_REASON_NONE;
 	table_data[err_code_2_type] = TRIP_REASON_NONE;
 	table_data[err_code_3_type] = TRIP_REASON_NONE;
 	table_data[err_code_4_type] = TRIP_REASON_NONE;
+	table_data[err_code_5_type] = TRIP_REASON_NONE;
 
 }
 
@@ -66,10 +66,10 @@ void test_errorBasic(void)
 	exp_cur = (int32_t)(current*10.0 + 0.05);
 	exp_freq = (int32_t)(freq*10.0 + 0.05);
 	table_updateErrorDSP(err_code, status, current, freq);
-	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
+	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
 
 	// 2nd error
 	err_code = 10;
@@ -81,38 +81,10 @@ void test_errorBasic(void)
 	exp_cur = (int32_t)(current*10.0 + 0.05);
 	exp_freq = (int32_t)(freq*10.0 + 0.05);
 	table_updateErrorDSP(err_code, status, current, freq);
-	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
-
-	// err0 move to err1
-	current = 3.2;
-	freq = 30.0;
-
-	exp_err = 1;
-	exp_status = 2;
-	exp_cur = (int32_t)(current*10.0 + 0.05);
-	exp_freq = (int32_t)(freq*10.0 + 0.05);
 	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_1_type]);
 	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_1_type]);
 	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_1_type]);
 	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
-
-	// 3rd error
-	err_code = 15;
-	status = 0;
-	current = 5.2;
-	freq = 54.8;
-	exp_err = (int32_t)err_code;
-	exp_status = (int32_t)status;
-	exp_cur = (int32_t)(current*10.0 + 0.05);
-	exp_freq = (int32_t)(freq*10.0 + 0.05);
-	table_updateErrorDSP(err_code, status, current, freq);
-	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
 
 	// err1 move to err2
 	current = 3.2;
@@ -127,7 +99,7 @@ void test_errorBasic(void)
 	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_2_type]);
 	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_2_type]);
 
-	// 4th error
+	// 3rd error
 	err_code = 15;
 	status = 0;
 	current = 5.2;
@@ -137,10 +109,10 @@ void test_errorBasic(void)
 	exp_cur = (int32_t)(current*10.0 + 0.05);
 	exp_freq = (int32_t)(freq*10.0 + 0.05);
 	table_updateErrorDSP(err_code, status, current, freq);
-	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
+	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
 
 	// err2 move to err3
 	current = 3.2;
@@ -155,20 +127,20 @@ void test_errorBasic(void)
 	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_3_type]);
 	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_3_type]);
 
-	// 5th error
-	err_code = 39;
-	status = 3;
-	current = 10.2;
-	freq = 150.5;
+	// 4th error
+	err_code = 15;
+	status = 0;
+	current = 5.2;
+	freq = 54.8;
 	exp_err = (int32_t)err_code;
 	exp_status = (int32_t)status;
 	exp_cur = (int32_t)(current*10.0 + 0.05);
 	exp_freq = (int32_t)(freq*10.0 + 0.05);
 	table_updateErrorDSP(err_code, status, current, freq);
-	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
+	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
 
 	// err3 move to err4
 	current = 3.2;
@@ -193,12 +165,40 @@ void test_errorBasic(void)
 	exp_cur = (int32_t)(current*10.0 + 0.05);
 	exp_freq = (int32_t)(freq*10.0 + 0.05);
 	table_updateErrorDSP(err_code, status, current, freq);
-	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
+	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
 
-	// err3 move to err4, 2nd error info
+	// err4 move to err5
+	current = 3.2;
+	freq = 30.0;
+
+	exp_err = 1;
+	exp_status = 2;
+	exp_cur = (int32_t)(current*10.0 + 0.05);
+	exp_freq = (int32_t)(freq*10.0 + 0.05);
+	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_5_type]);
+	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_5_type]);
+	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_5_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_5_type]);
+
+	// 5th error
+	err_code = 39;
+	status = 3;
+	current = 10.2;
+	freq = 150.5;
+	exp_err = (int32_t)err_code;
+	exp_status = (int32_t)status;
+	exp_cur = (int32_t)(current*10.0 + 0.05);
+	exp_freq = (int32_t)(freq*10.0 + 0.05);
+	table_updateErrorDSP(err_code, status, current, freq);
+	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
+
+	// err4 move to err5, 2nd error info
 	current = 1.8;
 	freq = 15.3;
 
@@ -206,10 +206,10 @@ void test_errorBasic(void)
 	exp_status = 4;
 	exp_cur = (int32_t)(current*10.0 + 0.05);
 	exp_freq = (int32_t)(freq*10.0 + 0.05);
-	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_4_type]);
-	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_4_type]);
-	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_4_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_4_type]);
+	TEST_ASSERT_EQUAL_INT(exp_err, table_data[err_code_5_type]);
+	TEST_ASSERT_EQUAL_INT(exp_status, table_data[err_status_5_type]);
+	TEST_ASSERT_EQUAL_INT(exp_cur, table_data[err_current_5_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_5_type]);
 }
 
 #endif

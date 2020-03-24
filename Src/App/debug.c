@@ -34,9 +34,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-#define VERSION_MAJ		0
-#define VERSION_MIN		23
-
 
 //#define CMDLINE_MAX_ARGS        8
 #define NUM_OF_DEBUGCHAR    	80
@@ -113,7 +110,13 @@ const char	*uio_test_msg[] = {
 #ifdef SUPPORT_PASSWORD
 const char	*pass_msg[] = {
 	"PASS",
-	"Usage: PASS old new",
+	"Usage: PASS password",
+	0
+};
+
+const char	*lock_msg[] = {
+	"LOCK",
+	"Usage: LOCK 0/1",
 	0
 };
 #endif
@@ -148,6 +151,13 @@ const char	*utest_msg[] = {
 };
 #endif
 
+
+const char	*version_msg[] = {
+	"VERSION INFO",
+	"Usage: VER ",
+	0
+};
+
 static int display_BoardInfo(uint8_t dport);
 
 STATIC int help_ser(uint8_t dport);
@@ -163,6 +173,7 @@ STATIC int ain_ser(uint8_t dport);
 //STATIC int uio_enable_ser(uint8_t dport);
 #ifdef SUPPORT_PASSWORD
 STATIC int pass_ser(uint8_t dport);
+STATIC int lock_ser(uint8_t dport);
 #endif
 #ifdef SUPPORT_PARAMETER_BACKUP
 STATIC int backup_ser(uint8_t dport);
@@ -174,12 +185,13 @@ STATIC int ptest_ser(uint8_t dport);
 #ifdef SUPPORT_UNIT_TEST
 STATIC int utest_ser(uint8_t dport);
 #endif
+STATIC int ver_ser(uint8_t dport);
 
 const COMMAND	Cmd_List[] =
 {
 	{ 1,   	"HELP",			2,		help_ser,			help_msg	},
 	{ 1,  	"RESET",		1,		reset_ser,			reset_msg	},
-	{ 1,  	"INITP",		1,		init_param_ser,		init_param_msg	},
+	{ 1,  	"INITP",		2,		init_param_ser,		init_param_msg	},
 	{ 1,  	"PARAM",		3,		param_ser,			param_msg	},
 	{ 1,  	"RNV",			2,		read_nv_ser,		read_nv_msg	},
 	{ 1,  	"WNV",			3,		write_nv_ser,		write_nv_msg},
@@ -190,6 +202,7 @@ const COMMAND	Cmd_List[] =
 //	{ 1,  	"UIOT",			2,		uio_enable_ser,		uio_test_msg},
 #ifdef SUPPORT_PASSWORD
 	{ 1,  	"PASS",			2,		pass_ser,			pass_msg	},
+	{ 1,  	"LOCK",			2,		lock_ser,			lock_msg	},
 #endif
 #ifdef SUPPORT_PARAMETER_BACKUP
 	{ 1,  	"BKUP",			2,		backup_ser,			backup_msg	},
@@ -201,6 +214,7 @@ const COMMAND	Cmd_List[] =
 #ifdef SUPPORT_UNIT_TEST	
 	{ 1,  	"UTEST",		1,		utest_ser,			utest_msg	},
 #endif	
+	{ 1,  	"VER",			1,		ver_ser,			version_msg	},
 	{ 0, 	(const char *)0,0,		0,			(const char **)0	}
 };
 
@@ -208,6 +222,10 @@ const COMMAND	Cmd_List[] =
 uint8_t debugIoFlag=0;
 
 int16_t test_run_stop_f=0;
+
+int32_t table_dbg[PARAM_TABLE_SIZE];
+
+int16_t dbg_warn_test=0;
 
 /* Global variables ---------------------------------------------------------*/
 
@@ -254,6 +272,7 @@ extern volatile int8_t ADC_error;
 extern int32_t table_nvm[];
 extern int32_t table_data[];
 extern int32_t sys_data[];
+extern Param_sys_t sys_table[];
 
 extern uint8_t reset_cmd_send_f;
 extern uint8_t reset_requested_f;
@@ -278,9 +297,12 @@ extern void MB_initTimer(int32_t b_index);
 extern void UTIL_writeDout(uint8_t index, uint8_t onoff);
 extern uint8_t NVM_clearInit(void); // to re-initialize EEPROM
 extern uint16_t NVM_getSystemParamAddr(uint16_t index);
+extern void NVM_setNfcMonitoring(void); // test only
+extern int8_t NVM_isMonitoring(void);
 
-extern int8_t main_SwReset(void);
+extern int8_t main_SwReset(int flag);
 
+extern void test_initDbgTableValue(void);
 extern int8_t table_setValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 extern int32_t table_getInitValue(PARAM_IDX_t index);
@@ -310,10 +332,12 @@ extern void test_sendCommand(void);
 //ext_io
 extern void test_setupMultiFuncDin(void);
 extern void test_convertMultiStep(void);
+extern void test_handleDinEmergency(void);
 extern void test_handleDin(void);
 extern void test_handleDout(void);
 extern void test_getFreq(void);
 extern void test_handleAin(void);
+extern void test_handleDAin(void);
 // table
 extern void test_setFreqValue(void);
 extern void test_setFreqRange(void);
@@ -481,21 +505,40 @@ STATIC int help_ser(uint8_t dport)
 STATIC int reset_ser(uint8_t dport)
 {
 	int8_t status;
+	int flag=0;
 
-	kputs(dport, "\r\n\r\n---Reset---\r\n\r\n");
+	flag = (int)atoi(arg_v[1]);
 
-	status = main_SwReset();
+	kprintf(dport, "\r\n\r\n ---Reset--- flag=%d\r\n\r\n", flag);
+	status = main_SwReset(flag);
 	if(status==0)
 		kputs(dport, "\r\n\r\n---Reset Error---\r\n\r\n");
+
 	return 0;
 }
 
 
 STATIC int init_param_ser(uint8_t dport)
 {
-	kputs(dport, "\r\n\r\n--- going to initialize EEPROM, please make sure motor is stopped");
+	uint8_t option=0;
 
-	param_init_requested_f = 1;
+	if(!table_isMotorStop())
+	{
+		kputs(dport, "\r\n\r\n--- please make sure motor is stopped");
+		return -1;
+	}
+
+	option = (uint8_t)atoi(arg_v[1]);
+	if(option > NVM_INIT_PARAM_TIME)
+	{
+		kputs(dport, "\r\n invalid value");
+		return -1;
+	}
+
+	param_init_requested_f = option;
+
+	kprintf(dport, "\r\n parameter initialization option= %d", param_init_requested_f);
+
 	return 0;
 }
 
@@ -567,7 +610,7 @@ STATIC int read_nv_ser(uint8_t dport)
 	if(arg_c == 2)
 	{
 		i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
-		kprintf(dport, "\r\n read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);
+		kprintf(dport, "\r\n read EEPROM addr=%d, 0x%x, value=%d, status=%d", addr, addr, i2c_rvalue, i2c_status);
 	}
 
 	return 0;
@@ -617,6 +660,7 @@ STATIC int din_ser(uint8_t dport)
 	for(i=0; i<20; i++) {UTIL_readDin(); osDelay(10);}
 
 	EXT_DI_printConfig();
+	EXT_DI_printStatus();
 
 	return 0;
 }
@@ -682,95 +726,63 @@ STATIC int ain_ser(uint8_t dport)
 	return 0;
 }
 
-#if 0
-STATIC int aout_ser(uint8_t dport)
-{
-	uint8_t enable;
-	uint32_t duty;
-
-	if(arg_c != 2 && arg_c != 3)
-	{
-		kprintf(dport, "\r\nInvalid number of parameters");
-		return -1;
-	}
-
-	enable = (uint8_t)atoi(arg_v[1]);
-	if(enable != 0 && enable != 1) return 1;
-
-	if(arg_c == 2)
-	{
-		set_AO_duty(enable, 0);
-		kprintf(dport, "\r\n AO enable=%d ", enable);
-	}
-	else if(arg_c == 3)
-	{
-		duty = (uint32_t)atoi(arg_v[2]);
-		if(duty >=0 && duty <= 100)
-		{
-			set_AO_duty(enable, duty);
-			kprintf(dport, "\r\n set AO enable=%d, duty=%d ", enable, duty);
-		}
-		else
-		{
-			kprintf(dport, "\r\n ERROR! duty should be 0 ~ 100 ");
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-
-STATIC int uio_enable_ser(uint8_t dport)
-{
-	uint8_t on_off=0;
-
-	if(arg_c != 2)
-	{
-		kprintf(dport, "\r\nInvalid number of parameters");
-		return -1;
-	}
-
-	on_off = (uint8_t)atoi(arg_v[1]);
-	if(on_off != 0 && on_off != 1)
-	{
-		kprintf(dport, "\r\n only 0(off) and 1(on) available!");
-		return -1;
-	}
-
-	debugIoFlag = on_off;
-
-	kprintf(dport, "\r\n set debugIo %d", debugIoFlag);
-
-	return 0;
-}
-#endif
 
 #ifdef SUPPORT_PASSWORD
+extern int password_enabled;
 STATIC int pass_ser(uint8_t dport)
 {
-	int32_t	old_pass=0, new_pass, stored_pass;
-	int8_t status=0;
+	int32_t	new_pass, stored_pass;
+	int8_t ret=0;
 
 	if(arg_c == 1)
 	{
 		stored_pass = table_getValue(password_type);
-		kprintf(dport, "\r\n password=%d", stored_pass);
+		kprintf(dport, "\r\n password=%d, flag=%d", stored_pass, password_enabled);
 		return -1;
 	}
-	else if(arg_c == 3)
+	else if(arg_c == 2)
 	{
-		old_pass = (uint8_t)atoi(arg_v[1]);
-		new_pass = (uint8_t)atoi(arg_v[2]);
-		stored_pass = table_getValue(password_type);
-		if(stored_pass != old_pass)
+		new_pass = (int32_t)atoi(arg_v[1]);
+		ret = table_runFunc(password_type, new_pass, REQ_FROM_MODBUS);
+		if(ret == 0)
 		{
 			kprintf(dport, "\r\n password is not correct !!");
 			return -1;
 		}
+		else
+			kprintf(dport, "\r\n set password=%d enabled=%d", new_pass, password_enabled);
+	}
+	else
+	{
+		kprintf(dport, "\r\nInvalid number of parameters");
+		return -1;
+	}
 
-		status = NVMQ_enqueueNfcQ(password_type, new_pass);
-		kprintf(dport, "\r\n set password=%d status=%d", new_pass, status);
+	return 0;
+}
+
+STATIC int lock_ser(uint8_t dport)
+{
+	int32_t lock_val;
+	int8_t ret=0;
+
+	if(arg_c == 1)
+	{
+		lock_val = table_getValue(modify_lock_type);
+		kprintf(dport, "\r\n lock=%d, flag=%d", lock_val, password_enabled);
+		return -1;
+	}
+	else if(arg_c == 2)
+	{
+		lock_val = (int32_t)atoi(arg_v[1]);
+		ret = table_runFunc(modify_lock_type, lock_val, REQ_FROM_MODBUS);
+		if(ret == 0)
+		{
+			kprintf(dport, "\r\n password should be opened before change lock !!");
+			return -1;
+		}
+		else
+			kprintf(dport, "\r\n set lock=%d enabled=%d", lock_val, password_enabled);
 	}
 	else
 	{
@@ -789,7 +801,7 @@ STATIC int backup_ser(uint8_t dport)
 
 	if(arg_c == 1)
 	{
-		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_isBackupEnabled(), HDLR_isBackupAvailable());
+		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_isBackupEnabled(), NVM_isBackupAvailable());
 		return -1;
 	}
 	else if(arg_c == 2)
@@ -804,7 +816,7 @@ STATIC int backup_ser(uint8_t dport)
 
 		HDLR_setBackupFlagModbus(bk_cmd);
 
-		kprintf(dport, "\r\n set backup_cmd=%d %d", bk_cmd);
+		kprintf(dport, "\r\n set backup_cmd=%d ", bk_cmd);
 	}
 	else
 	{
@@ -853,6 +865,18 @@ void test_DinConfig(void)
 	if(t_status == 0) err_flag++;
 
 	kprintf(PORT_DEBUG, "\r\n setup DIN control  err=%d\r\n", err_flag);
+}
+
+STATIC int ver_ser(uint8_t dport)
+{
+	int maj, min;
+
+	maj = (int)((NVM_TABLE_VERSION&0xFF00)>>8);
+	min = (int)(NVM_TABLE_VERSION&0xFF);
+	kprintf(dport, "\r\n table version = %d.%d", maj, min);
+	kprintf(dport, "\r\n MCU v%d.%d", VERSION_MAJ, VERSION_MIN);
+
+	return 0;
 }
 
 STATIC int test_ser(uint8_t dport)
@@ -925,8 +949,34 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 4) // set MCU error code to DSP  for testing
     {
-    	ERR_setErrorState(TRIP_REASON_MCU_ERR_TEST);
-    	kputs(dport, "\r\n set MCU ERR TEST");
+    	int16_t value;
+
+    	value = (int16_t)atoi(arg_v[2]);
+    	switch(value)
+    	{
+    	case 0 :
+    		dbg_warn_test = 0;
+    		kputs(dport, "\r\n clear MCU WARNNING");
+    		break;
+    	case 1 :
+    		dbg_warn_test = 1;
+    		kputs(dport, "\r\n set MCU WARNNING TEST");
+    		break;
+    	case 2:
+    		ERR_setErrorState(TRIP_REASON_MCU_ERR_TEST);
+    		kputs(dport, "\r\n set MCU ERR TEST");
+    		break;
+
+    	case 3:
+    		ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+    		kputs(dport, "\r\n set MCU COMM ERR TEST");
+    		break;
+
+    	case 4:
+    		ERR_setErrorState(TRIP_REASON_NONE);
+    		kputs(dport, "\r\n set ERR=0");
+    		break;
+    	}
     }
     else if(test_case == 5) // read table value
     {
@@ -943,9 +993,9 @@ STATIC int test_ser(uint8_t dport)
     {
 		kprintf(dport, "\r\n error code=%d, i2c_rd_err=%d, i2c_wr_err=%d", (int)ERR_getErrorState(), i2c_rd_error, i2c_wr_error);
 		kprintf(dport, "\r\n motor_on_cnt=%d, device_on_hour=%d, motor_run_hour=%d", (int)motor_run_cnt, (int)device_on_hour, (int)motor_run_hour);
-		kprintf(dport, "\r\n monitor=%d, run_stop=%d", NVM_isNfcMonitoring(), state_run_stop);
+		kprintf(dport, "\r\n monitor=%d, run_stop=%d", NVM_isMonitoring(), state_run_stop);
     }
-    else if(test_case == 7)
+    else if(test_case == 7) // change ctrl_in
     {
 #if 1
     	uint32_t crtrl_in=0;
@@ -995,7 +1045,8 @@ STATIC int test_ser(uint8_t dport)
     	{
     		i2c_addr = table_getAddr((PARAM_IDX_t)i);
     		status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
-    		kprintf(dport, "\r\n idx=%d, value=%d, nvm=%d, status=%d, ", i, i2c_value, table_nvm[i], status);
+    		kprintf(dport, "\r\n idx=%d, value=%d, data=%d, nvm=%d, status=%d, ", \
+    				i, i2c_value, table_data[i], table_nvm[i], status);
     		osDelay(5);
     	}
     }
@@ -1036,29 +1087,37 @@ STATIC int test_ser(uint8_t dport)
     	status = NVM_verifyCRC(crc32_calc);
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
     }
-    else if(test_case == 'D') // show Din value
+    else if(test_case == 'D') // ask DSP error info
     {
-    	//test_DinConfig();
-    	EXT_DI_printConfig();
-    	EXT_DI_printStatus();
+    	uint16_t dummy[] = {0,0,0};
+    	int8_t status;
+    	int32_t err_code=0;
+
+		status = COMM_sendMessage(SPICMD_REQ_ERR, dummy);
+		if(status == COMM_SUCCESS)
+		{
+			err_code = table_getValue(err_code_1_type);
+		}
+		kprintf(dport, " read DSP error code=%d, dsp_err=%d", (int)err_code, (int)UTIL_isDspError());
+
     }
     else if(test_case == 'E') // show error data
     {
-    	int i, idx[5] = {err_date_0_type, err_date_1_type, err_date_2_type, err_date_3_type, err_date_4_type};
+    	int i, idx[5] = {err_code_1_type, err_code_2_type, err_code_3_type, err_code_4_type, err_code_5_type};
 
     	kprintf(dport, " error code = %d", (int)ERR_getErrorState());
     	for(i=0; i<5; i++)
     	{
-    		kprintf(dport, "\r\n err=%d, date=%d, code=%d, status=%d current=%d, freq=%d", \
-    				i, table_data[idx[i]], table_data[idx[i]+1], table_data[idx[i]+2], table_data[idx[i]+3], table_data[idx[i]+4]);
+    		kprintf(dport, "\r\n [%d] err_code=%d, status=%d, current=%d, freq=%d", \
+    				i+1, table_data[idx[i]], table_data[idx[i]+1], table_data[idx[i]+2], table_data[idx[i]+3]);
     	}
     }
     else if(test_case == 'F') // run parameter function of each parameter
     {
-    	idx = (int)atoi(arg_v[2]);
-    	value = (int32_t)atoi(arg_v[3]);
-    	status = table_runFunc(idx, (int32_t)value, REQ_FROM_MODBUS);
-    	kprintf(dport, "\r\n idx=%d, value=%d, status=%d, ", idx, value, status);
+    	//idx = (int)atoi(arg_v[2]);
+    	value = (int32_t)atoi(arg_v[2]);
+    	status = table_runFunc(value_type, (int32_t)value, REQ_FROM_MODBUS);
+    	kprintf(dport, "\r\n set command freq value=%d, status=%d, ", value, status);
     }
     else if(test_case == 'G') // test DOUT
     {
@@ -1097,7 +1156,8 @@ STATIC int test_ser(uint8_t dport)
     	{
     		addr = NVM_getSystemParamAddr(i);
     		status = NVM_read(addr, &value);
-    		kprintf(dport, "\r\n sys_data[%d]=%d, nvm=%d, update=%d, status=%d", i, sys_data[i], value, NVM_isSysParamNeedUpdate(i), status);
+    		kprintf(dport, "\r\n sys_data[%d]=%d, addr=%d, nvm=%d, update=%d, status=%d", \
+    				i, sys_data[i], sys_table[i].addr, value, NVM_isSysParamNeedUpdate(i), status);
     		//kprintf(dport, "\r\n update_index=%d", NVM_getSysParamUpdateIndex());
     	}
     }
@@ -1149,6 +1209,103 @@ STATIC int test_ser(uint8_t dport)
 		kprintf(dport, "\r\n status run_stop=%d, dir=%d", state_run_stop, state_direction);
     	kprintf(dport, "\r\n status overload=%d, brake=%d, gear_ratio=%d", st_overload, st_brake, gear_ratio);
     	kprintf(dport, "\r\n status di_val=%d, do_val=%d, ai_val=%d", EXT_getDIValue(), EXT_getDOValue(), EXT_getAIValue());
+    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d", \
+    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour);
+    	kprintf(dport, "\r\n r_start=%d, minutes=%d", motor_run_start_time, run_minutes);
+    }
+    else if(test_case == 'V') // show status in EEPROM
+    {
+    	uint8_t i, status=0;
+    	uint16_t i2c_addr, i2c_len=4;
+    	uint32_t i2c_value=0;
+
+    	for(i=run_status1_type; i<PARAM_TABLE_SIZE; i++)
+    	{
+    		i2c_addr = table_getAddr((PARAM_IDX_t)i);
+    		status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
+    		kprintf(dport, "\r\n idx=%d, value=%d, nvm=%d, status=%d, ", i, i2c_value, table_nvm[i], status);
+    		osDelay(5);
+    	}
+    }
+    else if(test_case == 'W')
+    {
+    	int idx, errflag=0;
+    	int8_t status=NVM_OK;
+    	uint16_t addr;
+
+    	table_dbg[model_type] = 3;
+    	table_dbg[motor_type_type] = 3;
+    	table_dbg[gear_ratio_type] = 120;
+
+    	table_dbg[err_code_1_type] = 10;
+    	table_dbg[err_status_1_type] = 4;
+    	table_dbg[err_current_1_type] = 17;
+    	table_dbg[err_freq_1_type] = 100;
+
+    	table_dbg[err_code_2_type] = 2;
+    	table_dbg[err_status_2_type] = 1;
+    	table_dbg[err_current_2_type] = 19;
+    	table_dbg[err_freq_2_type] = 200;
+
+    	table_dbg[err_code_3_type] = 7;
+    	table_dbg[err_status_3_type] = 2;
+    	table_dbg[err_current_3_type] = 22;
+    	table_dbg[err_freq_3_type] = 300;
+
+    	table_dbg[err_code_4_type] = 9;
+    	table_dbg[err_status_4_type] = 3;
+    	table_dbg[err_current_4_type] = 21;
+    	table_dbg[err_freq_4_type] = 400;
+
+    	table_dbg[err_code_5_type] = 11;
+    	table_dbg[err_status_5_type] = 4;
+    	table_dbg[err_current_5_type] = 34;
+    	table_dbg[err_freq_5_type] = 500;
+
+    	table_dbg[run_status1_type] = 4;
+    	table_dbg[run_status2_type] = 1;
+    	table_dbg[I_rms_type] = 18;
+    	table_dbg[run_freq_type] = 310;
+    	table_dbg[dc_voltage_type] = 520;
+    	table_dbg[torque_value_type] = 50;
+    	table_dbg[torque_percent_type] = 95;
+    	table_dbg[ipm_temperature_type] = 401;
+    	table_dbg[mtr_temperature_type] = 3;
+    	table_dbg[di_status_type] = 1;
+    	table_dbg[do_status_type] = 2;
+    	table_dbg[ai_status_type] = 3;
+    	table_dbg[motor_on_cnt_type] = 20;
+    	table_dbg[elapsed_hour_type] = 30;
+    	table_dbg[operating_hour_type] = 50;
+
+    	for(idx=model_type; idx<=operating_hour_type; idx++)
+    	{
+    		addr = table_getAddr((PARAM_IDX_t)idx);
+    		status = NVM_write(addr, table_dbg[idx]); // clear all flag
+    		if(status==NVM_NOK) errflag++;
+
+#ifdef SUPPORT_TASK_WATCHDOG
+    		watchdog_f= 0x1F; // WATCHDOG_ALL; to kick watchdog in case of no NFC B/D
+#endif
+    	}
+    	kprintf(dport, "\r\n EEPROM write done err=%d", errflag);
+    }
+    else if(test_case == 'Y')
+    {
+    	uint8_t i, status=0;
+    	uint16_t i2c_addr, i2c_len=4;
+    	uint32_t i2c_value=0;
+
+    	for(i=model_type; i<=operating_hour_type; i++)
+    	{
+			i2c_addr = table_getAddr((PARAM_IDX_t)i);
+			status = I2C_readData((uint8_t *)&i2c_value, i2c_addr, i2c_len);
+			kprintf(dport, "\r\n idx=%d, value=%d, dbg=%d, status=%d, ", i, i2c_value, table_dbg[i], status);
+			osDelay(5);
+#ifdef SUPPORT_TASK_WATCHDOG
+    		watchdog_f= 0x1F; // WATCHDOG_ALL; to kick watchdog in case of no NFC B/D
+#endif
+    	}
     }
 #ifdef SUPPORT_PASSWORD
     else if(test_case == 'U') // lock/unock with password
@@ -1175,11 +1332,11 @@ STATIC int test_ser(uint8_t dport)
     	}
     }
 #endif
-    else if(test_case == 'T') // show time info
+    else if(test_case == 'T') // enable monitoring
     {
-    	kprintf(dport, "\r\n dev_cnt=%d, run_count=%d on_hour=%d, run_hour=%d", \
-    			device_min_cnt, motor_run_cnt, device_on_hour, motor_run_hour);
-    	kprintf(dport, "\r\n r_start=%d, minutes=%d", motor_run_start_time, run_minutes);
+    	kprintf(dport, "\r\n set monitoring flag !!");
+    	NVM_setNfcMonitoring();
+
     }
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
     else if(test_case == 'P') // Production test start
@@ -1263,6 +1420,7 @@ ptest_err:
 }
 #endif
 
+
 #ifdef SUPPORT_UNIT_TEST
 STATIC int utest_ser(uint8_t dport)
 {
@@ -1270,7 +1428,7 @@ STATIC int utest_ser(uint8_t dport)
 
 	UNITY_BEGIN();
 
-#if 1
+#if 0
 	// add nvm_queue test
 	RUN_TEST(test_nfc_q_basic);
 	RUN_TEST(test_nfc_q_muliple);
@@ -1287,13 +1445,13 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_parseValue);
 	RUN_TEST(test_parseMessage);
 	RUN_TEST(test_sendCommand);
-
 #endif
 
-#if 1
-	// ext_di_
+#if 0
+	// ext_di
 	RUN_TEST(test_setupMultiFuncDin);
 	RUN_TEST(test_convertMultiStep);
+	RUN_TEST(test_handleDinEmergency);
 	RUN_TEST(test_handleDin);
 
 	//ext_do
@@ -1303,15 +1461,19 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_getFreq);
 	RUN_TEST(test_handleAin);
 #endif
+	RUN_TEST(test_handleDAin);
+
+
+#if 0
 	// table
 	RUN_TEST(test_NvmAddr);
 	RUN_TEST(test_ModbusAddr);
 	RUN_TEST(test_setFreqRange);
 	RUN_TEST(test_setFreqValue);
 	RUN_TEST(test_setValue);
+#endif
 
-
-#if 1
+#if 0
 	// modbus
 	RUN_TEST(test_modbusBasic);
 	RUN_TEST(test_modbusAddress);
@@ -1323,12 +1485,13 @@ STATIC int utest_ser(uint8_t dport)
 	RUN_TEST(test_modbusFC06);
 	//RUN_TEST(test_modbusFC16);
 #endif
+
 	UNITY_END();
 
 	kputs(dport, " End of Unit Test!\r\n Reset Device!!\r\n");
 
 	//UARTFlushTx(0);
-	while(1); // cause device reset by watchdog
+	//while(1); // cause device reset by watchdog
 
 	return 0;
 }

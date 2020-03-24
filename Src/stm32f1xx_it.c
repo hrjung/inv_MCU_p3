@@ -55,7 +55,7 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define NFC_APP_ACCESS_INTERVAL		1000
+#define NFC_APP_ACCESS_INTERVAL		500
 
 extern uint8_t NFC_Access_flag;
 extern osTimerId NfcAppTimerHandle;

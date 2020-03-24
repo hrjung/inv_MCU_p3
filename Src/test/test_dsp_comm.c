@@ -24,6 +24,7 @@ int8_t recv_status;
 
 uint16_t testResp[20];
 
+extern int16_t gear_ratio;
 extern int32_t table_data[];
 
 extern uint16_t sendMsg[];
@@ -49,7 +50,7 @@ void test_getRecvLength(void)
 {
 	int16_t recvlen, exp_len;
 
-	exp_len = 18;
+	exp_len = 22;
 	recvlen = COMM_getRecvLength(SPICMD_REQ_ST);
 	TEST_ASSERT_EQUAL_INT(exp_len, recvlen);
 
@@ -282,9 +283,11 @@ void test_parseMessage(void)
 	int16_t dsp_index;
 	int8_t result, exp_result;
 	uint16_t rcvMsg_ACK[6] = {0xAAAA, 0x5555, 0, 0, SPICMD_RESP_ACK, SPI_ACK};
-	uint16_t rcvMsg_ST[16] = {0xAAAA, 0x5555, 0, 0, SPICMD_RESP_ST, 0,0,0,0,0, 0,0,0,0,0,0};
+	uint16_t rcvMsg_ST[20] = {0xAAAA, 0x5555, 0, 0, SPICMD_RESP_ST, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0};
 	uint16_t rcvMsg_ERR[10] = {0xAAAA, 0x5555, 0, 0, SPICMD_RESP_ERR, 0,0,0,0,0};
 	uint16_t rcvMsg_PARAM[8] = {0xAAAA, 0x5555, 0, 0, SPICMD_RESP_PARAM, 0,0,0};
+
+	gear_ratio = 1;
 
 	//========= RESP_ACK, ACK
 	for(i=0; i<6; i++) recvMsg[i] = rcvMsg_ACK[i];
@@ -304,9 +307,11 @@ void test_parseMessage(void)
 	TEST_ASSERT_EQUAL_INT(exp_value, recvMsg[5]);
 
 	//========= RESP_ST
-	int32_t exp_run_st, exp_dir_st, exp_ovload_st, exp_brake_st, exp_i_rms, exp_dc_volt, exp_freq, exp_ipm_tmp, exp_mtr_temp;
+	int32_t exp_run_st, exp_dir_st, exp_ovload_st, exp_brake_st, exp_i_rms, exp_dc_volt;
+	int32_t exp_freq, exp_ipm_tmp, exp_mtr_temp, exp_torq, exp_torq_percent;
 	int32_t test_mtr_temp=1;
 	float test_i_rms=1.4, test_freq=34.5, test_dc_volt=532.4, test_ipm_temp=72.3;
+	float test_torq = 2.1, test_torq_percent = 95.0;
 #ifdef SUPPORT_NFC_OLD
 	int32_t exp_status1, exp_status2;
 #endif
@@ -319,40 +324,34 @@ void test_parseMessage(void)
 	memcpy(&recvMsg[5+6], &test_dc_volt, sizeof(float));
 	memcpy(&recvMsg[5+8], &test_ipm_temp, sizeof(float));
 	memcpy(&recvMsg[5+10], &test_mtr_temp, sizeof(float));
+	memcpy(&recvMsg[5+12], &test_torq, sizeof(float));
+	memcpy(&recvMsg[5+14], &test_torq_percent, sizeof(float));
+
 	exp_result = COMM_SUCCESS;
-#ifdef SUPPORT_NFC_OLD
 	exp_status1 = STATE_RUN;
 	exp_status2 = 0x100;
-#else
-	exp_run_st = (int32_t)1;
-	exp_dir_st = (int32_t)0;
-	exp_ovload_st = (int32_t)0;
-	exp_brake_st = (int32_t)1;
-#endif
 	exp_i_rms = (int32_t)(test_i_rms*10.0 + 0.05);
 	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	exp_dc_volt = (int32_t)(test_dc_volt*10.0);
 	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0 + 0.05);
 	exp_mtr_temp = (int32_t)1;
+	exp_torq = (int32_t)(test_torq*10.0 + 0.05);
+	exp_torq_percent = (int32_t)(test_torq_percent*10.0 + 0.05);
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
-#ifdef SUPPORT_NFC_OLD
 	TEST_ASSERT_EQUAL_INT(exp_status1, table_getStatusValue(run_status1_type));
 	TEST_ASSERT_EQUAL_INT(exp_status2, table_getStatusValue(run_status2_type));
-#else
-	TEST_ASSERT_EQUAL_INT(exp_run_st, table_getStatusValue(run_status_type));
-	TEST_ASSERT_EQUAL_INT(exp_dir_st, table_getStatusValue(dir_status_type));
-	TEST_ASSERT_EQUAL_INT(exp_ovload_st, table_getStatusValue(overload_alarm_type));
-	TEST_ASSERT_EQUAL_INT(exp_brake_st, table_getStatusValue(shaftbrake_status_type));
-#endif
 	TEST_ASSERT_EQUAL_INT(exp_freq, table_getStatusValue(run_freq_type));
 	TEST_ASSERT_EQUAL_INT(exp_i_rms, table_getStatusValue(I_rms_type));
 	TEST_ASSERT_EQUAL_INT(exp_dc_volt, table_getStatusValue(dc_voltage_type));
 	TEST_ASSERT_EQUAL_INT(exp_ipm_tmp, table_getStatusValue(ipm_temperature_type));
 	TEST_ASSERT_EQUAL_INT(exp_mtr_temp, table_getStatusValue(mtr_temperature_type));
+	TEST_ASSERT_EQUAL_INT(exp_torq, table_getStatusValue(torque_value_type));
+	TEST_ASSERT_EQUAL_INT(exp_torq_percent, table_getStatusValue(torque_percent_type));
 
 	test_mtr_temp=2;
 	test_i_rms=3.8, test_freq=83.2, test_dc_volt=659.4, test_ipm_temp=88.7;
+	test_torq = 3.7, test_torq_percent = 15.1;
 	for(i=0; i<16; i++) recvMsg[i] = rcvMsg_ST[i];
 	recvMsg[5] = 0x101; // status1 : reverse, stop
 	recvMsg[6] = 1; //status2
@@ -361,37 +360,30 @@ void test_parseMessage(void)
 	memcpy(&recvMsg[5+6], &test_dc_volt, sizeof(float));
 	memcpy(&recvMsg[5+8], &test_ipm_temp, sizeof(float));
 	memcpy(&recvMsg[5+10], &test_mtr_temp, sizeof(float));
+	memcpy(&recvMsg[5+12], &test_torq, sizeof(float));
+	memcpy(&recvMsg[5+14], &test_torq_percent, sizeof(float));
 	exp_result = COMM_SUCCESS;
-#ifdef SUPPORT_NFC_OLD
+
 	exp_status1 = 0x101; // status1 reverse, stop
 	exp_status2 = 1;
-#else
-	exp_run_st = (int32_t)0;
-	exp_dir_st = (int32_t)1;
-	exp_ovload_st = (int32_t)1;
-	exp_brake_st = (int32_t)0;
-#endif
 	exp_i_rms = (int32_t)(test_i_rms*10.0 + 0.05);
 	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	exp_dc_volt = (int32_t)(test_dc_volt*10.0);
 	exp_ipm_tmp = (int32_t)(test_ipm_temp*10.0 + 0.05);
 	exp_mtr_temp = (int32_t)2;
+	exp_torq = (int32_t)(test_torq*10.0 + 0.05);
+	exp_torq_percent = (int32_t)(test_torq_percent*10.0 + 0.05);
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
-#ifdef SUPPORT_NFC_OLD
 	TEST_ASSERT_EQUAL_INT(exp_status1, table_getStatusValue(run_status1_type));
 	TEST_ASSERT_EQUAL_INT(exp_status2, table_getStatusValue(run_status2_type));
-#else
-	TEST_ASSERT_EQUAL_INT(exp_run_st, table_getStatusValue(run_status_type));
-	TEST_ASSERT_EQUAL_INT(exp_dir_st, table_getStatusValue(dir_status_type));
-	TEST_ASSERT_EQUAL_INT(exp_ovload_st, table_getStatusValue(overload_alarm_type));
-	TEST_ASSERT_EQUAL_INT(exp_brake_st, table_getStatusValue(shaftbrake_status_type));
-#endif
 	TEST_ASSERT_EQUAL_INT(exp_freq, table_getStatusValue(run_freq_type));
 	TEST_ASSERT_EQUAL_INT(exp_i_rms, table_getStatusValue(I_rms_type));
 	TEST_ASSERT_EQUAL_INT(exp_dc_volt, table_getStatusValue(dc_voltage_type));
 	TEST_ASSERT_EQUAL_INT(exp_ipm_tmp, table_getStatusValue(ipm_temperature_type));
 	TEST_ASSERT_EQUAL_INT(exp_mtr_temp, table_getStatusValue(mtr_temperature_type));
+	TEST_ASSERT_EQUAL_INT(exp_torq, table_getStatusValue(torque_value_type));
+	TEST_ASSERT_EQUAL_INT(exp_torq_percent, table_getStatusValue(torque_percent_type));
 
 	//========= RESP_ERR
 	int16_t err_code=4, exp_err_code, run_status=2, exp_run_status;
@@ -412,10 +404,10 @@ void test_parseMessage(void)
 	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
-	TEST_ASSERT_EQUAL_INT(exp_err_code, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_run_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_current, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
+	TEST_ASSERT_EQUAL_INT(exp_err_code, table_data[err_code_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_run_status, table_data[err_status_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_current, table_data[err_current_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
 
 	err_code=34, run_status=1;
 	test_current = 0.7, test_freq = 81.1;
@@ -431,10 +423,10 @@ void test_parseMessage(void)
 	exp_freq = (int32_t)(test_freq*10.0 + 0.05);
 	result = COMM_parseMessage();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
-	TEST_ASSERT_EQUAL_INT(exp_err_code, table_data[err_code_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_run_status, table_data[err_status_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_current, table_data[err_current_0_type]);
-	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_0_type]);
+	TEST_ASSERT_EQUAL_INT(exp_err_code, table_data[err_code_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_run_status, table_data[err_status_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_current, table_data[err_current_1_type]);
+	TEST_ASSERT_EQUAL_INT(exp_freq, table_data[err_freq_1_type]);
 
 	//========= RESP_PARAM : valid dsp_index
 	dsp_index = value_dsp;
@@ -446,7 +438,7 @@ void test_parseMessage(void)
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(dsp_index, read_idx);
 
-	dsp_index = fan_onoff_dsp;
+	dsp_index = motor_type_dsp;
 	for(i=0; i<8; i++) recvMsg[i] = rcvMsg_PARAM[i];
 	recvMsg[5] = dsp_index;
 	recvMsg[6] = 0, recvMsg[7] = 0; // no need to set

@@ -71,12 +71,14 @@ uint8_t param_init_requested_f=0;
 
 
 MODBUS_addr_st mb_drive, mb_config, mb_protect, mb_ext_io;
-MODBUS_addr_st mb_motor, mb_device, mb_err, mb_status;
+MODBUS_addr_st mb_device, mb_err, mb_status;
 
 extern void HDLR_setRunStopFlagModbus(int8_t flag);
 extern void HDLR_setFactoryModeFlagModbus(int8_t flag);
+
 #ifdef SUPPORT_PASSWORD
-extern int table_isPasswordAddrModbus(uint16_t mb_addr);
+extern int table_isPasswordAddrModbus(uint16_t addr);
+extern int table_isLockAddrModbus(uint16_t addr);
 #endif
 extern int8_t table_setValueFactoryMode(PARAM_IDX_t idx, int32_t value);
 
@@ -216,25 +218,6 @@ void MB_initAddrMap(void)
 
 	//printf("\r\n st_addr=%d, end_addr=%d", mb_ext_io.start, mb_ext_io.end);
 
-	// motor parameter
-	mb_motor.start = MB_MOTOR_START_ADDR;
-	mb_motor.end = MB_MOTOR_END_ADDR;
-	mb_motor.start_index = Rs_type;
-	count = MB_MOTOR_END_ADDR - MB_MOTOR_START_ADDR + 1;
-	for(i=0; i<count; i++)
-	{
-		mb_motor.map[i].valid = 1;
-		mb_motor.map[i].rd_only = 1; // read_only
-		mb_motor.map[i].conv_index = mb_motor.start_index + i;
-	}
-	// clear else
-	for(i=count; i<MODBUS_ADDR_MAP_SIZE; i++)
-	{
-		mb_motor.map[i].valid = 0;
-		mb_motor.map[i].rd_only = 0;
-		mb_motor.map[i].conv_index = PARAM_TABLE_SIZE;
-	}
-
 	// device setting
 	mb_device.start = MB_DEVICE_START_ADDR;
 	mb_device.end = MB_DEVICE_END_ADDR;
@@ -257,7 +240,7 @@ void MB_initAddrMap(void)
 	// error map
 	mb_err.start = MB_ERROR_START_ADDR;
 	mb_err.end = MB_ERROR_END_ADDR;
-	mb_err.start_index = err_date_0_type;
+	mb_err.start_index = err_code_1_type;
 	count = MB_ERROR_END_ADDR - MB_ERROR_START_ADDR + 1;
 	for(i=0; i<count; i++)
 	{
@@ -353,11 +336,9 @@ uint16_t MB_convModbusAddr(uint16_t addr, uint16_t count, int8_t *type)
 
 	else if(addr >= mb_err.start && addr <= mb_err.end) {mb_addr = &mb_err; find_f = 5;}
 
-	else if(addr >= mb_motor.start && addr <= mb_motor.end) {mb_addr = &mb_motor; find_f = 6;}
+	else if(addr >= mb_device.start && addr <= mb_device.end) {mb_addr = &mb_device; find_f = 6;}
 
-	else if(addr >= mb_device.start && addr <= mb_device.end) {mb_addr = &mb_device; find_f = 7;}
-
-	else if(addr >= mb_status.start && addr <= mb_status.end) {mb_addr = &mb_status; find_f = 8;}
+	else if(addr >= mb_status.start && addr <= mb_status.end) {mb_addr = &mb_status; find_f = 7;}
 
 	else return MODBUS_ADDR_MAP_ERR;
 
@@ -441,6 +422,10 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	index = MB_convModbusAddr(addr, cnt, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC03_ERR; }
 
+#ifdef SUPPORT_PASSWORD // block reading password
+	if(table_isPasswordAddrModbus(addr)) {result = MOD_EX_SLAVE_FAIL; goto FC03_ERR; }
+#endif
+
 	modbusTx.wp = 0;
 	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
 	modbusTx.buf[modbusTx.wp++] = func_code;
@@ -455,20 +440,21 @@ int MB_handleReadRegister(uint8_t func_code, uint16_t addr, uint16_t cnt)
 	}
 	else
 	{
+		kprintf(PORT_DEBUG, "multi_read s_addr=%d, s_idx=%d, cnt=%d \r\n", addr, index, cnt);
 		for(i=0; i<cnt; i++)
 		{
 			value = table_getValue(index + i);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0x0000FF00) >> 8);
 			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x000000FF);
+			//kprintf(PORT_DEBUG, "multi_read index=%d, value=%d \r\n", index+i, value);
 		}
-		//kprintf(PORT_DEBUG, "s_read index=%d, value=%d, wp=%d \r\n", index, (uint16_t)value, modbusTx.wp);
 	}
 
 
 FC03_ERR:
 	if(result != MOD_EX_NO_ERR)
 	{
-		MB_generateErrorResp(MOD_FC03_RD_HREG, result);
+		MB_generateErrorResp(func_code, result);
 	}
 
 	return result;
@@ -537,21 +523,27 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 	case MB_CTRL_BACKUP_FLAG_ADDR:
 		if(value == MB_BACKUP_SAVE || value == MB_BACKUP_RESTORE)
 		{
-			HDLR_setBackupFlagModbus(value);
-			modbusTx.wp = 0;
-			modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-			modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
-			modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
+			if(table_isMotorStop())
+			{
+				HDLR_setBackupFlagModbus(value);
+				modbusTx.wp = 0;
+				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
+				modbusTx.buf[modbusTx.wp++] = MOD_FC06_WR_REG;
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)((value&0xFF00) >> 8);
+				modbusTx.buf[modbusTx.wp++] = (uint8_t)(value&0x00FF);
 
-			result = MOD_EX_NO_ERR;
-			kprintf(PORT_DEBUG, "set backup_addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+				result = MOD_EX_NO_ERR;
+				kprintf(PORT_DEBUG, "set backup_addr=%d, value=%d, wp=%d \r\n", addr, (uint16_t)value, modbusTx.wp);
+			}
+			else
+				result = MOD_EX_SLAVE_FAIL; // motor is running
 		}
 		else
 			result = MOD_EX_DataVAL;
 
+		kprintf(PORT_DEBUG, "MB_CTRL_BACKUP_FLAG_ADDR, value=%d, result=%d \r\n", (uint16_t)value, result);
 		break;
 #endif
 	case MB_CTRL_FACTORY_MODE_ADDR: // enable/disable factory mode
@@ -582,11 +574,11 @@ int MB_handleFlagRegister(uint16_t addr, uint16_t value)
 
 #ifdef SUPPORT_INIT_PARAM
 	case MB_CTRL_NVM_INIT_ADDR:
-		if(value == 1)
+		if(value > NVM_INIT_PARAM_NONE && value <= NVM_INIT_PARAM_TIME)
 		{
 			if(table_isMotorStop()) // only on motor not running
 			{
-				param_init_requested_f = 1; // set flag
+				param_init_requested_f = (uint8_t)value; // set flag
 
 				modbusTx.wp = 0;
 				modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
@@ -683,12 +675,14 @@ int MB_handleWriteSingleRegister(uint16_t addr, uint16_t value)
 	index = MB_convModbusAddr(addr, 1, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC06_ERR; } // range errer
 
-	if(type == 8) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : status read only
+	if(type == 7) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : status read only
 
 	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : read only
 
-#ifdef SUPPORT_PASSWORD
-	if(table_isLocked()) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; } // error : parameter locked
+#ifdef SUPPORT_PASSWORD  // error : parameter locked, except pass and lock
+	if(table_isLocked()
+	   && (!table_isPasswordAddrModbus(addr) && !table_isLockAddrModbus(addr))
+	   ) {result = MOD_EX_SLAVE_FAIL; goto FC06_ERR; }
 #endif
 
 	modbusTx.wp = 0;
@@ -717,36 +711,6 @@ FC06_ERR:
 	return result;
 }
 
-#ifdef SUPPORT_PASSWORD
-int lock_pass_ok=0;
-int MB_handleLockReq(uint16_t addr, uint16_t count, uint16_t *value)
-{
-	int ret, result=MOD_EX_NO_ERR;
-	uint16_t password, lock;
-	int32_t stored_password=0;
-
-	password = value[0];
-	lock = value[1];
-
-	stored_password = table_getValue(password_type);
-	if(stored_password != (int32_t)password) return MOD_EX_SLAVE_FAIL;
-	else lock_pass_ok = 1; // password OK
-
-	ret = table_runFunc(modify_lock_type, (int32_t)lock, REQ_FROM_MODBUS);
-	if(ret == 0) return MOD_EX_SLAVE_FAIL;
-
-	modbusTx.wp = 0;
-	modbusTx.buf[modbusTx.wp++] = mb_slaveAddress;
-	modbusTx.buf[modbusTx.wp++] = MOD_FC16_WRM_REG;
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)((addr&0xFF00) >> 8);
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)(addr&0x00FF);
-
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)((count&0xFF00) >> 8);
-	modbusTx.buf[modbusTx.wp++] = (uint8_t)(count&0x00FF);
-
-	return result;
-}
-#endif
 
 int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 {
@@ -760,16 +724,9 @@ int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 	 * - function cannot be processed : MOD_EX_SLAVE_FAIL
 	 */
 
-#ifdef SUPPORT_PASSWORD
-	if(table_isPasswordAddrModbus(addr) && count == 2)
-	{
-		result = MB_handleLockReq(addr, count, value);
-	}
-	else
-		result = MOD_EX_SLAVE_FAIL;
-
-	goto FC16_ERR; // multi write is not supported
-#endif
+	// multi write is not supported !!
+	result=MOD_EX_SLAVE_FAIL;
+	goto FC16_ERR;
 
 	// count is over 123 or not matched with byte size
 	if(count == MODBUS_COUNT_ERR) {result = MOD_EX_DataVAL; goto FC16_ERR; }
@@ -778,7 +735,7 @@ int MB_handleWriteMultiRegister(uint16_t addr, uint16_t count, uint16_t *value)
 	index = MB_convModbusAddr(addr, count, &type);
 	if(index > MODBUS_ADDR_MAP_ERR-4) {result = MOD_EX_DataADD; goto FC16_ERR; }
 
-	if(type == 8) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : status read only
+	if(type == 7) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : status read only
 
 	if(table_getRW(index) == 0) {result = MOD_EX_SLAVE_FAIL; goto FC16_ERR; } // error : read only
 

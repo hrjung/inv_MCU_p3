@@ -12,7 +12,7 @@
 #include "table.h"
 
 
-#define NVM_QUEUE_SIZE		PARAM_TABLE_SIZE
+#define NVM_QUEUE_SIZE		(PARAM_TABLE_SIZE)
 
 #define NVM_INVALID_ADDR		(-1)
 

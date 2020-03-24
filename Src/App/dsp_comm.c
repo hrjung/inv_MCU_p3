@@ -18,7 +18,7 @@
 #include "error.h"
 
 
-#define LENGTH_BUFFER 20
+#define LENGTH_BUFFER 30	// 20 -> 30 for add torque value at status response
 static int8_t comm_state;
 STATIC uint16_t sendMsg[LENGTH_BUFFER ];
 STATIC uint16_t recvMsg[LENGTH_BUFFER ];
@@ -35,14 +35,15 @@ int16_t st_brake = 0;
 int16_t gear_ratio = 1;
 
 int16_t comm_err_cnt=0;
+int16_t status_comm_err_cnt=0;
 
-RTC_TimeTypeDef sTime;
-extern RTC_HandleTypeDef hrtc;
+//RTC_TimeTypeDef sTime;
+//extern RTC_HandleTypeDef hrtc;
 
 //extern int16_t test_run_stop_f;
 uint8_t time_cnt=0;
 
-extern int8_t NVM_isNfcMonitoring(void);
+extern int8_t NVM_isMonitoring(void);
 
 extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 
@@ -146,7 +147,11 @@ int16_t COMM_getRecvLength(COMM_CMD_t cmd)
 
 	switch(cmd)
 	{
+#ifdef SUPPORT_STATUS_TORQUE
+	case SPICMD_REQ_ST: 	return 22; // 18 -> 22 for add torque value at status response
+#else
 	case SPICMD_REQ_ST: 	return 18;
+#endif
 	case SPICMD_CTRL_RUN:
 	case SPICMD_CTRL_STOP:
 	case SPICMD_CTRL_DIR_F:
@@ -262,7 +267,7 @@ int8_t COMM_recvfromDSP(int16_t recv_len)
 	int8_t isCrcError = SPI_isChecksumError(recvMsg, recv_len);
 	if(isCrcError)
 	{
-		kputs(PORT_DEBUG, "[COMM_DSP] CRC ERROR!");
+		//kputs(PORT_DEBUG, "[COMM_DSP] CRC ERROR!\r\n");
 		return COMM_FAILED;
 	}
 
@@ -380,7 +385,12 @@ int8_t COMM_parseMessage(void)
 	float run_freq_index = 0.f;
 	float dc_voltage_index = 0.f;
 	float ipm_temp_index = 0.f;
-	int32_t motor_temp_index = 0;
+	float motor_temp_index = 0.f;
+#ifdef SUPPORT_STATUS_TORQUE
+	float torque_index = 0.f;
+	float torque_percent_index = 0.f;
+	static float prev_torque=0.f;
+#endif
 
 	comm_state=COMM_DEFAULT;
 #ifdef DEBUG_DSP
@@ -428,7 +438,15 @@ int8_t COMM_parseMessage(void)
 		memcpy(&run_freq_index, &recvMsg[5+4], sizeof(float));
 		memcpy(&dc_voltage_index, &recvMsg[5+6], sizeof(float));
 		memcpy(&ipm_temp_index, &recvMsg[5+8], sizeof(float));
-		memcpy(&motor_temp_index, &recvMsg[5+10], sizeof(long));
+		memcpy(&motor_temp_index, &recvMsg[5+10], sizeof(float));
+#ifdef SUPPORT_STATUS_TORQUE
+		memcpy(&torque_index, &recvMsg[5+12], sizeof(float));
+		memcpy(&torque_percent_index, &recvMsg[5+14], sizeof(float));
+
+		// avoid invalid torque
+		if(torque_index < 0.0 || torque_index > 50.0) torque_index = prev_torque;
+#endif
+
 #else
 		/*for test : count-up values*/
 
@@ -441,6 +459,7 @@ int8_t COMM_parseMessage(void)
 		motor_temp_index = 1.f;
 #endif
 
+		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST run_freq=%d \r\n", (int32_t)run_freq_index);
 #ifdef SUPPORT_NFC_OLD
 //		status1 = (int32_t)((state_direction<<8) | state_run_stop); // only use lower 16 bit for modbus
 //		status2 = (int32_t)((st_brake<<8) | st_overload);
@@ -465,13 +484,19 @@ int8_t COMM_parseMessage(void)
 		table_setStatusValue(I_rms_type, (int32_t)(10.0*i_rms_index + 0.05), REQ_FROM_DSP);
 		table_setStatusValue(dc_voltage_type, (int32_t)(10.0*dc_voltage_index), REQ_FROM_DSP);
 		table_setStatusValue(ipm_temperature_type, (int32_t)(10.0*ipm_temp_index + 0.05), REQ_FROM_DSP);
-		table_setStatusValue(mtr_temperature_type, (int32_t)(motor_temp_index), REQ_FROM_DSP);
+		table_setStatusValue(mtr_temperature_type, (int32_t)(10.0*motor_temp_index + 0.05), REQ_FROM_DSP);
+#ifdef SUPPORT_STATUS_TORQUE
+		table_setStatusValue(torque_value_type, (int32_t)(10.0*torque_index + 0.05), REQ_FROM_DSP);
+		table_setStatusValue(torque_percent_type, (int32_t)(10.0*torque_percent_index + 0.05), REQ_FROM_DSP);
+		prev_torque = torque_index;
+#endif
 		table_setExtStatusValue();
 
-		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST status1=0x%x status2=0x%x\r\n",status1, status2);
-#ifdef SUPPORT_NFC_OLD
+		//kprintf(PORT_DEBUG, "SPICMD_RESP_ST run_freq=%d freq=%f \r\n", (int32_t)run_freq_index, (int32_t)run_freq_f);
+
 		// update EEPROM while NFC tagged
-		if(NVM_isNfcMonitoring())
+		//if(NVM_getNfcMonitoring())
+		if(NVM_isMonitoring())
 		{
 			kprintf(PORT_DEBUG, "update Status to EEPROM\r\n");
 			if(table_setStatusDSP() == 0)
@@ -484,10 +509,6 @@ int8_t COMM_parseMessage(void)
 		HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
 		time_cnt = sTime.Seconds;
 		kprintf(PORT_DEBUG, "cnt=%d : SPICMD_RESP_ST freq=%d \r\n",time_cnt, (int32_t)(10.0*run_freq_index + 0.05));
-#endif
-
-#else
-		// TODO: update mailbox
 #endif
 
 
@@ -613,10 +634,10 @@ int8_t COMM_sendCommand(COMM_CMD_t cmd, const uint16_t* data)
 // only for SPICMD_PARAM_W command
 int8_t COMM_sendParamWrite(const uint16_t* data)
 {
-	//int32_t value;
+	int32_t value;
 	int8_t result;
 
-#if 0 // remove read parameter before write
+#if 0
 	// read parameter before write, in order to avoid writing same value
 	result = COMM_sendCommand(SPICMD_PARAM_R, data);
 	if(result == COMM_FAILED) return COMM_FAILED;
@@ -632,17 +653,29 @@ int8_t COMM_sendParamWrite(const uint16_t* data)
 	return COMM_SUCCESS;
 }
 
-void COMM_handleError(int8_t result)
+void COMM_handleError(COMM_CMD_t cmd, int8_t result)
 {
-	if(result == COMM_SUCCESS)
+	if(cmd == SPICMD_REQ_ST) // in case of status error treat as separate error
 	{
-		if(comm_err_cnt > 0) comm_err_cnt--;
+		if(result == COMM_FAILED)
+		{
+			status_comm_err_cnt++;
+			if(status_comm_err_cnt > COMM_STATUS_ERR_CNT_LIMIT) // 10 errors
+				ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		}
+		else
+			status_comm_err_cnt = 0;
 	}
-	else if(result == COMM_FAILED)
+	else // except status error
 	{
-		comm_err_cnt++;
-		if(comm_err_cnt > COMM_ERR_COUNT_LIMIT)
-			ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		if(result == COMM_FAILED)
+		{
+			comm_err_cnt++;
+			if(comm_err_cnt > COMM_ERR_COUNT_LIMIT)	// 5 errors
+				ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
+		}
+		else
+			comm_err_cnt=0;
 	}
 }
 
@@ -653,18 +686,19 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 {
 	int8_t result;
 
-#if 0
+#if 0 // don't need to read DSP to compare same value, just send
 	if(cmd == SPICMD_PARAM_W)
 		result = COMM_sendParamWrite(data);
 	else
 #endif
 		result = COMM_sendCommand(cmd, data);
 
-	COMM_handleError(result);
+	COMM_handleError(cmd, result);
 
 	return (result == COMM_SUCCESS);
 }
 
+#if 0
 // only used at inverter initialize to sync motor parameter
 int8_t COMM_sendMotorType(void)
 {
@@ -681,6 +715,19 @@ int8_t COMM_sendMotorType(void)
 			status, (int)table_idx, (int)table_getValue(table_idx));
 
 	return status;
+}
+#endif
+// read motor type from DSP at startup
+int32_t COMM_getMotorType(int8_t *status)
+{
+	int8_t result = COMM_SUCCESS;
+	uint16_t buf[3]={0,0,0};
+
+	buf[0] = (uint16_t)table_getDspAddr((PARAM_IDX_t)motor_type_type);
+	result = COMM_sendCommand(SPICMD_PARAM_R, buf);
+	if(result == COMM_FAILED) *status = 0;
+
+	return read_value;
 }
 
 int8_t COMM_sendTestCmd(uint16_t test_cmd)

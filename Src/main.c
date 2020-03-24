@@ -183,6 +183,9 @@ uint32_t timer_100ms=0;
 uint32_t device_min_cnt=0;
 uint32_t dev_start_time=0;
 
+uint16_t led_blink_cnt=0;
+
+int8_t reset_flag=0; // flag for MCU force reset
 
 #ifdef SUPPORT_TASK_WATCHDOG
 uint8_t watchdog_f = 0;
@@ -201,9 +204,12 @@ extern void gen_crc_table(void);
 extern void MB_init(void);
 extern void MB_TaskFunction(void);
 extern int8_t MB_handlePacket(void);
+#ifdef SUPPORT_PASSWORD
+extern void table_clearPassEnable(void);
+#endif
 
 extern int8_t NVM_setMotorRunCount(uint32_t run_count);
-extern int8_t COMM_sendMotorType(void);
+//extern int8_t COMM_sendMotorType(void);
 
 // opt485_task.c
 extern void OPT_init(void);
@@ -1125,10 +1131,22 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+#ifdef SUPPORT_TASK_WATCHDOG
 void main_kickWatchdogNFC(void)
 {
 	watchdog_f |= WATCHDOG_NFC;
 }
+#endif
+
+#ifdef SUPPORT_PASSWORD
+uint32_t pass_start_time=0;
+void main_setPassCounterStart(void)
+{
+	pass_start_time = timer_100ms;
+	if(pass_start_time == 0) pass_start_time=1;
+}
+#endif
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1140,16 +1158,22 @@ void main_kickWatchdogNFC(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
-
   /* USER CODE BEGIN 5 */
+  uint16_t led_count=0;
+
   osDelay(800);
   kputs(PORT_DEBUG, "start DefaultTask\r\n");
   /* Infinite loop */
   for(;;)
   {
+    if(led_count != led_blink_cnt) // every 1sec
+    {
+    	UTIL_handleLED(); // handling 3 color LED
+    	led_count = led_blink_cnt;
+    }
 
 #ifdef SUPPORT_TASK_WATCHDOG
-	if(main_handler_f == 0)
+	if(main_handler_f == 0) // only mainHandler task available
 	{
 		HAL_IWDG_Refresh(&hiwdg); // kick
 	}
@@ -1164,7 +1188,7 @@ void StartDefaultTask(void const * argument)
 #endif
 
 	default_cnt++;
-    osDelay(50);
+    osDelay(100);
   }
   /* USER CODE END 5 */ 
 }
@@ -1175,13 +1199,65 @@ void StartDefaultTask(void const * argument)
 * @param argument: Not used
 * @retval None
 */
+
+void NfcNvmUpdateParam(int32_t tag_end)
+{
+	int8_t status;
+
+	// if tagged, wait tag_end
+	if(tag_end == 1)
+	{
+		// if tag end, update NVM -> table
+		//	check parameter table
+		//	check system parameter
+		osDelay(5);
+#ifdef SUPPORT_PASSWORD
+		if(table_isLocked()) // in case of lock, parameter should be restored
+		{
+			osDelay(5);
+			status = HDLR_restoreNVM();
+			if(status == 0) {kputs(PORT_DEBUG, "locked!! nfc tag restore error\r\n"); }
+
+			UTIL_setLED(LED_COLOR_G, 0);
+		}
+		else
+		{
+#endif
+			status = HDLR_updatebyNfc(); // EEPROM updated -> table update
+			if(status == 0)
+			{
+				kputs(PORT_DEBUG, "nfc tag update error\r\n");
+				//UTIL_setLED(LED_COLOR_B, 1);
+			}
+			else
+				UTIL_setLED(LED_COLOR_G, 0);
+
+		  kputs(PORT_DEBUG, "nfc tag processed!\r\n");
+		}
+	}
+	else if(tag_end != 0 && tag_end != 1) // NFC write is incomplete -> restore
+	{
+		// tag error : restore NVM <- table
+		osDelay(5);
+		status = HDLR_restoreNVM();
+		if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
+
+		kputs(PORT_DEBUG, "nfc tag imcomplete!\r\n");
+
+		UTIL_setLED(LED_COLOR_G, 0);
+	}
+	else
+		UTIL_setLED(LED_COLOR_G, 0);
+
+}
+
 /* USER CODE END Header_NfcNvmTaskFunc */
 void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
   int sys_index=SYSTEM_PARAM_SIZE;
   int32_t tag_end=0;
-  int8_t status, nvm_backup=0;
+  int8_t status;
   static uint32_t prev_time_tick;
   static uint32_t bk_cnt=0;
 
@@ -1199,71 +1275,32 @@ void NfcNvmTaskFunc(void const * argument)
 #endif
 
 #ifndef SUPPORT_UNIT_TEST
-	  // read NFC tag flag
-	  tag_end=0;
-	  status = NVM_getNfcStatus(&tag_end);
-	  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); continue;}
-
 	  if(NFC_Access_flag)
 	  {
+		  int32_t run_stop=0;
+
 		  UTIL_setLED(LED_COLOR_B, 0);
 		  osDelay(10);
-		  continue; // it can skip below EEPROM access until NFC untagged
-	  }
-//	  else
-//		  UTIL_setLED(LED_COLOR_G, 0);
 
-	  // if tagged, wait tag_end
-	  if(tag_end == 1)
-	  {
-		  // if tag end, update NVM -> table
-		  //	check parameter table
-		  //	check system parameter
-		  osDelay(5);
-		  if(NVM_isNfcMonitoring())
-		  {
-			  UTIL_setLED(LED_COLOR_B, 0);
-		  }
-		  else
-		  {
-#ifdef SUPPORT_PASSWORD
-			  if(table_isLocked()) // in case of lock, parameter should be restored
-			  {
-				  osDelay(5);
-				  status = HDLR_restoreNVM();
-				  if(status == 0) {kputs(PORT_DEBUG, "locked!! nfc tag restore error\r\n"); }
+		  NVM_getRunStopFlag(&run_stop); // read run_stop
 
-				  UTIL_setLED(LED_COLOR_G, 0);
-			  }
-			  else
-			  {
-#endif
-				  status = HDLR_updatebyNfc(); // EEPROM updated -> table update
-				  if(status == 0)
-				  {
-					  kputs(PORT_DEBUG, "nfc tag update error\r\n");
-					  UTIL_setLED(LED_COLOR_B, 1);
-				  }
-				  else
-					  UTIL_setLED(LED_COLOR_G, 0);
-			  }
+		  // read NFC tag flag
+		  tag_end=0;
+		  status = NVM_getNfcStatus(&tag_end);
+		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); tag_end=0;}
 
-			  kputs(PORT_DEBUG, "nfc tag processed!\r\n");
-		  }
-	  }
-	  else if(tag_end != 0 && tag_end != 1) // NFC write is incomplete -> restore
-	  {
-		  // tag error : restore NVM <- table
-		  osDelay(5);
-		  status = HDLR_restoreNVM();
-		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
+		  NVM_getNfcMonitoring(); // read monitoring flag
 
-		  kputs(PORT_DEBUG, "nfc tag imcomplete!\r\n");
-
-		  UTIL_setLED(LED_COLOR_G, 0);
+		  NVM_getCommandParam(); // read command
 	  }
 	  else
-		  UTIL_setLED(LED_COLOR_G, 0);
+	  {
+		  NfcNvmUpdateParam(tag_end);
+		  tag_end=0;
+	  }
+
+
+	  //if(ERR_getErrorState() == TRIP_REASON_MCU_SETVALUE) continue;
 
 	  // no tag state,
 	  //	handle NVM update request
@@ -1287,6 +1324,7 @@ void NfcNvmTaskFunc(void const * argument)
 		  if(status == 0) kprintf(PORT_DEBUG, "HDLR_updateSysParam index=%d ERROR\r\n", sys_index);
 
 		  UTIL_setLED(LED_COLOR_G, 0);
+		  kputs(PORT_DEBUG, "HDLR_updateSysParam called\r\n");
 	  }
 
 
@@ -1294,11 +1332,15 @@ void NfcNvmTaskFunc(void const * argument)
 	  if(bk_cnt%50 == 0) // every 500ms
 	  {
 #ifdef SUPPORT_INIT_PARAM
-		  if(param_init_requested_f || NVM_isInitNvmNfc()) // need NVM initialize ?
+		  uint8_t nvm_init_type=0;
+
+		  nvm_init_type = HDLR_isNeedInitialize();
+		  if(nvm_init_type > 0) // need NVM initialize ?
 		  {
 			  UTIL_setLED(LED_COLOR_B, 0);
+			  kprintf(PORT_DEBUG, "HDLR_initNVM type=%d\r\n", nvm_init_type);
 
-			  status = HDLR_initNVM();
+			  status = HDLR_initNVM((NVM_INIT_t)nvm_init_type);
 			  if(status == 0)
 				  kputs(PORT_DEBUG, "HDLR_initNVM ERROR\r\n");
 			  else
@@ -1314,6 +1356,8 @@ void NfcNvmTaskFunc(void const * argument)
 #ifdef SUPPORT_PARAMETER_BACKUP
 		  if(HDLR_isBackupEnabled())
 		  {
+			  int8_t nvm_backup=0;
+
 			  nvm_backup = HDLR_getBackupFlag();
 			  kprintf(PORT_DEBUG, "HDLR_backupParameter cmd=%d\r\n", nvm_backup);
 			  if(nvm_backup == MB_BACKUP_SAVE) // backup
@@ -1321,7 +1365,7 @@ void NfcNvmTaskFunc(void const * argument)
 				  status = HDLR_backupParameter();
 				  if(status == 0) kputs(PORT_DEBUG, "HDLR_backupParameter ERROR\r\n");
 			  }
-			  else if(nvm_backup == MB_BACKUP_RESTORE && HDLR_isBackupAvailable()) // restore
+			  else if(nvm_backup == MB_BACKUP_RESTORE && NVM_isBackupAvailable()) // restore
 			  {
 				  status = HDLR_restoreParameter(); // restore NVM
 				  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
@@ -1333,6 +1377,17 @@ void NfcNvmTaskFunc(void const * argument)
 			  HDLR_clearBackupFlagModbus(); // clear flag
 		  }
 #endif
+		  // handle reset command via NFC
+		  if(NVM_isResetEnabled())
+		  {
+			  kputs(PORT_DEBUG, "RESET !!\r\n");
+			  NVM_clearResetCmd();
+			  if(table_isMotorStop()) // only on motor not running
+			  {
+				  osDelay(100); // small delay
+				  reset_enabled_f=1;
+			  }
+		  }
 	  }
 
 	  // time info update
@@ -1379,12 +1434,14 @@ void userIoTaskFunc(void const * argument)
 
 /* USER CODE BEGIN Header_mainHandlerTaskFunc */
 
-int8_t main_SwReset(void)
+int8_t main_SwReset(int flag)
 {
-	int8_t status;
+	int8_t status=1;
+
 	reset_cmd_send_f = 1;
 
-	status = COMM_sendTestCmd(SPI_TEST_CMD_RESET);
+	if(flag==0)
+		status = COMM_sendTestCmd(SPI_TEST_CMD_RESET);
 
 	if(status)
 	{
@@ -1395,6 +1452,27 @@ int8_t main_SwReset(void)
 	return status;
 }
 
+#ifdef SUPPORT_FORCE_RESET
+int8_t main_isForceReset(void)
+{
+	return (reset_flag == 1);
+}
+
+int8_t main_isMcuReset(void)
+{
+	uint16_t dummy[] = {0,0,0};
+	int8_t status=1, result=0;
+
+	status = COMM_sendMessage(SPICMD_REQ_ST, dummy);
+	if(status == 1)
+	{
+		if(!table_isMotorStop()) // motor is running
+			result = 1;
+	}
+
+	return result;
+}
+#endif
 
 int8_t mainHandlerState(void)
 {
@@ -1419,10 +1497,14 @@ int8_t mainHandlerState(void)
 		break;
 
 	case MAIN_DSP_STATE:
-		// read DSP error flag and status info
-		HDLR_handleDspError();
-
-		HDLR_readDspStatus();
+#ifdef SUPPORT_INIT_PARAM
+		if(HDLR_isNeedInitialize() == 0) // skip DSP status, error request during parameter initialization
+#endif
+		{
+			// read DSP error flag and status info
+			HDLR_handleDspError();
+			HDLR_readDspStatus();
+		}
 
 		DSP_status_read_flag = 0; // clear flag
 
@@ -1456,11 +1538,9 @@ int8_t mainHandlerState(void)
 			status = EXT_AI_handleAin();
 			break;
 
-#ifdef SUPPORT_DI_AI_CONTROL
 		case CTRL_IN_Din_Ain:
 			status = EXT_handleDAin(ctrl_in);
 			break;
-#endif
 
 		case CTRL_IN_Modbus: // only run/stop command
 			status = HDLR_handleRunStopFlagModbus();
@@ -1483,7 +1563,11 @@ int8_t mainHandlerState(void)
 		  if(status == 0) kputs(PORT_DEBUG, "table_updatebyTableQ ERROR\r\n");
 		}
 
-		if(reset_enabled_f) main_SwReset(); // SW reset
+		if(reset_enabled_f)
+		{
+			status = main_SwReset(0); // SW reset
+			reset_enabled_f = 0;
+		}
 
 		sct_state = MAIN_IDLE_STATE;
 		break;
@@ -1506,7 +1590,7 @@ int8_t mainHandlerState(void)
 void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
-  int8_t com_status, nv_status;
+  int8_t nv_status;
 //	uint16_t addr=408;
 //	int32_t i2c_rvalue=0;
 //	uint8_t i2c_status;
@@ -1530,17 +1614,23 @@ void mainHandlerTaskFunc(void const * argument)
 //	i2c_status = I2C_readData((uint8_t *)&i2c_rvalue, addr, 4);
 //	kprintf(PORT_DEBUG, "read EEPROM addr=%d, value=%d, status=%d", addr, i2c_rvalue, i2c_status);
 
+#ifdef SUPPORT_FORCE_RESET
+  reset_flag = main_isMcuReset();
+#endif
+
   UTIL_setLED(LED_COLOR_G, 0);
 #ifndef SUPPORT_UNIT_TEST
   nv_status = table_initNVM();
   if(nv_status == 0)
+  {
+	  kprintf(PORT_DEBUG, "nv_status = %d error!\r\n", nv_status);
+	  nv_status = table_initNVM(); // try again
+  }
+
+  if(nv_status == 0)
 	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
 
-  com_status = COMM_sendMotorType();
-  if(com_status == 0)
-	  ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
-
-  kprintf(PORT_DEBUG, "nv_status = %d, com_status=%d\r\n", nv_status, com_status);
+  kprintf(PORT_DEBUG, "nv_status = %d  reset=%d\r\n", nv_status, reset_flag);
 #endif
 
   // init queue
@@ -1549,14 +1639,8 @@ void mainHandlerTaskFunc(void const * argument)
 
   main_handler_f = 1;
 
-  //TODO : hrjung init parameters setting for ctrl_in
+  //init parameters setting for ctrl_in
   table_initParam();
-
-//  nv_status = NVM_clearRunStopFlag(); // set idle flag
-//  if(nv_status == 0)
-//  {
-//	  kprintf(PORT_DEBUG, "NFC idle flag set error=%d\r\n", nv_status);
-//  }
 
   osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 1 min to inverter operation time
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status
@@ -1657,6 +1741,14 @@ void YstcTriggerTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN YstcTriggerTimerCallback */
   timer_100ms++;
+
+#ifdef SUPPORT_PASSWORD
+  if(pass_start_time != 0 && (timer_100ms-pass_start_time > 600)) // 60 sec timeout
+  {
+	  table_clearPassEnable();
+	  pass_start_time=0;
+  }
+#endif
   /* USER CODE END YstcTriggerTimerCallback */
 }
 
@@ -1684,11 +1776,7 @@ void userIoTimerCallback(void const * argument)
 
 	ctrl_in = table_getCtrllIn();
 
-	if(ctrl_in == CTRL_IN_Analog_V
-#ifdef SUPPORT_DI_AI_CONTROL
-		|| ctrl_in == CTRL_IN_Din_Ain
-#endif
-	)
+	if(ctrl_in == CTRL_IN_Analog_V || ctrl_in == CTRL_IN_Din_Ain)
 	{
 		// read ADC
 		if(ADC_ConvCpltFlag)
@@ -1735,7 +1823,8 @@ void AccReadTimerCallback(void const * argument)
 {
   /* USER CODE BEGIN AccReadTimerCallback */
 
-  UTIL_handleLED(); // handling 3 color LED
+  led_blink_cnt++;
+  if(led_blink_cnt > 30000) led_blink_cnt=0;
 
   //HAL_GPIO_TogglePin(STATUS_MCU_GPIO_Port, STATUS_MCU_Pin); // STATUS-LED toggle
   /* USER CODE END AccReadTimerCallback */

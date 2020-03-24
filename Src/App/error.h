@@ -27,6 +27,7 @@ typedef enum {
 
 	TRIP_REASON_I_PHASE_MISS,
 	TRIP_REASON_V_PHASE_MISS,
+	TRIP_REASON_INT_RELAY_FAULT,
 
 
 	TRIP_REASON_ARRAY_ERR =		20,
@@ -45,7 +46,7 @@ typedef enum {
 	TRIP_REASON_MCU_UNKNOWN	= 40,
 	TRIP_REASON_MCU_INIT,
 	TRIP_REASON_MCU_INPUT,			// external trip or emergency stop
-	TRIP_REASON_MCU_SETVALUE,		// not used
+	TRIP_REASON_MCU_SETVALUE,		// EEPROM error
 	TRIP_REASON_MCU_COMM_FAIL,
 
 	TRIP_REASON_MCU_ERR_TEST,
@@ -81,6 +82,7 @@ typedef struct {
 
 extern uint8_t ERR_isErrorState(void);
 extern uint8_t ERR_isCommError(void);
+extern uint16_t ERR_isNvmError(void);
 extern uint8_t ERR_getErrorState(void);
 extern void ERR_setErrorState(TRIP_REASON_t err_code);
 
