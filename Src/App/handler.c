@@ -399,10 +399,11 @@ int8_t HDLR_updateParamNVM(void)
 
 void HDLR_retryUpdate(int *fail_list, int count)
 {
-	int i, read_fail[baudrate_type+1], fail_cnt=0;
+	int i, read_fail[baudrate_type+1], fail_cnt=0, retry_index;
 	int32_t nvm_value;
 	uint8_t nvm_status=0;
 	int8_t status=1;
+	int valid=0;
 
 	fail_cnt=0;
 	for(i=0; i<=baudrate_type; i++) read_fail[i] = 0;
@@ -410,19 +411,29 @@ void HDLR_retryUpdate(int *fail_list, int count)
 	for(i=0; i<count; i++)
 	{
 		osDelay(5);
-		nvm_status = NVM_readParam((PARAM_IDX_t)fail_list[i], &nvm_value);
+		retry_index = fail_list[i];
+		nvm_status = NVM_readParam((PARAM_IDX_t)retry_index, &nvm_value);
 		if(nvm_status == 0)
 		{
-			kprintf(PORT_DEBUG,"ERROR NVM read error index=%d \r\n", i);
-			read_fail[fail_cnt++] = fail_list[i];
+			kprintf(PORT_DEBUG,"Retry ERROR NVM read error index=%d \r\n", i);
+			read_fail[fail_cnt++] = retry_index;
 		}
 		else
 		{
-			if(nvm_value != table_getValue(i))
+			valid = table_checkValidityNFC(retry_index, nvm_value); // valid range check
+			if(valid == 0) // wrong value than restore NVM
 			{
-				status = NVMQ_enqueueTableQ(i, nvm_value);
-				if(status == 0) {kprintf(PORT_DEBUG,"ERROR table enqueue error index=%d \r\n", fail_list[i]); }
-				kprintf(PORT_DEBUG,"HDLR_updatebyNfc index=%d, value=%d, status=%d \r\n", fail_list[i], nvm_value, status);
+				status = NVM_writeParam(retry_index, table_getValue(retry_index));
+				if(status == 0) {kprintf(PORT_DEBUG,"retry ERROR NVM restore error index=%d\n", retry_index);}
+			}
+			else // correct value to update table
+			{
+				if(nvm_value != table_getValue(retry_index))
+				{
+					status = NVMQ_enqueueTableQ(retry_index, nvm_value);
+					if(status == 0) {kprintf(PORT_DEBUG,"retry ERROR table enqueue error index=%d \r\n", retry_index); }
+					kprintf(PORT_DEBUG,"HDLR_retryUpdate index=%d, value=%d, status=%d \r\n", retry_index, nvm_value, status);
+				}
 			}
 		}
 	}
