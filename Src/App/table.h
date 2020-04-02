@@ -22,100 +22,100 @@ typedef enum{
 	decel_time_type,
 	acc_base_set_type,
 	dir_cmd_type,
-	dir_domain_type,
+	dir_domain_type,	// 7
 
 	ctrl_in_type,
 	energy_save_type,
-	pwm_freq_type,
+	pwm_freq_type,		// 10
 	jmp_enable0_type,
 	jmp_low0_type,
 	jmp_high0_type,
 	jmp_enable1_type,
-	jmp_low1_type,
+	jmp_low1_type,		// 15
 	jmp_high1_type,
 	jmp_enable2_type,
 	jmp_low2_type,
 	jmp_high2_type,
-	brake_type_type,
+	brake_type_type,	// 20
 	brake_freq_type,
 	dci_brk_freq_type,
 	dci_brk_hold_type,
 	dci_brk_time_type,
-	dci_brk_rate_type,
+	dci_brk_rate_type,	// 25
 
 	ovl_warn_limit_type,
 	ovl_warn_dur_type,
 	ovl_enable_type,
 	ovl_trip_limit_type,
-	ovl_trip_dur_type,
+	ovl_trip_dur_type,	// 30
 	regen_duty_type,
 	regen_band_type,
 	fan_onoff_type,
 #ifdef SUPPORT_PASSWORD
 	password_type,
-	modify_lock_type,
+	modify_lock_type,	// 35
 #endif
 
 	multi_Din_0_type,
 	multi_Din_1_type,
 	multi_Din_2_type,
 	multi_val_0_type,
-	multi_val_1_type,
+	multi_val_1_type,	// 40
 	multi_val_2_type,
 	multi_val_3_type,
 	multi_val_4_type,
 	multi_val_5_type,
-	multi_val_6_type,
+	multi_val_6_type,	// 45
 	multi_val_7_type,
 	multi_Dout_0_type,
 	multi_Dout_1_type,
 	v_in_min_type,
-	v_in_min_freq_type,
+	v_in_min_freq_type,	// 50
 	v_in_max_type,
 	v_in_max_freq_type,
 	mb_address_type,
 	baudrate_type,
 
-	model_type,
+	model_type,			// 55
 	motor_type_type,
 	gear_ratio_type,
 	fw_ver_type,
 
 	err_code_1_type,
-	err_status_1_type,
+	err_status_1_type,	// 60
 	err_current_1_type,
 	err_freq_1_type,
 	err_code_2_type,
 	err_status_2_type,
-	err_current_2_type,
+	err_current_2_type,	// 65
 	err_freq_2_type,
 	err_code_3_type,
 	err_status_3_type,
 	err_current_3_type,
-	err_freq_3_type,
+	err_freq_3_type,	// 70
 	err_code_4_type,
 	err_status_4_type,
 	err_current_4_type,
 	err_freq_4_type,
-	err_code_5_type,
+	err_code_5_type,	// 75
 	err_status_5_type,
 	err_current_5_type,
 	err_freq_5_type,
 
 	run_status1_type,
-	run_status2_type,
+	run_status2_type,	// 80
 	I_rms_type,
 	run_freq_type,
 	dc_voltage_type,
 #ifdef SUPPORT_STATUS_TORQUE
 	torque_value_type,
-	torque_percent_type,
+	torque_percent_type,	// 85
 #endif	
 	ipm_temperature_type,
 	mtr_temperature_type,
 	di_status_type,
 	do_status_type,
-	ai_status_type,
+	ai_status_type,			//90
 	motor_on_cnt_type,
 	elapsed_hour_type,
 	operating_hour_type,
