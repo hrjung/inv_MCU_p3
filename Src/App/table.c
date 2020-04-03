@@ -1361,6 +1361,7 @@ void table_initParam(void)
 {
 	PARAM_IDX_t idx;
 	int index;
+	int8_t status=0;
 
 	// initialize DIN for ext_trip or emergency_stop
 	for(idx=multi_Din_0_type; idx<=multi_Din_2_type; idx++)
@@ -1383,5 +1384,9 @@ void table_initParam(void)
 	param_table[dir_domain_type].param_func(dir_domain_type, table_data[dir_domain_type], REQ_FROM_TEST);
 	gear_ratio = (int16_t)table_getValue(gear_ratio_type);
 	if(gear_ratio == 0 || gear_ratio > param_table[gear_ratio_type].maxValue)
-		kprintf(PORT_DEBUG,"ERROR!! gear_ratio=%d \r\n", gear_ratio);
+	{
+		gear_ratio = 1; // set default value for error value
+		status = NVM_writeParam((PARAM_IDX_t)gear_ratio_type, gear_ratio);
+		kprintf(PORT_DEBUG,"ERROR!! gear_ratio=%d status=%d \r\n", gear_ratio, status);
+	}
 }

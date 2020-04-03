@@ -63,6 +63,10 @@ extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
 extern void main_kickWatchdogNFC(void);
 #endif
 
+#ifdef SUPPORT_FORCE_RESET
+extern int8_t main_SwReset(int flag);
+#endif
+
 #ifdef SUPPORT_PARAMETER_BACKUP
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 #endif
@@ -569,6 +573,11 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 #endif
 		}
 		kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
+
+		// initialize gear ratio
+		init_value = table_getInitValue(gear_ratio_type);
+		status = NVM_writeParam((PARAM_IDX_t)gear_ratio_type, init_value);
+		if(status == 0) errflag++;
 	}
 
 	init_value = table_getInitValue(motor_type_type);
