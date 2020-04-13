@@ -1245,10 +1245,12 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	}
 
 	// store latest error info
-	if(ERR_isErrorState())
-		table_data[err_code_1_type] = (int32_t)ERR_getErrorState();
+	if(err_code == TRIP_REASON_MCU_ERR)
+		table_data[err_code_1_type] = (int32_t)ERR_getErrorState(); // set MCU error code
 	else
 		table_data[err_code_1_type] = (int32_t)err_code;
+
+	//kprintf(PORT_DEBUG, "DSP error code tbl_err=%d, err_code=%d\r\n", table_data[err_code_1_type], err_code);
 
 	if(ERR_getErrorState() == TRIP_REASON_MCU_COMM_FAIL) // store status value for COMM error
 	{
