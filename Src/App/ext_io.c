@@ -302,6 +302,29 @@ void EXT_DI_printStatus(void)
 	}
 }
 
+int EXT_isDirectionValid(void)
+{
+	int result = 1;
+	int32_t dir_control = table_getValue(dir_domain_type);
+
+	if(m_din.dir_pin == EXT_DIN_COUNT) return 1; // always valid
+
+	switch(dir_control)
+	{
+	case DIR_FORWARD_ONLY:
+		if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE)
+			result = 0;
+		break;
+
+	case DIR_REVERSE_ONLY:
+		if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE)
+			result = 0;
+		break;
+	}
+
+	return result;
+}
+
 int8_t EXI_DI_handleDin(int32_t ctrl_in)
 {
 	int32_t dir_ctrl;
@@ -309,6 +332,7 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 	uint8_t step=0;
 	int8_t status, result=1;
 	uint16_t dummy[3] = {0,0,0};
+	int dir_check=0;
 
 	if(ctrl_in == CTRL_IN_Digital) // only DI control
 	{
@@ -354,16 +378,20 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 				&& prev_run == EXT_DI_INACTIVE
 				&& state_run_stop == CMD_STOP) // STOP -> RUN
 		{
-			// send run cmd
-			test_cmd = SPICMD_CTRL_RUN;
-			kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN run_stop=%d\r\n", state_run_stop);
+			dir_check = EXT_isDirectionValid();
+			if(dir_check)
+			{
+				// send run cmd
+				test_cmd = SPICMD_CTRL_RUN;
 #ifndef SUPPORT_UNIT_TEST
-			// send run to DSP
-			status = COMM_sendMessage(test_cmd, dummy);
-			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+				// send run to DSP
+				status = COMM_sendMessage(test_cmd, dummy);
+				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
 #endif
-			HDLR_setStopFlag(0);
-			prev_run = mdin_value[m_din.run_pin];
+				HDLR_setStopFlag(0);
+				prev_run = mdin_value[m_din.run_pin];
+			}
+			kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN run_stop=%d dir_chk=%d\r\n", state_run_stop, dir_check);
 		}
 		else
 			result = 0;
@@ -583,6 +611,7 @@ int8_t EXT_AI_handleAin(void)
 	int32_t freq, diff=0;
 	uint16_t dummy[3] = {0,0,0};
 	int8_t status=1;
+	int dir_check=0;
 
 	// read config, can be updated during running
 	EXT_AI_setConfig();
@@ -611,17 +640,21 @@ int8_t EXT_AI_handleAin(void)
 		{
 			if(table_isMotorStop())
 			{
-				test_cmd = SPICMD_CTRL_RUN;
-				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN \r\n");
+				dir_check = table_isDirectionValid();
+				if(dir_check)
+				{
+					test_cmd = SPICMD_CTRL_RUN;
+					kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN \r\n");
 #ifndef SUPPORT_UNIT_TEST
-				// send run to DSP
-				status = COMM_sendMessage(test_cmd, dummy);
-				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+					// send run to DSP
+					status = COMM_sendMessage(test_cmd, dummy);
+					if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
 
-				//HDLR_setStartRunTime();
+					//HDLR_setStartRunTime();
 #endif
-				test_cmd = SPICMD_PARAM_W;
-				kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
+					test_cmd = SPICMD_PARAM_W;
+				}
+				kprintf(PORT_DEBUG, " send SPICMD_PARAM_W  freq=%d, dir_chk=%d\r\n", freq, dir_check);
 #ifndef SUPPORT_UNIT_TEST
 				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
 				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }

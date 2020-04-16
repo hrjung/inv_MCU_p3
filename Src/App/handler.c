@@ -81,9 +81,15 @@ int HDLR_isStopInProgress(void)
 	return (stopping_enabled && state_run_stop == CMD_RUN);
 }
 
-void HDLR_setRunStopFlagModbus(int8_t flag)
+int HDLR_setRunStopFlagModbus(int8_t flag)
 {
-	mb_run_stop_f = flag;
+	int result = 1;
+	if(table_isDirectionValid())
+		mb_run_stop_f = flag;
+	else
+		result = 0;
+
+	return result;
 }
 
 void HDLR_clearRunStopFlagModbus(void)
@@ -217,7 +223,9 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 	int32_t run_stop=0;
 	static int32_t prev_run_stop=0;
 	uint16_t dummy[3] = {0,0,0};
+	int dir_check=0;
 
+	if(table_isDirectionValid() == 0) return;
 
 	run_stop = NVM_readRunStopSysFlag();
 
@@ -228,16 +236,22 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 	case RUN_STOP_FLAG_RUN:
 		// send run to DSP
 #ifndef SUPPORT_UNIT_TEST
-		status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
-		// clear flag to idle
-		if(status != COMM_FAILED)
+
+		dir_check = table_isDirectionValid();
+		if(dir_check)
 		{
-			NVM_clearRunStopFlag();
-			prev_run_stop = run_stop;
-			//HDLR_setStartRunTime(); // set Run start time
+			status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
+			// clear flag to idle
+			if(status != COMM_FAILED)
+			{
+				NVM_clearRunStopFlag();
+				prev_run_stop = run_stop;
+				//HDLR_setStartRunTime(); // set Run start time
+			}
 		}
 #endif
-		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d\r\n", status);
+		kprintf(PORT_DEBUG, "RUN Flag, send to DSP status=%d dir_chk=%d\r\n", status, dir_check);
+
 		break;
 
 	case RUN_STOP_FLAG_STOP:
@@ -593,7 +607,7 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 			status = NVM_writeParam((PARAM_IDX_t)index, init_value);
 			if(status == 0) errflag++;
 
-			table_initStatusError(index);
+			table_initStatusError(index); // clear table value
 			//kprintf("idx=%d: value=%d, nvm=%d\r\n", i, param_table[i].initValue, table_nvm[i]);
 
 #ifdef SUPPORT_TASK_WATCHDOG

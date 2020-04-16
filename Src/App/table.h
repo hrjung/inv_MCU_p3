@@ -321,5 +321,6 @@ extern int8_t table_runFunc(PARAM_IDX_t idx, int32_t value, int16_t opt);
 extern int8_t table_updatebyTableQ(void);
 
 extern void table_initParam(void);
+extern int table_isDirectionValid(void);
 
 #endif /* SRC_TABLE_H_ */
