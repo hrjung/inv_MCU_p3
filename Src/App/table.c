@@ -41,6 +41,7 @@ extern int16_t gear_ratio;
 
 extern int16_t dbg_warn_test;
 
+extern int32_t prev_adc_cmd;
 
 extern COMM_CMD_t test_cmd;
 
@@ -294,18 +295,16 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 		return 0;
 	}
 
-	if(option != REQ_FROM_TEST)
+	if(option != REQ_FROM_TEST && option != REQ_FROM_NFC)
 	{
 		// request to update EEPROM
 		status = NVMQ_enqueueNfcQ(idx, value);
 		if(status == 0) return 0;
 	}
 
-
 	table_data[idx] = value;
 	table_nvm[idx] = value;
 	//kprintf(PORT_DEBUG,"table_setValueAPI: idx=%d set value=%d\r\n", idx, value);
-
 	if(option > REQ_FROM_DSP) // need DSP comm
 	{
 		if(table_getDspAddr(idx) != none_dsp)
@@ -350,7 +349,7 @@ int8_t table_setCommandFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 	// check validity
 	if(table_checkFreqValidity(idx, value) == 0) return 0;
 
-	if(idx == value_type && HDLR_isStopInProgress()) return 0; // not set freq during stopping
+//	if(idx == value_type && HDLR_isStopInProgress()) return 0; // not set freq during stopping
 
 	status = table_setValueAPI(idx, value, option);
 
@@ -469,6 +468,7 @@ int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t option)
 int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t result;
+	int32_t dir_cmd=0;
 
 	result = table_setValue(idx, value, option);
 	if(result)
@@ -478,11 +478,19 @@ int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t option)
 		{
 			param_table[dir_cmd_type].minValue = 0;
 			param_table[dir_cmd_type].maxValue = 0;
+//			table_data[dir_cmd_type] = 0;
+//			NVM_readParam(dir_cmd_type, &dir_cmd);
+//			if(dir_cmd != table_data[dir_cmd_type])
+//				NVM_writeParam(dir_cmd_type, table_data[dir_cmd_type]); // update command value
 		}
 		else if(value == 2)
 		{
 			param_table[dir_cmd_type].minValue = 1;
 			param_table[dir_cmd_type].maxValue = 1;
+//			table_data[dir_cmd_type] = 1;
+//			NVM_readParam(dir_cmd_type, &dir_cmd);
+//			if(dir_cmd != table_data[dir_cmd_type])
+//				NVM_writeParam(dir_cmd_type, table_data[dir_cmd_type]); // update command value
 		}
 		else
 		{
@@ -501,7 +509,6 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 	status = table_setValue(idx, value, option);
 	if(status == 0) return 0;
 
-
 	if(value == CTRL_IN_Digital	|| value == CTRL_IN_Din_Ain)
 	{
 		HDLR_setStopFlag(0); // init stop
@@ -514,6 +521,7 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 	else
 	{
 		UTIL_stopADC();
+		prev_adc_cmd = 1; // initialize
 	}
 
 	return status;
@@ -873,7 +881,7 @@ int8_t table_loadEEPROM(void)
 int8_t table_updateRange(void)
 {
 	int i, range_size=17, index;
-	int32_t min_value, max_value, value;
+	int32_t min_value, max_value, value, dir_cmd=0;
 	PARAM_IDX_t r_idx[] = {
 			value_type,
 			multi_val_0_type,
@@ -923,17 +931,25 @@ int8_t table_updateRange(void)
 
 	// update dir range and cmd value
 	value = table_data[dir_domain_type];
+	//kprintf(PORT_DEBUG, "dir_domain value=%d\r\n", value);
 	if(value == DIR_FORWARD_ONLY)
 	{
 		param_table[dir_cmd_type].minValue = 0; // forward only
 		param_table[dir_cmd_type].maxValue = 0;
-		table_data[dir_domain_type] = 0;
+//		table_data[dir_cmd_type] = 0;
+//		NVM_readParam(dir_cmd_type, &dir_cmd);
+//		if(dir_cmd != table_data[dir_cmd_type])
+//			NVM_writeParam(dir_cmd_type, table_data[dir_cmd_type]); // update command value
+
 	}
 	else if(value == DIR_REVERSE_ONLY)
 	{
 		param_table[dir_cmd_type].minValue = 1; // reverse only
 		param_table[dir_cmd_type].maxValue = 1;
-		table_data[dir_domain_type] = 1;
+//		table_data[dir_cmd_type] = 1;
+//		NVM_readParam(dir_cmd_type, &dir_cmd);
+//		if(dir_cmd != table_data[dir_cmd_type])
+//			NVM_writeParam(dir_cmd_type, table_data[dir_cmd_type]);
 	}
 
 	return 1;
@@ -1000,12 +1016,17 @@ int8_t table_init(void)
 	uint16_t buf[3]={0,0,0}; // index + int32 or float
 
 	status = table_updateRange();
-	if(status == 0) return 0;
+	//if(status == 0) return 0;
 
 	if( !main_isForceReset() ) // no mcu force reset, then send DSP
 	{
 		for(i=0; i<=baudrate_type; i++)
 		{
+			if(i == dir_cmd_type) // verify valid direction command
+			{
+				if(!table_isDirectionValid()) continue; // invalid dir command then not send
+			}
+
 			// if value is not initial value than send DSP to sync
 			if(table_data[i] != param_table[i].initValue)
 			{
@@ -1245,10 +1266,12 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	}
 
 	// store latest error info
-	if(ERR_isErrorState())
-		table_data[err_code_1_type] = (int32_t)ERR_getErrorState();
+	if(err_code == TRIP_REASON_MCU_ERR)
+		table_data[err_code_1_type] = (int32_t)ERR_getErrorState(); // set MCU error code
 	else
 		table_data[err_code_1_type] = (int32_t)err_code;
+
+	//kprintf(PORT_DEBUG, "DSP error code tbl_err=%d, err_code=%d\r\n", table_data[err_code_1_type], err_code);
 
 	if(ERR_getErrorState() == TRIP_REASON_MCU_COMM_FAIL) // store status value for COMM error
 	{
@@ -1361,6 +1384,9 @@ void table_initParam(void)
 {
 	PARAM_IDX_t idx;
 	int index;
+	int8_t status=0;
+//	int32_t dir_domain=0;
+//	uint16_t dummy[3] = {0,0,0};
 
 	// initialize DIN for ext_trip or emergency_stop
 	for(idx=multi_Din_0_type; idx<=multi_Din_2_type; idx++)
@@ -1381,7 +1407,44 @@ void table_initParam(void)
 
 	// set dir_domain_type
 	param_table[dir_domain_type].param_func(dir_domain_type, table_data[dir_domain_type], REQ_FROM_TEST);
+//	dir_domain = (int16_t)table_getValue(dir_domain_type);
+//	if(dir_domain == DIR_REVERSE_ONLY) // if dir_domain_type = reverse only, then initialize DSP direction reverse
+//	{
+//		kprintf(PORT_DEBUG, "initial send SPICMD_CTRL_DIR_R\r\n");
+//#ifndef SUPPORT_UNIT_TEST
+//		// send run to DSP
+//		status = COMM_sendMessage(SPICMD_CTRL_DIR_R, dummy);
+//		if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR R error! \r\n"); }
+//#endif
+//	}
+
+	// set gear ratio 1 as default
 	gear_ratio = (int16_t)table_getValue(gear_ratio_type);
 	if(gear_ratio == 0 || gear_ratio > param_table[gear_ratio_type].maxValue)
-		kprintf(PORT_DEBUG,"ERROR!! gear_ratio=%d \r\n", gear_ratio);
+	{
+		gear_ratio = 1; // set default value for error value
+		status = NVM_writeParam((PARAM_IDX_t)gear_ratio_type, gear_ratio);
+		kprintf(PORT_DEBUG,"ERROR!! gear_ratio=%d status=%d \r\n", gear_ratio, status);
+	}
+}
+
+int table_isDirectionValid(void)
+{
+	int32_t dir_control = table_getValue(dir_domain_type);
+	int result = 1;
+
+	switch(dir_control)
+	{
+	case DIR_FORWARD_ONLY:
+		if(table_getValue(dir_cmd_type) == CMD_DIR_R)
+			result = 0;
+		break;
+
+	case DIR_REVERSE_ONLY:
+		if(table_getValue(dir_cmd_type) == CMD_DIR_F)
+			result = 0;
+		break;
+	}
+
+	return result;
 }

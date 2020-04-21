@@ -535,9 +535,8 @@ int8_t COMM_parseMessage(void)
 		memcpy(&current, &recvMsg[5+2], sizeof(float));
 		memcpy(&freq, &recvMsg[5+4], sizeof(float));
 #ifdef DEBUG_DSP
-		kprintf(PORT_DEBUG, "[COMM_DSP] RESP_ERR : err_code[%d], run_state[%d], freq[%d], current[%d]\r\n",
-						(int)err_code, (int)run_state, *curr, *freq);
-		//printf("[COMM_DSP] RESP_ERR : err_code[%d], run_state[%d]\r\n",(int)err_code, (int)run_state);
+		kprintf(PORT_DEBUG, "[COMM_DSP] RESP_ERR : err_code[%d], run_state[%d]\r\n",
+						(int)err_code, (int)run_state);
 #endif
 
 		table_updateErrorDSP(err_code, run_state, current, freq);
@@ -692,6 +691,9 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 	else
 #endif
 		result = COMM_sendCommand(cmd, data);
+
+	if(cmd != SPICMD_REQ_ST)
+		kprintf(PORT_DEBUG, "COMM_sendMessage: status=%d, cmd=0x%x \r\n", result, cmd);
 
 	COMM_handleError(cmd, result);
 

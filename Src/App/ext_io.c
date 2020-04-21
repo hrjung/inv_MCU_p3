@@ -40,7 +40,7 @@ uint8_t mdout_value[EXT_DOUT_COUNT]={0,0};
 uint16_t adc_value=0; // analog input value
 float V_adc_val=0;
 float freq_min=0.0, freq_max=0.0, V_ai_min=0.0, V_ai_max=0.0;
-STATIC int32_t prev_adc_cmd=0;
+int32_t prev_adc_cmd=1;
 
 uint8_t isConfigured=0; // flag for AIN parameter configured
 
@@ -302,6 +302,29 @@ void EXT_DI_printStatus(void)
 	}
 }
 
+int EXT_isDirectionValid(void)
+{
+	int result = 1;
+	int32_t dir_control = table_getValue(dir_domain_type);
+
+	if(m_din.dir_pin == EXT_DIN_COUNT) return 1; // always valid
+
+	switch(dir_control)
+	{
+	case DIR_FORWARD_ONLY:
+		if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE)
+			result = 0;
+		break;
+
+	case DIR_REVERSE_ONLY:
+		if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE)
+			result = 0;
+		break;
+	}
+
+	return result;
+}
+
 int8_t EXI_DI_handleDin(int32_t ctrl_in)
 {
 	int32_t dir_ctrl;
@@ -309,10 +332,11 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 	uint8_t step=0;
 	int8_t status, result=1;
 	uint16_t dummy[3] = {0,0,0};
+	int dir_check=0;
 
 	if(ctrl_in == CTRL_IN_Digital) // only DI control
 	{
-		if(!HDLR_isStopInProgress()) // block multistep command till stop completed
+		//if(!HDLR_isStopInProgress()) // block multistep command till stop completed
 		{
 			// handle multi-step freq
 			freq_step = EXI_DI_getStepValue(EXT_DI_NORMAL);
@@ -335,8 +359,8 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 	if(m_din.run_pin != EXT_DIN_COUNT)
 	{
 		if(mdin_value[m_din.run_pin] == EXT_DI_INACTIVE
-			&& prev_run == EXT_DI_ACTIVE
-			&& state_run_stop == CMD_RUN) //RUN -> STOP
+			&& prev_run == EXT_DI_ACTIVE)
+		//	&& state_run_stop == CMD_RUN) //RUN -> STOP
 		{
 			// send STOP cmd
 			test_cmd = SPICMD_CTRL_STOP;
@@ -351,19 +375,23 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 			prev_run = mdin_value[m_din.run_pin];
 		}
 		else if(mdin_value[m_din.run_pin] == EXT_DI_ACTIVE
-				&& prev_run == EXT_DI_INACTIVE
-				&& state_run_stop == CMD_STOP) // STOP -> RUN
+				&& prev_run == EXT_DI_INACTIVE)
+		//		&& state_run_stop == CMD_STOP) // STOP -> RUN
 		{
-			// send run cmd
-			test_cmd = SPICMD_CTRL_RUN;
-			kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN run_stop=%d\r\n", state_run_stop);
+			dir_check = EXT_isDirectionValid();
+			if(dir_check)
+			{
+				// send run cmd
+				test_cmd = SPICMD_CTRL_RUN;
 #ifndef SUPPORT_UNIT_TEST
-			// send run to DSP
-			status = COMM_sendMessage(test_cmd, dummy);
-			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+				// send run to DSP
+				status = COMM_sendMessage(test_cmd, dummy);
+				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
 #endif
-			HDLR_setStopFlag(0);
-			prev_run = mdin_value[m_din.run_pin];
+				HDLR_setStopFlag(0);
+				prev_run = mdin_value[m_din.run_pin];
+			}
+			kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN run_stop=%d dir_chk=%d\r\n", state_run_stop, dir_check);
 		}
 		else
 			result = 0;
@@ -377,8 +405,8 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 		//kprintf(PORT_DEBUG, "CMD_DIR: dir_pin=%d, prev=%d, direct=%d \r\n", mdin_value[m_din.dir_pin], prev_dir, state_direction);
 		dir_ctrl = table_getValue(dir_domain_type);
 		if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE
-			&& prev_dir == EXT_DI_ACTIVE
-			&& state_direction != CMD_DIR_F) // reverse -> forward
+			&& prev_dir == EXT_DI_ACTIVE)
+		//	&& state_direction != CMD_DIR_F) // reverse -> forward
 		{
 			// send FWD cmd
 			if(dir_ctrl != DIR_REVERSE_ONLY)
@@ -399,8 +427,8 @@ int8_t EXI_DI_handleDin(int32_t ctrl_in)
 
 		}
 		else if(mdin_value[m_din.dir_pin] == EXT_DI_ACTIVE
-				&& prev_dir == EXT_DI_INACTIVE
-				&& state_direction != CMD_DIR_R)	// forward -> reverse
+				&& prev_dir == EXT_DI_INACTIVE)
+		//		&& state_direction != CMD_DIR_R)	// forward -> reverse
 		{
 			// send RVS cmd
 			if(dir_ctrl != DIR_FORWARD_ONLY)
@@ -583,6 +611,7 @@ int8_t EXT_AI_handleAin(void)
 	int32_t freq, diff=0;
 	uint16_t dummy[3] = {0,0,0};
 	int8_t status=1;
+	int dir_check=0;
 
 	// read config, can be updated during running
 	EXT_AI_setConfig();
@@ -605,23 +634,29 @@ int8_t EXT_AI_handleAin(void)
 			// send stop cmd
 			status = COMM_sendMessage(test_cmd, dummy);
 			if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO STOP error! \r\n"); }
+			HDLR_setStopFlag(1);
 #endif
 		}
 		else
 		{
-			if(table_isMotorStop())
+			if(table_isMotorStop() || HDLR_isStopInProgress())
 			{
-				test_cmd = SPICMD_CTRL_RUN;
-				kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN \r\n");
+				dir_check = table_isDirectionValid();
+				if(dir_check)
+				{
+					HDLR_setStopFlag(0);
+					test_cmd = SPICMD_CTRL_RUN;
+					kprintf(PORT_DEBUG, "send SPICMD_CTRL_RUN \r\n");
 #ifndef SUPPORT_UNIT_TEST
-				// send run to DSP
-				status = COMM_sendMessage(test_cmd, dummy);
-				if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
+					// send run to DSP
+					status = COMM_sendMessage(test_cmd, dummy);
+					if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO RUN error! \r\n"); }
 
-				//HDLR_setStartRunTime();
+					//HDLR_setStartRunTime();
 #endif
-				test_cmd = SPICMD_PARAM_W;
-				kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
+					test_cmd = SPICMD_PARAM_W;
+				}
+				kprintf(PORT_DEBUG, " send SPICMD_PARAM_W  freq=%d, dir_chk=%d\r\n", freq, dir_check);
 #ifndef SUPPORT_UNIT_TEST
 				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
 				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
@@ -661,7 +696,7 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 	freq = EXT_AI_getFreq(value);
 
 	diff = labs(prev_adc_cmd - freq);
-	if(diff >= F_CMD_DIFF_HYSTERISIS) // over 1Hz
+	if(diff >= F_CMD_DIFF_HYSTERISIS || freq == 0) // over 1Hz
 	{
 		if(freq == 0) freq = (int32_t)(freq_min*10.0 + 0.05); // set minumum freq value
 
