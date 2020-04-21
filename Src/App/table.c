@@ -41,6 +41,7 @@ extern int16_t gear_ratio;
 
 extern int16_t dbg_warn_test;
 
+extern int32_t prev_adc_cmd;
 
 extern COMM_CMD_t test_cmd;
 
@@ -294,18 +295,16 @@ static int8_t table_setValueAPI(PARAM_IDX_t idx, int32_t value, int16_t option)
 		return 0;
 	}
 
-	if(option != REQ_FROM_TEST)
+	if(option != REQ_FROM_TEST && option != REQ_FROM_NFC)
 	{
 		// request to update EEPROM
 		status = NVMQ_enqueueNfcQ(idx, value);
 		if(status == 0) return 0;
 	}
 
-
 	table_data[idx] = value;
 	table_nvm[idx] = value;
 	//kprintf(PORT_DEBUG,"table_setValueAPI: idx=%d set value=%d\r\n", idx, value);
-
 	if(option > REQ_FROM_DSP) // need DSP comm
 	{
 		if(table_getDspAddr(idx) != none_dsp)
@@ -350,7 +349,7 @@ int8_t table_setCommandFreqValue(PARAM_IDX_t idx, int32_t value, int16_t option)
 	// check validity
 	if(table_checkFreqValidity(idx, value) == 0) return 0;
 
-	if(idx == value_type && HDLR_isStopInProgress()) return 0; // not set freq during stopping
+//	if(idx == value_type && HDLR_isStopInProgress()) return 0; // not set freq during stopping
 
 	status = table_setValueAPI(idx, value, option);
 
@@ -510,7 +509,6 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 	status = table_setValue(idx, value, option);
 	if(status == 0) return 0;
 
-
 	if(value == CTRL_IN_Digital	|| value == CTRL_IN_Din_Ain)
 	{
 		HDLR_setStopFlag(0); // init stop
@@ -523,6 +521,7 @@ int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option)
 	else
 	{
 		UTIL_stopADC();
+		prev_adc_cmd = 1; // initialize
 	}
 
 	return status;

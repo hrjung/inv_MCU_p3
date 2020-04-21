@@ -225,7 +225,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 	uint16_t dummy[3] = {0,0,0};
 	int dir_check=0;
 
-	if(table_isDirectionValid() == 0) return;
+	if(table_isDirectionValid() == 0) return 0;
 
 	run_stop = NVM_readRunStopSysFlag();
 
@@ -240,6 +240,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 		dir_check = table_isDirectionValid();
 		if(dir_check)
 		{
+			HDLR_setStopFlag(0); // clear stop
 			status = COMM_sendMessage(SPICMD_CTRL_RUN, dummy);
 			// clear flag to idle
 			if(status != COMM_FAILED)
@@ -256,6 +257,7 @@ int8_t HDLR_handleRunStopFlagNFC(void)
 
 	case RUN_STOP_FLAG_STOP:
 		// send stop to DSP
+		HDLR_setStopFlag(1); // start stop
 #ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_CTRL_STOP, dummy);
 		// clear flag to idle

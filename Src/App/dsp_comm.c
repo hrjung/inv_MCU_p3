@@ -692,6 +692,9 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 #endif
 		result = COMM_sendCommand(cmd, data);
 
+	if(cmd != SPICMD_REQ_ST)
+		kprintf(PORT_DEBUG, "COMM_sendMessage: status=%d, cmd=0x%x \r\n", result, cmd);
+
 	COMM_handleError(cmd, result);
 
 	return (result == COMM_SUCCESS);
