@@ -259,6 +259,9 @@ extern uint32_t device_min_cnt;
 extern uint32_t run_minutes;
 extern uint32_t motor_run_start_time;
 
+extern uint8_t NFC_Access_flag;
+extern uint32_t NFC_Access_cnt;
+
 extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
 extern uint16_t ain_val[];
@@ -1134,6 +1137,7 @@ STATIC int test_ser(uint8_t dport)
     	// freq, ctrl_in
     	kprintf(dport, "\r\n freq=%d, ctrl_in=%d, baudrate=%d, motor_type=%d, gear_ratio=%d", \
     		table_data[value_type], table_data[ctrl_in_type], table_data[baudrate_type], table_data[motor_type_type], table_data[gear_ratio_type]);
+    	kprintf(dport, "\r\n NFC_flag=%d, NFC_cnt=%d ", NFC_Access_flag, NFC_Access_cnt);
 
     }
     else if(test_case == 'L') // show table_data and table_nvm to compare

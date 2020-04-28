@@ -1037,7 +1037,11 @@ int8_t table_init(void)
 				status = COMM_sendMessage(SPICMD_PARAM_W, buf);
 				kprintf(PORT_DEBUG, "DSP COMM : status=%d, idx=%d, value=%d, param=%d\r\n", \
 						status, i, (int)table_data[i], param_table[i].initValue);
-				if(status == 0) errflag++;
+				if(status == 0) // retry
+				{
+					status = COMM_sendMessage(SPICMD_PARAM_W, buf);
+					if(status == 0) errflag++;
+				}
 			}
 		}
 	}
@@ -1073,6 +1077,18 @@ int8_t table_initNVM(void)
 		{
 			status = table_init();
 			kprintf(PORT_DEBUG, "2: status=%d\r\n", status);
+		}
+		else // try again
+		{
+			status = table_loadEEPROM();
+			kprintf(PORT_DEBUG, "retry 1: status=%d\r\n", status);
+			if(status)
+			{
+				status = table_init();
+				kprintf(PORT_DEBUG, "retry 2: status=%d\r\n", status);
+			}
+			else
+				return 0; // load EEPROM error -> trip
 		}
 	}
 	else
@@ -1376,6 +1392,8 @@ int8_t table_updatebyTableQ(void)
 	} while(empty == 0); // not empty
 
 	if(errflag) return 0;
+
+	//NVM_setCRC(); // force CRC
 
 	return 1;
 }

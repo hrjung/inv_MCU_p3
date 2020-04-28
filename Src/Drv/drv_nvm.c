@@ -336,6 +336,12 @@ void NVM_setInit(void)
 		status = NVM_write(sys_table[SYSTEM_PARAM_IS_INITIATED].addr, sys_data[SYSTEM_PARAM_IS_INITIATED]);
 		if(status == 1)
 			NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_IS_INITIATED);
+		else // try again
+		{
+			status = NVM_write(sys_table[SYSTEM_PARAM_IS_INITIATED].addr, sys_data[SYSTEM_PARAM_IS_INITIATED]);
+			if(status == 1)
+				NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_IS_INITIATED);
+		}
 	}
 }
 
@@ -361,7 +367,12 @@ int8_t NVM_isInit(void)
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_IS_INITIATED].addr, &isInit);
 
 	kprintf(PORT_DEBUG, "NVM_isInit init=%d, status=%d\r\n", (int)isInit, status);
-	if(status!=NVM_OK) return -1;
+	if(status!=NVM_OK)
+	{
+		status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_IS_INITIATED].addr, &isInit);
+		if(status != NVM_OK)
+			return -1;
+	}
 
 	sys_data[SYSTEM_PARAM_IS_INITIATED] = isInit;
 
@@ -501,7 +512,7 @@ int8_t NVM_verifyCRC(uint32_t crc32_calc)
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_CRC_VALUE].addr, (int32_t *)&crc32_rd);
 
-	//kprintf(PORT_DEBUG, "calc=0x%x, read_crc=0x%x, status=%d\r\n", crc32_calc, crc32_rd, status);
+	kprintf(PORT_DEBUG, "calc=0x%x, read_crc=0x%x, status=%d\r\n", crc32_calc, crc32_rd, status);
 	if(status != NVM_OK) return NVM_NOK;
 
 	sys_data[SYSTEM_PARAM_CRC_VALUE] = crc32_rd;

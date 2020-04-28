@@ -164,6 +164,7 @@ uint32_t default_cnt=0, main_cnt=0, nfc_cnt=0, mbus_cnt=0, rs485_cnt=0, user_io_
 uint8_t main_handler_f=0;
 
 uint8_t NFC_Access_flag=0;
+uint32_t NFC_Access_cnt=0;
 uint8_t DSP_status_read_flag=0;
 uint8_t reset_cmd_send_f = 0;
 

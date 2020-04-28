@@ -58,6 +58,7 @@
 #define NFC_APP_ACCESS_INTERVAL		500
 
 extern uint8_t NFC_Access_flag;
+extern uint32_t NFC_Access_cnt;
 extern osTimerId NfcAppTimerHandle;
 
 extern uint16_t mb_downcounter;
@@ -232,6 +233,7 @@ void EXTI9_5_IRQHandler(void)
   // get RF_BUSY(RF_WIP) sig to identify NFC App access, clear after 1sec
   osTimerStart(NfcAppTimerHandle, NFC_APP_ACCESS_INTERVAL);
   NFC_Access_flag = 1;
+  NFC_Access_cnt++;
   /* USER CODE END EXTI9_5_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
