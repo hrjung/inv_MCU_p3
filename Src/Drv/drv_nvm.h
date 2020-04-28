@@ -43,8 +43,8 @@ extern int8_t NVM_initTime(void);
 
 extern int8_t NVM_initError(void);
 extern int8_t NVM_initSystemParam(void);
-extern void NVM_setInit(void);
-extern int8_t NVM_isInit(void);
+//extern void NVM_setInit(void);
+//extern int8_t NVM_isInit(void);
 extern int8_t NVM_getNfcMonitoring(void);
 extern void NVM_clearNfcMonitoring(void);
 extern int8_t NVM_getNfcStatus(int32_t *tag_end);

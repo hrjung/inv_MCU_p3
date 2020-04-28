@@ -580,7 +580,11 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 				status = COMM_sendMessage(SPICMD_PARAM_W, buf);
 				kprintf(PORT_DEBUG, "HDLR_initNVM() DSP COMM : status=%d, idx=%d, value=%d, param=%d\r\n", \
 						status, index, (int)nvm_value, init_value);
-				if(status == 0) errflag++;
+				if(status == 0) // retry
+				{
+					status = COMM_sendMessage(SPICMD_PARAM_W, buf);
+					if(status == 0) errflag++;
+				}
 			}
 			index++;
 
@@ -638,7 +642,7 @@ int8_t HDLR_initNVM(NVM_INIT_t init_type)
 	main_kickWatchdogNFC();
 #endif
 
-	NVM_setInit();
+	//NVM_setInit(); // not use init flag
 
 	NVM_setCRC();
 

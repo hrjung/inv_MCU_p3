@@ -312,6 +312,7 @@ extern int32_t table_getInitValue(PARAM_IDX_t index);
 extern uint16_t table_getAddr(PARAM_IDX_t index);
 extern uint32_t table_calcCRC(void);
 extern int8_t table_setCtrlIn(PARAM_IDX_t idx, int32_t value, int16_t option);
+extern int8_t table_initializeBlankEEPROM(void);
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 extern uint8_t p_test_enabled;
@@ -540,7 +541,7 @@ STATIC int init_param_ser(uint8_t dport)
 
 	param_init_requested_f = option;
 
-	kprintf(dport, "\r\n parameter initialization option= %d", param_init_requested_f);
+	kprintf(dport, "\r\n INITP parameter initialization option= %d", param_init_requested_f);
 
 	return 0;
 }
@@ -926,7 +927,8 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 2) // re-initialize EEPROM after reset
     {
-    	NVM_clearInit();
+    	table_initializeBlankEEPROM();
+    	//NVM_clearInit();
 		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  \r\n");
 #ifdef SUPPORT_PARAMETER_BACKUP
 		status = HDLR_clearBackupFlag();

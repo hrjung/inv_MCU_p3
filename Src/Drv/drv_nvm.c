@@ -325,6 +325,7 @@ int8_t NVM_initError(void)
 	return status;
 }
 
+/* remove init flag
 void NVM_setInit(void)
 {
 	uint8_t status;
@@ -378,6 +379,7 @@ int8_t NVM_isInit(void)
 
 	return (int8_t)isInit;
 }
+*/
 
 int8_t NVM_getNfcMonitoring(void)
 {

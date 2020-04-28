@@ -788,10 +788,10 @@ void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option)
  * 		table handling function implementation
  */
 
-int8_t table_isInit(void)
-{
-	return NVM_isInit();
-}
+//int8_t table_isInit(void)
+//{
+//	return NVM_isInit();
+//}
 
 // CRC value for initial value : 0xf2364d63
 uint32_t table_calcCRC(void)
@@ -842,7 +842,7 @@ int8_t table_initializeBlankEEPROM(void)
 
 	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
 
-	NVM_setInit();
+	//NVM_setInit(); // not use init flag
 
 	NVM_setCRC();
 
@@ -1067,7 +1067,7 @@ int8_t table_initNVM(void)
 	//int32_t motor_type, value;
 
 	// initialize EEPROM
-	if(table_isInit() == 1) // correctly initialize
+//	if(table_isInit() == 1) // correctly initialize
 	{
 		kputs(PORT_DEBUG, "load EEPROM\r\n");
 		// load EEPROM, check CRC
@@ -1091,12 +1091,14 @@ int8_t table_initNVM(void)
 				return 0; // load EEPROM error -> trip
 		}
 	}
+#if 0
 	else
 	{
 		// blank NVM : initialize as init value
 		kputs(PORT_DEBUG, "blank EEPROM\r\n");
 		status = table_initializeBlankEEPROM();
 	}
+#endif
 
 	status = table_getMotorType();
 
