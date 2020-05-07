@@ -44,6 +44,8 @@ int32_t prev_adc_cmd=1;
 
 uint8_t isConfigured=0; // flag for AIN parameter configured
 
+extern int8_t ain_ready_flag;
+
 extern int16_t state_run_stop; // global run/stop status
 extern int16_t state_direction; // global forward/reverse direction status
 extern int16_t st_overload;
@@ -95,8 +97,10 @@ int32_t EXT_getDOValue(void)
 int32_t EXT_getAIValue(void)
 {
 	int32_t ai_val=0;
+	int32_t ctrl_in=0;
 
-	if(table_getCtrllIn() == CTRL_IN_Analog_V)
+	ctrl_in = table_getCtrllIn();
+	if(ctrl_in == CTRL_IN_Analog_V || ctrl_in == CTRL_IN_Din_Ain)
 	{
 		ai_val = (int32_t)(V_adc_val*10.0 + 0.5); // voltage value
 	}
@@ -613,6 +617,8 @@ int8_t EXT_AI_handleAin(void)
 	int8_t status=1;
 	int dir_check=0;
 
+	if(!ain_ready_flag) return 1;
+
 	// read config, can be updated during running
 	EXT_AI_setConfig();
 
@@ -685,6 +691,8 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 	uint16_t value;
 	int32_t freq, diff=0;
 	int8_t status, result=1;
+
+	if(!ain_ready_flag) return 1;
 
 	// read config, can be updated during running
 	EXT_AI_setConfig();

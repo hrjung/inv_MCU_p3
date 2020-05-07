@@ -340,11 +340,15 @@ uint16_t UTIL_getMinADC(void)
 	return min;
 }
 
+int8_t ain_ready_flag=0;
+
 void UTIL_readADC(uint16_t adc_sample)
 {
 	static int ain_idx=0;
 	uint16_t min=0, max=0;
 	int i;
+
+	if(ain_idx == EXT_AIN_SAMPLE_CNT) ain_ready_flag = 1;
 
 	ain_idx = ain_idx%EXT_AIN_SAMPLE_CNT;
 	ain_val[ain_idx] = adc_sample&0x0FFF;
