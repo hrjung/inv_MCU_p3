@@ -1377,6 +1377,7 @@ int8_t table_updatebyTableQ(void)
 	int8_t empty, status=1;
 	PARAM_IDX_t index;
 	int16_t errflag=0;
+	int8_t crc_flag=0;
 
 	do {
 
@@ -1386,7 +1387,9 @@ int8_t table_updatebyTableQ(void)
 		if(table_data[index] != value)
 		{
 			status = table_runFunc(index, value, REQ_FROM_NFC);
-			kprintf(PORT_DEBUG,"table_updatebyTableQ table_data[%d]=%d, status=%d \r\n", index, (int)value, status);
+			if(index <= baudrate_type) crc_flag=1;
+			kprintf(PORT_DEBUG,"table_updatebyTableQ table_data[%d]=%d, status=%d crc_f=%d\r\n", index, (int)value, status, crc_flag);
+
 		}
 
 		empty = NVMQ_isEmptyTableQ();
@@ -1395,7 +1398,10 @@ int8_t table_updatebyTableQ(void)
 
 	if(errflag) return 0;
 
-	//NVM_setCRC(); // force CRC
+	if(crc_flag)
+		NVM_setCRC(); // force CRC
+
+
 
 	return 1;
 }

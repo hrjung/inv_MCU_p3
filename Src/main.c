@@ -201,7 +201,10 @@ extern uint8_t param_init_requested_f;
 
 extern uint16_t jig_test_enabled_f;
 
+extern uint8_t UTIL_readDTMpin(void);
+
 extern void gen_crc_table(void);
+
 extern void MB_init(void);
 extern void MB_TaskFunction(void);
 extern int8_t MB_handlePacket(void);
@@ -328,7 +331,6 @@ int main(void)
 
   // ADC self calibration
   while(!(HAL_ADCEx_Calibration_Start(&hadc1)==HAL_OK));
-
 
   gen_crc_table();
 
@@ -1596,7 +1598,7 @@ void mainHandlerTaskFunc(void const * argument)
 //	int32_t i2c_rvalue=0;
 //	uint8_t i2c_status;
 
-  osDelay(10);
+  osDelay(500); // DSP request wait 1 sec
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
@@ -1620,6 +1622,7 @@ void mainHandlerTaskFunc(void const * argument)
 #endif
 
   UTIL_setLED(LED_COLOR_G, 0);
+  kprintf(PORT_DEBUG, "dsp_status = %d \r\n", UTIL_readDTMpin());
 #ifndef SUPPORT_UNIT_TEST
   nv_status = table_initNVM();
   if(nv_status == 0)
@@ -1638,10 +1641,10 @@ void mainHandlerTaskFunc(void const * argument)
   MBQ_init();
   NVMQ_init();
 
-  main_handler_f = 1;
-
   //init parameters setting for ctrl_in
   table_initParam();
+
+  main_handler_f = 1;
 
   osTimerStart(OperationTimerHandle, OPERATION_TIME_INTERVAL); // 1 min to inverter operation time
   osTimerStart(YstcUpdateTimerHandle, DSP_STATUS_TIME_INTERVAL); // 1 sec read DSP status

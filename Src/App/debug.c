@@ -1091,6 +1091,10 @@ STATIC int test_ser(uint8_t dport)
     	crc32_calc = table_calcCRC();
     	status = NVM_verifyCRC(crc32_calc);
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
+
+    	arg1 = (int)atoi(arg_v[2]); // force update CRC
+    	if(arg1 == 1)
+    		NVM_setCRC();
     }
     else if(test_case == 'D') // ask DSP error info
     {

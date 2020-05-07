@@ -533,6 +533,7 @@ void NVM_setCRC(void)
 
 	if(NVM_verifyCRC(crc32_calc) == NVM_NOK) // updated
 	{
+		kprintf(PORT_DEBUG, "write crc=0x%x \r\n", crc32_calc);
 		sys_data[SYSTEM_PARAM_CRC_VALUE] = crc32_calc;
 		sys_table[SYSTEM_PARAM_CRC_VALUE].need_update = WRITE_TO_NVM;
 		status = NVM_write(sys_table[SYSTEM_PARAM_CRC_VALUE].addr, sys_data[SYSTEM_PARAM_CRC_VALUE]);

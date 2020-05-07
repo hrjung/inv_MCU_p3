@@ -58,6 +58,7 @@ extern int8_t table_getMotorType(void);
 extern int8_t table_updateFwVersion(void);
 
 extern TABLE_DSP_PARAM_t table_getDspAddr(PARAM_IDX_t index);
+extern uint16_t table_getAddr(PARAM_IDX_t index);
 
 #ifdef SUPPORT_TASK_WATCHDOG
 extern void main_kickWatchdogNFC(void);
@@ -388,6 +389,7 @@ int8_t HDLR_updateParamNVM(void)
 	uint8_t nvm_status=0;
 	uint16_t addr;
 	int16_t errflag=0;
+	int8_t crc_flag = 0;
 
 	do {
 
@@ -398,6 +400,7 @@ int8_t HDLR_updateParamNVM(void)
 		if(nvm_status == 0 || nvm_value != value)
 		{
 			//kprintf(PORT_DEBUG,"ERROR NVM read error addr=0x%x\r\n", addr); errflag++;
+			if(addr <= table_getAddr(baudrate_type)) crc_flag=1;
 			nvm_status = NVM_write(addr, value);
 			if(nvm_status == 0) {kprintf(PORT_DEBUG,"ERROR NVM write error addr=0x%x\r\n", addr); errflag++;}
 		}
@@ -410,7 +413,8 @@ int8_t HDLR_updateParamNVM(void)
 	} while(empty == 0); // not empty
 
 	// update CRC
-	NVM_setCRC();
+	if(crc_flag)
+		NVM_setCRC();
 
 	if(errflag) return 0;
 
@@ -511,7 +515,7 @@ int8_t HDLR_updatebyNfc(void)
 
 	kprintf(PORT_DEBUG, "HDLR_updatebyNfc\r\n");
 
-//	CRC is updated by NFC App
+//	CRC is updated by NFC App or NFC task
 //	NVM_setCRC();
 
 	// clear NFC tag flag
