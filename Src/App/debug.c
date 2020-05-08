@@ -121,14 +121,6 @@ const char	*lock_msg[] = {
 };
 #endif
 
-#ifdef SUPPORT_PARAMETER_BACKUP
-const char	*backup_msg[] = {
-	"BKUP",
-	"Usage: BKUP value", // 1 : backup, 2: restore
-	0
-};
-#endif
-
 const char	*test_msg[] = {
 	"TEST",
 	"Usage: TEST f_value",
@@ -175,9 +167,6 @@ STATIC int ain_ser(uint8_t dport);
 STATIC int pass_ser(uint8_t dport);
 STATIC int lock_ser(uint8_t dport);
 #endif
-#ifdef SUPPORT_PARAMETER_BACKUP
-STATIC int backup_ser(uint8_t dport);
-#endif
 STATIC int test_ser(uint8_t dport);
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
 STATIC int ptest_ser(uint8_t dport);
@@ -203,9 +192,6 @@ const COMMAND	Cmd_List[] =
 #ifdef SUPPORT_PASSWORD
 	{ 1,  	"PASS",			2,		pass_ser,			pass_msg	},
 	{ 1,  	"LOCK",			2,		lock_ser,			lock_msg	},
-#endif
-#ifdef SUPPORT_PARAMETER_BACKUP
-	{ 1,  	"BKUP",			2,		backup_ser,			backup_msg	},
 #endif
 	{ 1,  	"TEST",			2,		test_ser,			test_msg	},
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
@@ -798,41 +784,6 @@ STATIC int lock_ser(uint8_t dport)
 }
 #endif
 
-#ifdef SUPPORT_PARAMETER_BACKUP
-STATIC int backup_ser(uint8_t dport)
-{
-	uint8_t bk_cmd=0;
-
-	if(arg_c == 1)
-	{
-		kprintf(dport, "\r\n backup_flag=%d, available=%d", HDLR_isBackupEnabled(), NVM_isBackupAvailable());
-		return -1;
-	}
-	else if(arg_c == 2)
-	{
-
-		bk_cmd = (uint8_t)atoi(arg_v[1]);
-		if(bk_cmd != 1 && bk_cmd != 2)
-		{
-			kprintf(dport, "\r\n only 1(backup) and 2(restore) available!");
-			return -1;
-		}
-
-		HDLR_setBackupFlagModbus(bk_cmd);
-
-		kprintf(dport, "\r\n set backup_cmd=%d ", bk_cmd);
-	}
-	else
-	{
-		kprintf(dport, "\r\nInvalid number of parameters");
-		return -1;
-	}
-
-	return 0;
-}
-#endif
-
-
 void test_DinConfig(void)
 {
 	int8_t t_status;
@@ -930,10 +881,6 @@ STATIC int test_ser(uint8_t dport)
     	table_initializeBlankEEPROM();
     	//NVM_clearInit();
 		kprintf(dport, "\r\n re-initialize EEPROM, please reset...  \r\n");
-#ifdef SUPPORT_PARAMETER_BACKUP
-		status = HDLR_clearBackupFlag();
-		kprintf(dport, "\r\n clear Backup data...  %d\r\n", status);
-#endif
     }
     else if(test_case == 3) // analog input test start
     {
@@ -1086,10 +1033,17 @@ STATIC int test_ser(uint8_t dport)
     }
     else if(test_case == 'C') // show EEPROM CRC value
     {
+#if 0
     	uint32_t crc32_calc;
 
     	crc32_calc = table_calcCRC();
     	status = NVM_verifyCRC(crc32_calc);
+#else
+    	uint16_t crc16_calc;
+
+    	crc16_calc = table_calcCRC();
+    	status = NVM_verifyCRC(crc16_calc);
+#endif
     	kprintf(dport, "\r\n verifyCRC status=%d", status);
 
     	arg1 = (int)atoi(arg_v[2]); // force update CRC

@@ -64,7 +64,8 @@ extern int8_t NVM_setMotorRunCount(uint32_t run_count);
 extern int8_t NVM_setMotorDevCounter(uint32_t r_time);
 extern int8_t NVM_setMotorRunTimeMinute(uint32_t r_time);
 
-extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
+//extern int8_t NVM_verifyCRC(uint32_t crc32_calc);
+extern int8_t NVM_verifyCRC(uint16_t crc16_calc);
 extern void NVM_setCRC(void);
 
 extern void NVM_setMotorStatus(int32_t status);

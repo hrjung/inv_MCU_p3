@@ -332,7 +332,7 @@ int main(void)
   // ADC self calibration
   while(!(HAL_ADCEx_Calibration_Start(&hadc1)==HAL_OK));
 
-  gen_crc_table();
+  //gen_crc_table();
 
   /* USER CODE END 2 */
 
@@ -1353,31 +1353,6 @@ void NfcNvmTaskFunc(void const * argument)
 			  }
 
 			  UTIL_setLED(LED_COLOR_G, 0);
-		  }
-#endif
-
-#ifdef SUPPORT_PARAMETER_BACKUP
-		  if(HDLR_isBackupEnabled())
-		  {
-			  int8_t nvm_backup=0;
-
-			  nvm_backup = HDLR_getBackupFlag();
-			  kprintf(PORT_DEBUG, "HDLR_backupParameter cmd=%d\r\n", nvm_backup);
-			  if(nvm_backup == MB_BACKUP_SAVE) // backup
-			  {
-				  status = HDLR_backupParameter();
-				  if(status == 0) kputs(PORT_DEBUG, "HDLR_backupParameter ERROR\r\n");
-			  }
-			  else if(nvm_backup == MB_BACKUP_RESTORE && NVM_isBackupAvailable()) // restore
-			  {
-				  status = HDLR_restoreParameter(); // restore NVM
-				  if(status == 0) kputs(PORT_DEBUG, "HDLR_restoreParameter ERROR\r\n");
-
-				  NVM_setCRC(); // set new CRC
-			  }
-
-			  UTIL_setLED(LED_COLOR_G, 0);
-			  HDLR_clearBackupFlagModbus(); // clear flag
 		  }
 #endif
 		  // handle reset command via NFC

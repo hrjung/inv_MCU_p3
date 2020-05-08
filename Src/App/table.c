@@ -9,7 +9,6 @@
 #include "proc_uart.h"
 
 #include "table.h"
-#include "crc32.h"
 
 #include "dsp_comm.h"
 #include "nvm_queue.h"
@@ -468,7 +467,7 @@ int8_t table_setValueMax(PARAM_IDX_t idx, int32_t value, int16_t option)
 int8_t table_setValueDir(PARAM_IDX_t idx, int32_t value, int16_t option)
 {
 	int8_t result;
-	int32_t dir_cmd=0;
+	//int32_t dir_cmd=0;
 
 	result = table_setValue(idx, value, option);
 	if(result)
@@ -788,21 +787,32 @@ void test_setTableValue(PARAM_IDX_t idx, int32_t value, int16_t option)
  * 		table handling function implementation
  */
 
-//int8_t table_isInit(void)
-//{
-//	return NVM_isInit();
-//}
+uint16_t crc16_calc(const uint8_t *buffer, uint32_t size)
+{
+    uint16_t crc = 0xFFFF;
 
-// CRC value for initial value : 0xf2364d63
-uint32_t table_calcCRC(void)
+    if (buffer && size)
+        while (size--)
+        {
+            crc = (crc >> 8) | (crc << 8);
+            crc ^= *buffer++;
+            crc ^= ((unsigned char) crc) >> 4;
+            crc ^= crc << 12;
+            crc ^= (crc & 0xFF) << 5;
+        }
+
+    return crc;
+}
+
+uint16_t table_calcCRC(void)
 {
 	int table_length = (int)(baudrate_type+1); // RW data only
 	uint8_t* buff = (uint8_t *)table_nvm;
-	uint32_t crc32 = update_crc(-1, buff, table_length *sizeof(int32_t));
+	uint16_t crc16 = crc16_calc(buff, table_length *sizeof(int32_t));
 
 //	printf("nvm %d, %d, %d %d\r\n", table_nvm[0], table_nvm[1], table_nvm[2], table_nvm[3]);
-//	printf("CRC : 0x%x\r\n", crc32);
-	return crc32;
+//	printf("CRC : 0x%x\r\n", crc16);
+	return crc16;
 }
 
 int8_t table_initializeBlankEEPROM(void)
@@ -831,18 +841,12 @@ int8_t table_initializeBlankEEPROM(void)
 	status = NVM_initSystemParam();
 	if(status == 0) errflag++;
 
-#ifdef SUPPORT_PARAMETER_BACKUP
-	HDLR_clearBackupFlag();
-#endif
-
 	kprintf(PORT_DEBUG, "1: err=%d\r\n", errflag);
 
 	status = NVM_initTime();
 	if(status == 0) errflag++;
 
 	kprintf(PORT_DEBUG, "2: err=%d\r\n", errflag);
-
-	//NVM_setInit(); // not use init flag
 
 	NVM_setCRC();
 
@@ -856,7 +860,7 @@ int8_t table_loadEEPROM(void)
 	int i;
 	uint8_t status;
 	int32_t value;
-	uint32_t crc32_calc;
+	uint16_t crc16_calc;
 
 	for(i=0; i<PARAM_TABLE_SIZE; i++)
 	{
@@ -872,16 +876,17 @@ int8_t table_loadEEPROM(void)
 	}
 
 	// check CRC
-	crc32_calc = table_calcCRC();
-	status = NVM_verifyCRC(crc32_calc);
+	crc16_calc = table_calcCRC();
+	status = NVM_verifyCRC(crc16_calc);
 	kprintf(PORT_DEBUG, "table_loadEEPROM verify status=%d\r\n", status);
+
 	return status;
 }
 
 int8_t table_updateRange(void)
 {
 	int i, range_size=17, index;
-	int32_t min_value, max_value, value, dir_cmd=0;
+	int32_t min_value, max_value, value;
 	PARAM_IDX_t r_idx[] = {
 			value_type,
 			multi_val_0_type,
@@ -1400,7 +1405,6 @@ int8_t table_updatebyTableQ(void)
 
 	if(crc_flag)
 		NVM_setCRC(); // force CRC
-
 
 
 	return 1;
