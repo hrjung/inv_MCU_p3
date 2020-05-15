@@ -17,7 +17,6 @@
 #include "error.h"
 #include "handler.h"
 
-
 #define ERRINFO_ITEM_CNT	4
 
 
@@ -858,9 +857,10 @@ int8_t table_initializeBlankEEPROM(void)
 int8_t table_loadEEPROM(void)
 {
 	int i;
-	uint8_t status;
+	uint8_t status=NVM_LOAD_OK;
 	int32_t value;
 	uint16_t crc16_calc;
+	uint8_t errflag=0;
 
 	for(i=0; i<PARAM_TABLE_SIZE; i++)
 	{
@@ -868,19 +868,27 @@ int8_t table_loadEEPROM(void)
 		if(status == NVM_NOK)
 		{
 			kprintf(PORT_DEBUG, " table_loadEEPROM idx=%d read error, value=%d\r\n", i, (int)value);
-			return 0;
+			errflag++;
 		}
 		else
 			table_data[i] = value;
 
 	}
 
+	if(errflag)
+	{
+		kprintf(PORT_DEBUG, "table_loadEEPROM read error! status=%d, errflag=%d\r\n", status, errflag);
+		return NVM_LOAD_ERR;
+	}
+
 	// check CRC
 	crc16_calc = table_calcCRC();
 	status = NVM_verifyCRC(crc16_calc);
 	kprintf(PORT_DEBUG, "table_loadEEPROM verify status=%d\r\n", status);
-
-	return status;
+	if(status == 0)
+		return NVM_CRC_ERR;
+	else
+		return NVM_LOAD_OK;
 }
 
 int8_t table_updateRange(void)
@@ -973,9 +981,8 @@ int8_t table_getMotorType(void)
 		motor_type = COMM_getMotorType(&status); // try again
 		if(status == 0)
 		{
-			ERR_setErrorState(TRIP_REASON_MCU_COMM_FAIL);
 			kprintf(PORT_DEBUG, " getType error status=%d \r\n", status);
-			return status;
+			return NVM_COMM_ERR;
 		}
 	}
 
@@ -989,7 +996,7 @@ int8_t table_getMotorType(void)
 			table_data[motor_type_type] = motor_type;
 		}
 		else
-			status = 0;
+			status = NVM_MOTOR_ERR;
 	}
 
 	kprintf(PORT_DEBUG, " read motor type=%d, table_val=%d, status=%d  \r\n", motor_type, value, status);
@@ -999,7 +1006,7 @@ int8_t table_getMotorType(void)
 
 int8_t table_updateFwVersion(void)
 {
-	int8_t status=1;
+	int8_t status=NVM_LOAD_OK;
 	int32_t nvm_fw_ver;
 	int32_t fw_ver = (int32_t)((VERSION_MAJ<<8) | VERSION_MIN);
 
@@ -1011,7 +1018,10 @@ int8_t table_updateFwVersion(void)
 		kprintf(PORT_DEBUG, " need update! nvm_fw_ver=%d, fw_ver=%d status=%d \r\n", nvm_fw_ver, fw_ver, status);
 	}
 
-	return status;
+	if(status == 0)
+		return NVM_LOAD_OK;
+	else
+		return NVM_LOAD_ERR;
 }
 
 int8_t table_init(void)
@@ -1058,17 +1068,16 @@ int8_t table_init(void)
 	if( !main_isForceReset() )
 		NVM_initSystemFlagStartup();
 
-	status = NVM_readTime();
-	if(status == 0) errflag++;
+	NVM_readTime();
 
-	if(errflag) return 0;
+	if(errflag) return NVM_COMM_ERR;
 
-	return 1;
+	return NVM_LOAD_OK;
 }
 
 int8_t table_initNVM(void)
 {
-	int8_t status;
+	int8_t status=NVM_LOAD_OK;
 	//int32_t motor_type, value;
 
 	// initialize EEPROM
@@ -1078,22 +1087,22 @@ int8_t table_initNVM(void)
 		// load EEPROM, check CRC
 		status = table_loadEEPROM(); // EEPROM -> table_data[]
 		kprintf(PORT_DEBUG, "1: status=%d\r\n", status);
-		if(status)
+		if(status == NVM_LOAD_OK)
 		{
-			status = table_init();
+			status |= table_init();
 			kprintf(PORT_DEBUG, "2: status=%d\r\n", status);
 		}
 		else // try again
 		{
-			status = table_loadEEPROM();
+			status |= table_loadEEPROM();
 			kprintf(PORT_DEBUG, "retry 1: status=%d\r\n", status);
-			if(status)
+			if(status == NVM_LOAD_OK)
 			{
-				status = table_init();
+				status |= table_init();
 				kprintf(PORT_DEBUG, "retry 2: status=%d\r\n", status);
 			}
 			else
-				return 0; // load EEPROM error -> trip
+				return status; // load EEPROM error -> trip
 		}
 	}
 #if 0
@@ -1105,9 +1114,9 @@ int8_t table_initNVM(void)
 	}
 #endif
 
-	status = table_getMotorType();
+	status |= table_getMotorType();
 
-	status = table_updateFwVersion();
+	status |= table_updateFwVersion();
 
 	return status;
 }
@@ -1289,7 +1298,7 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	}
 
 	// store latest error info
-	if(err_code == TRIP_REASON_MCU_ERR)
+	if(err_code == TRIP_REASON_MCU_ERR || err_code == TRIP_REASON_NONE)
 		table_data[err_code_1_type] = (int32_t)ERR_getErrorState(); // set MCU error code
 	else
 		table_data[err_code_1_type] = (int32_t)err_code;
@@ -1477,4 +1486,32 @@ int table_isDirectionValid(void)
 	}
 
 	return result;
+}
+
+void table_handleInitError(int8_t err_status)
+{
+	int err_reason=0;
+
+	if(err_status&NVM_LOAD_ERR)
+	{
+		kprintf(PORT_DEBUG, "nv_status = %d NV read error !\r\n", err_status);
+		err_reason = TRIP_REASON_MCU_INIT;
+	}
+	else if(err_status&NVM_CRC_ERR)
+	{
+		kprintf(PORT_DEBUG, "nv_status = %d CRC error!\r\n", err_status);
+		err_reason = TRIP_REASON_MCU_CRC_FAILURE;
+	}
+	else if(err_status&NVM_COMM_ERR)
+	{
+		kprintf(PORT_DEBUG, "nv_status = %d COMM error!\r\n", err_status);
+		err_reason = TRIP_REASON_MCU_INIT;
+	}
+	else if(err_status&NVM_MOTOR_ERR)
+	{
+		kprintf(PORT_DEBUG, "nv_status = %d MOTOR type error!\r\n", err_status);
+		err_reason = TRIP_REASON_MCU_INIT;
+	}
+
+	ERR_setErrorState(err_reason);
 }

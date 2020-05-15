@@ -1049,6 +1049,8 @@ STATIC int test_ser(uint8_t dport)
     	arg1 = (int)atoi(arg_v[2]); // force update CRC
     	if(arg1 == 1)
     		NVM_setCRC();
+    	else if(arg1 == 2) // clear CRC for test
+    		status = NVM_write(sys_table[SYSTEM_PARAM_CRC_VALUE].addr, 0x0);
     }
     else if(test_case == 'D') // ask DSP error info
     {

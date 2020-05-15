@@ -29,6 +29,9 @@
 
 #define SUPPORT_FORCE_RESET
 
+// go to normal from trip when emergency stop sig disabled
+#define SUPPORT_RESTORE_EMERGENCY_STOP
+
 //#define SUPPORT_UNIT_TEST
 
 //#define SUPPORT_PRODUCTION_TEST_MODE

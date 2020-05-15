@@ -555,7 +555,7 @@ void test_handleDinEmergency(void)
 	TEST_ASSERT_EQUAL_INT(exp_pin, m_din.emergency_pin);
 	mdin_value[m_din.emergency_pin] = EXT_DI_INACTIVE;
 	exp_result = 1; // do nothing
-	result = EXI_DI_handleEmergency();
+	result = EXT_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// enable emergency stop
@@ -563,7 +563,7 @@ void test_handleDinEmergency(void)
 	mdin_value[m_din.emergency_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
 	exp_result = 0;
-	result = EXI_DI_handleEmergency();
+	result = EXT_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
@@ -581,13 +581,13 @@ void test_handleDinEmergency(void)
 	TEST_ASSERT_EQUAL_INT(exp_pin, m_din.trip_pin);
 	mdin_value[m_din.trip_pin] = EXT_DI_INACTIVE;
 	exp_result = 1; // do nothing
-	result = EXI_DI_handleEmergency();
+	result = EXT_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	exp_result = 0;
 	mdin_value[m_din.trip_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
-	result = EXI_DI_handleEmergency();
+	result = EXT_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
@@ -605,17 +605,17 @@ void test_handleDinEmergency(void)
 	TEST_ASSERT_EQUAL_INT(exp_pin, m_din.run_pin);
 	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE; //STOP
 	exp_result = 1; // do nothing
-	result = EXI_DI_handleEmergency();
+	result = EXT_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	mdin_value[m_din.run_pin] = EXT_DI_ACTIVE; //RUN
 	exp_result = 1; // do nothing
-	result = EXI_DI_handleEmergency();
+	result = EXT_DI_handleEmergency();
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 }
 
 /*
- * 		test item : EXI_DI_handleDin
+ * 		test item : EXT_DI_handleDin
  *
  * 		1. set run_pin=0, do nothing, run_pin=1,  send RUN_CMD,
  * 		2. set dir_pin=1 in run state, send DIR_F
@@ -647,51 +647,51 @@ void test_handleDin(void)
 
 	// set ctrl_in = DIN, STOP, FORWARD
 	exp_result = 0; // do nothing
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// run
 	mdin_value[m_din.run_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_RUN;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 4, REQ_FROM_TEST); // run
 	exp_result = 0; // no change
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// dir R
 	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_DIR_R;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x104, REQ_FROM_TEST); // run + R
 	exp_result = 0; // no change
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// dir F
 	mdin_value[m_din.dir_pin] = EXT_DI_INACTIVE;
 	exp_cmd = SPICMD_CTRL_DIR_F;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x4, REQ_FROM_TEST); // run + F
 	exp_result = 0; // no change
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// stop
 	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x1, REQ_FROM_TEST); // stop + F
 	exp_result = 0; // no change
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	table_setValueDir(dir_domain_type, DIR_FORWARD_ONLY, REQ_FROM_TEST); // set forward only
@@ -699,13 +699,13 @@ void test_handleDin(void)
 	// dir R not working
 	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
 	exp_result = 0; // do nothing
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// restore dir F
 	mdin_value[m_din.dir_pin] = EXT_DI_INACTIVE;
 	exp_result = 0; // do nothing
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	table_setValueDir(dir_domain_type, DIR_ALL, REQ_FROM_TEST); // set bi-directional
@@ -713,12 +713,12 @@ void test_handleDin(void)
 	// dir R
 	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_DIR_R;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x101, REQ_FROM_TEST); // stop + R
 	exp_result = 0; // no change
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	table_setValueDir(dir_domain_type, DIR_REVERSE_ONLY, REQ_FROM_TEST); // set reverse only
@@ -726,20 +726,20 @@ void test_handleDin(void)
 	// dir F not working
 	mdin_value[m_din.dir_pin] = EXT_DI_INACTIVE;
 	exp_result = 0; // do nothing
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	// restore dir R
 	mdin_value[m_din.dir_pin] = EXT_DI_ACTIVE;
 	exp_result = 0; // do nothing
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 	table_setValueDir(dir_domain_type, DIR_ALL, REQ_FROM_TEST); // set bi-directional
 
 	table_setStatusValue(run_status1_type, 0x101, REQ_FROM_TEST); // stop + R
 	exp_result = 0; // no change
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 
 
@@ -759,7 +759,7 @@ void test_handleDin(void)
 	// run
 	mdin_value[m_din.run_pin] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_CTRL_RUN;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 
 	table_setStatusValue(run_status1_type, 0x104, REQ_FROM_TEST); // run + R
@@ -767,7 +767,7 @@ void test_handleDin(void)
 	mdin_value[m_din.bit_H] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_PARAM_W;
 	exp_step = 4;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
 	test_cmd = SPICMD_TEST_CMD;
@@ -775,7 +775,7 @@ void test_handleDin(void)
 	mdin_value[m_din.bit_L] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_PARAM_W;
 	exp_step = 5;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
 	test_cmd = SPICMD_TEST_CMD;
@@ -784,7 +784,7 @@ void test_handleDin(void)
 	mdin_value[m_din.bit_L] = EXT_DI_INACTIVE;
 	exp_cmd = SPICMD_PARAM_W;
 	exp_step = 0;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
 	test_cmd = SPICMD_TEST_CMD;
@@ -793,7 +793,7 @@ void test_handleDin(void)
 	mdin_value[m_din.run_pin] = EXT_DI_INACTIVE;
 	exp_cmd = SPICMD_CTRL_STOP;
 	exp_result = 1; // send STOP
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_result, result);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	test_cmd = SPICMD_TEST_CMD;
@@ -803,7 +803,7 @@ void test_handleDin(void)
 	mdin_value[m_din.bit_L] = EXT_DI_ACTIVE;
 	exp_cmd = SPICMD_TEST_CMD;
 	exp_step = 0;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
 
@@ -812,7 +812,7 @@ void test_handleDin(void)
 	// end of STOP than apply change
 	exp_cmd = SPICMD_PARAM_W;
 	exp_step = 1;
-	result = EXI_DI_handleDin(CTRL_IN_Digital);
+	result = EXT_DI_handleDin(CTRL_IN_Digital);
 	TEST_ASSERT_EQUAL_INT(exp_cmd, test_cmd);
 	TEST_ASSERT_EQUAL_INT(exp_step, step_cmd);
 }

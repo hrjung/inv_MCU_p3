@@ -207,20 +207,53 @@ int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option
 	return 1;
 }
 
-int8_t EXI_DI_handleEmergency(void)
+#ifdef SUPPORT_RESTORE_EMERGENCY_STOP
+void EXT_DI_sendEmergencyCmd(COMM_CMD_t cmd)
+{
+	int8_t status=0;
+	uint16_t dummy[3] = {0,0,0};
+
+	// send DSP emergency_stop start
+	status = COMM_sendMessage(cmd, dummy); // for test only
+	if(status == 0)
+	{
+		status = COMM_sendMessage(cmd, dummy);
+	}
+}
+#endif
+
+int8_t EXT_DI_handleEmergency(void)
 {
 	if(m_din.emergency_pin != EXT_DIN_COUNT)
 	{
+		// enable emergency stop
 		if(mdin_value[m_din.emergency_pin] == EXT_DI_ACTIVE && prev_emergency == EXT_DI_INACTIVE)
 		{
 			test_cmd = SPICMD_CTRL_STOP;
 			kprintf(PORT_DEBUG, "send emergency STOP set ERROR\r\n");
 			ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
+#ifdef SUPPORT_RESTORE_EMERGENCY_STOP
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP); // let DSP go to emergency
+#endif
 			prev_emergency = mdin_value[m_din.emergency_pin];
 
 			return 0;
 		}
+#ifdef SUPPORT_RESTORE_EMERGENCY_STOP
+		// disable emergency stop
+		else if(mdin_value[m_din.emergency_pin] == EXT_DI_INACTIVE && prev_emergency == EXT_DI_ACTIVE)
+		{
+			kprintf(PORT_DEBUG, "restore normal from TRIP \r\n");
+			ERR_setErrorState(TRIP_REASON_NONE);
+			// send DSP emergency_stop end
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP);
+
+			prev_emergency = mdin_value[m_din.emergency_pin];
+		}
+#else
 		prev_emergency = mdin_value[m_din.emergency_pin];
+#endif
+
 	}
 
 	if(m_din.trip_pin != EXT_DIN_COUNT)
@@ -230,11 +263,28 @@ int8_t EXI_DI_handleEmergency(void)
 			test_cmd = SPICMD_CTRL_STOP;
 			kprintf(PORT_DEBUG, "send trip SPICMD_CTRL_STOP\r\n");
 			ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
+#ifdef SUPPORT_RESTORE_EMERGENCY_STOP
+			// send DSP emergency_stop start
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP); // let DSP go to emergency
+#endif
 			prev_trip = mdin_value[m_din.trip_pin];
 
 			return 0;
 		}
+#ifdef SUPPORT_RESTORE_EMERGENCY_STOP
+		else if(mdin_value[m_din.trip_pin] == EXT_DI_INACTIVE && prev_trip == EXT_DI_ACTIVE)
+		{
+			kprintf(PORT_DEBUG, "restore normal from TRIP \r\n");
+			ERR_setErrorState(TRIP_REASON_NONE);
+
+			// send DSP emergency_stop end
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP);
+
+			prev_trip = mdin_value[m_din.trip_pin];
+		}
+#else
 		prev_trip = mdin_value[m_din.trip_pin];
+#endif
 	}
 
 	return 1;
@@ -329,7 +379,7 @@ int EXT_isDirectionValid(void)
 	return result;
 }
 
-int8_t EXI_DI_handleDin(int32_t ctrl_in)
+int8_t EXT_DI_handleDin(int32_t ctrl_in)
 {
 	int32_t dir_ctrl;
 	int32_t freq_step;
@@ -721,7 +771,7 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 		}
 	}
 
-	result = EXI_DI_handleDin(ctrl_in);
+	result = EXT_DI_handleDin(ctrl_in);
 
 	return result;
 }

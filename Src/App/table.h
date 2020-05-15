@@ -11,6 +11,13 @@
 
 #define NVM_TABLE_VERSION		0x501
 
+#define NVM_LOAD_OK		0x0
+#define NVM_LOAD_ERR	0x1
+#define NVM_CRC_ERR		0x2
+#define NVM_COMM_ERR	0x4
+#define NVM_MOTOR_ERR	0x8
+
+
 #define IPM_TEMPERATURE_WARNNING	(900)	// 90 degree
 #define MOTOR_TEMP_WARNNING			(1300)  // 130 degree
 
@@ -324,5 +331,7 @@ extern int8_t table_updatebyTableQ(void);
 
 extern void table_initParam(void);
 extern int table_isDirectionValid(void);
+
+extern void table_handleInitError(int8_t err_status);
 
 #endif /* SRC_TABLE_H_ */

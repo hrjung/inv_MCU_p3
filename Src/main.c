@@ -1465,7 +1465,7 @@ int8_t mainHandlerState(void)
 		//if(ERR_isErrorState()) sct_state = MAIN_ERROR_STATE;
 		//else
 		if(DSP_status_read_flag && reset_cmd_send_f==0) sct_state = MAIN_DSP_STATE;
-		else if(user_io_handle_f && ERR_isErrorState()==0) sct_state = MAIN_EXTIO_STATE;
+		else if(user_io_handle_f) sct_state = MAIN_EXTIO_STATE;
 		else
 		{
 			event_cnt++;
@@ -1491,9 +1491,16 @@ int8_t mainHandlerState(void)
 		break;
 
 	case MAIN_EXTIO_STATE:
+
+#ifdef SUPPORT_RESTORE_EMERGENCY_STOP
+		EXT_DI_handleEmergency(); // handle trip/emergency DI
+
+		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; break;}
+#else
 		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; break;}
 
-		EXI_DI_handleEmergency(); // handle trip/emergency DI
+		EXT_DI_handleEmergency(); // handle trip/emergency DI
+#endif
 
 		ctrl_in = table_getCtrllIn();
 
@@ -1509,7 +1516,7 @@ int8_t mainHandlerState(void)
 			break;
 
 		case CTRL_IN_Digital:
-			status = EXI_DI_handleDin(ctrl_in);
+			status = EXT_DI_handleDin(ctrl_in);
 			break;
 
 		case CTRL_IN_Analog_V:
@@ -1600,14 +1607,10 @@ void mainHandlerTaskFunc(void const * argument)
   kprintf(PORT_DEBUG, "dsp_status = %d \r\n", UTIL_readDTMpin());
 #ifndef SUPPORT_UNIT_TEST
   nv_status = table_initNVM();
-  if(nv_status == 0)
+  if(nv_status)
   {
-	  kprintf(PORT_DEBUG, "nv_status = %d error!\r\n", nv_status);
-	  nv_status = table_initNVM(); // try again
+	  table_handleInitError(nv_status);
   }
-
-  if(nv_status == 0)
-	  ERR_setErrorState(TRIP_REASON_MCU_INIT);
 
   kprintf(PORT_DEBUG, "nv_status = %d  reset=%d\r\n", nv_status, reset_flag);
 #endif
