@@ -970,7 +970,7 @@ int8_t table_updateRange(void)
 
 int8_t table_getMotorType(void)
 {
-	int8_t status=1;
+	int8_t status=1, nvm_status=NVM_LOAD_OK;
 	int32_t motor_type, value;
 
 	// read motor type from DSP
@@ -993,20 +993,30 @@ int8_t table_getMotorType(void)
 		if(motor_type > MOTOR_NONE_TYPE && motor_type < MOTOR_MAX_TYPE)
 		{
 			status = NVM_writeParam((PARAM_IDX_t)motor_type_type, motor_type);
-			table_data[motor_type_type] = motor_type;
+			if(status)
+				table_data[motor_type_type] = motor_type;
+			else
+			{
+				osDelay(10);
+				status = NVM_writeParam((PARAM_IDX_t)motor_type_type, motor_type);
+				if(status)
+					table_data[motor_type_type] = motor_type;
+				else
+					nvm_status = NVM_LOAD_ERR;
+			}
 		}
 		else
-			status = NVM_MOTOR_ERR;
+			nvm_status = NVM_MOTOR_ERR;
 	}
 
-	kprintf(PORT_DEBUG, " read motor type=%d, table_val=%d, status=%d  \r\n", motor_type, value, status);
+	kprintf(PORT_DEBUG, " read motor type=%d, table_val=%d, nvm_status=%d \r\n", motor_type, value, nvm_status);
 
-	return status;
+	return nvm_status;
 }
 
 int8_t table_updateFwVersion(void)
 {
-	int8_t status=NVM_LOAD_OK;
+	int8_t status=1;
 	int32_t nvm_fw_ver;
 	int32_t fw_ver = (int32_t)((VERSION_MAJ<<8) | VERSION_MIN);
 
@@ -1019,9 +1029,9 @@ int8_t table_updateFwVersion(void)
 	}
 
 	if(status == 0)
-		return NVM_LOAD_OK;
-	else
 		return NVM_LOAD_ERR;
+	else
+		return NVM_LOAD_OK;
 }
 
 int8_t table_init(void)
@@ -1054,6 +1064,7 @@ int8_t table_init(void)
 						status, i, (int)table_data[i], param_table[i].initValue);
 				if(status == 0) // retry
 				{
+					osDelay(10);
 					status = COMM_sendMessage(SPICMD_PARAM_W, buf);
 					if(status == 0) errflag++;
 				}
@@ -1116,7 +1127,11 @@ int8_t table_initNVM(void)
 
 	status |= table_getMotorType();
 
+	kprintf(PORT_DEBUG, "3: status=%d\r\n", status);
+
 	status |= table_updateFwVersion();
+
+	kprintf(PORT_DEBUG, "4: status=%d\r\n", status);
 
 	return status;
 }

@@ -22,7 +22,7 @@
 static int8_t comm_state;
 STATIC uint16_t sendMsg[LENGTH_BUFFER ];
 STATIC uint16_t recvMsg[LENGTH_BUFFER ];
-STATIC int16_t seq_cnt = 1;
+STATIC uint16_t seq_cnt = 1;
 
 STATIC int16_t read_idx;
 STATIC int32_t read_value;
@@ -190,6 +190,8 @@ int8_t COMM_generateMessage(COMM_CMD_t cmd, const uint16_t* data)
 	case SPICMD_CTRL_DIR_R:
 	case SPICMD_REQ_ST:
 	case SPICMD_REQ_ERR:
+	case SPICMD_CTRL_EMER_IN:
+	case SPICMD_CTRL_EMER_OUT:
 #ifdef DEBUG_DSP
 		kprintf(PORT_DEBUG, "[COMM_DSP] COMM_generateMessage : cmd = %d\r\n", (int)sendMsg[4]);
 #endif

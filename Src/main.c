@@ -1495,9 +1495,9 @@ int8_t mainHandlerState(void)
 #ifdef SUPPORT_RESTORE_EMERGENCY_STOP
 		EXT_DI_handleEmergency(); // handle trip/emergency DI
 
-		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; break;}
+		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; user_io_handle_f = 0; break;}
 #else
-		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; break;}
+		if(ERR_isErrorState()) {sct_state = MAIN_IDLE_STATE; user_io_handle_f = 0; break;}
 
 		EXT_DI_handleEmergency(); // handle trip/emergency DI
 #endif

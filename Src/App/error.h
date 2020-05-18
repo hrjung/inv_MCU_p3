@@ -47,9 +47,9 @@ typedef enum {
 	TRIP_REASON_MCU_INIT,
 	TRIP_REASON_MCU_INPUT,			// external trip or emergency stop
 	TRIP_REASON_MCU_SETVALUE,		// EEPROM error
-	TRIP_REASON_MCU_COMM_FAIL,
-	TRIP_REASON_MCU_CRC_FAILURE,
-	TRIP_REASON_MCU_MOTOR_TYPE,
+	TRIP_REASON_MCU_COMM_FAIL,		// DSP communication error
+	TRIP_REASON_MCU_CRC_FAILURE,	// CRC failure at init
+	TRIP_REASON_MCU_MOTOR_TYPE,		// Motor type range error
 
 	TRIP_REASON_MCU_ERR_TEST,
 

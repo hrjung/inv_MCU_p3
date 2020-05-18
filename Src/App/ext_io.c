@@ -230,10 +230,10 @@ int8_t EXT_DI_handleEmergency(void)
 		if(mdin_value[m_din.emergency_pin] == EXT_DI_ACTIVE && prev_emergency == EXT_DI_INACTIVE)
 		{
 			test_cmd = SPICMD_CTRL_STOP;
-			kprintf(PORT_DEBUG, "send emergency STOP set ERROR\r\n");
+			kprintf(PORT_DEBUG, "send emergency SPICMD_CTRL_EMER_IN\r\n");
 			ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
 #ifdef SUPPORT_RESTORE_EMERGENCY_STOP
-			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP); // let DSP go to emergency
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_EMER_IN); // let DSP go to emergency
 #endif
 			prev_emergency = mdin_value[m_din.emergency_pin];
 
@@ -246,7 +246,7 @@ int8_t EXT_DI_handleEmergency(void)
 			kprintf(PORT_DEBUG, "restore normal from TRIP \r\n");
 			ERR_setErrorState(TRIP_REASON_NONE);
 			// send DSP emergency_stop end
-			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP);
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_EMER_OUT);
 
 			prev_emergency = mdin_value[m_din.emergency_pin];
 		}
@@ -261,11 +261,11 @@ int8_t EXT_DI_handleEmergency(void)
 		if(mdin_value[m_din.trip_pin] == EXT_DI_ACTIVE && prev_trip == EXT_DI_INACTIVE)
 		{
 			test_cmd = SPICMD_CTRL_STOP;
-			kprintf(PORT_DEBUG, "send trip SPICMD_CTRL_STOP\r\n");
+			kprintf(PORT_DEBUG, "send trip SPICMD_CTRL_EMER_IN\r\n");
 			ERR_setErrorState(TRIP_REASON_MCU_INPUT); // get external trip
 #ifdef SUPPORT_RESTORE_EMERGENCY_STOP
 			// send DSP emergency_stop start
-			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP); // let DSP go to emergency
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_EMER_IN); // let DSP go to emergency
 #endif
 			prev_trip = mdin_value[m_din.trip_pin];
 
@@ -278,7 +278,7 @@ int8_t EXT_DI_handleEmergency(void)
 			ERR_setErrorState(TRIP_REASON_NONE);
 
 			// send DSP emergency_stop end
-			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_STOP);
+			EXT_DI_sendEmergencyCmd(SPICMD_CTRL_EMER_OUT);
 
 			prev_trip = mdin_value[m_din.trip_pin];
 		}

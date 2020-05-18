@@ -1466,7 +1466,7 @@ STATIC int utest_ser(uint8_t dport)
 static int display_BoardInfo(uint8_t dport)
 {
 	kputs  (dport, "\r\n*************************************************");
-	kprintf(dport, "\r\n    Nara Inverter MCU v%d.%d", VERSION_MAJ, VERSION_MIN);
+	kprintf(dport, "\r\n    Nara Inverter MCU v%d.%d Develop", VERSION_MAJ, VERSION_MIN);
 	kputs  (dport, "\r\n*************************************************\r\n");
 
 	return 0;

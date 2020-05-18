@@ -11,7 +11,7 @@
 #include    <stdarg.h>
 
 #define VERSION_MAJ		0
-#define VERSION_MIN		51
+#define VERSION_MIN		52
 
 
 #define SUPPORT_TASK_WATCHDOG
