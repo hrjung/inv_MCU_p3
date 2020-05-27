@@ -387,6 +387,7 @@ int8_t EXT_DI_handleDin(int32_t ctrl_in)
 	int8_t status, result=1;
 	uint16_t dummy[3] = {0,0,0};
 	int dir_check=0;
+	static int8_t dir_first_f=0;
 
 	if(ctrl_in == CTRL_IN_Digital) // only DI control
 	{
@@ -458,6 +459,51 @@ int8_t EXT_DI_handleDin(int32_t ctrl_in)
 	{
 		//kprintf(PORT_DEBUG, "CMD_DIR: dir_pin=%d, prev=%d, direct=%d \r\n", mdin_value[m_din.dir_pin], prev_dir, state_direction);
 		dir_ctrl = table_getValue(dir_domain_type);
+
+		if(dir_first_f == 0) // only send initial direction after power on
+		{
+			if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE)
+			{
+				if(dir_ctrl != DIR_REVERSE_ONLY)
+				{
+					// send forward cmd
+					test_cmd = SPICMD_CTRL_DIR_F;
+					kprintf(PORT_DEBUG, "send start SPICMD_CTRL_DIR_F\r\n");
+	#ifndef SUPPORT_UNIT_TEST
+					// send run to DSP
+					status = COMM_sendMessage(test_cmd, dummy);
+					if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR F error! \r\n"); }
+					else
+	#endif
+						prev_dir = mdin_value[m_din.dir_pin];
+				}
+				else
+					result = 0;
+			}
+			else
+			{
+				// send RVS cmd
+				if(dir_ctrl != DIR_FORWARD_ONLY)
+				{
+					// send reverse cmd
+					test_cmd = SPICMD_CTRL_DIR_R;
+					kprintf(PORT_DEBUG, "send start SPICMD_CTRL_DIR_R\r\n");
+	#ifndef SUPPORT_UNIT_TEST
+					// send run to DSP
+					status = COMM_sendMessage(test_cmd, dummy);
+					if(status == 0) { kprintf(PORT_DEBUG, "ERROR EXTIO DIR R error! \r\n"); }
+					else
+	#endif
+						prev_dir = mdin_value[m_din.dir_pin];
+				}
+				else
+					result = 0;
+			}
+			dir_first_f = 1;
+
+			return 1;
+		}
+
 		if(mdin_value[m_din.dir_pin] == EXT_DI_INACTIVE
 			&& prev_dir == EXT_DI_ACTIVE)
 		//	&& state_direction != CMD_DIR_F) // reverse -> forward
