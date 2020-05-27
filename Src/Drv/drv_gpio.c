@@ -41,6 +41,7 @@ static uint8_t din[EXT_DIN_COUNT][EXT_DIN_SAMPLE_CNT] = {0};
 static uint8_t dtm[2][EXT_DIN_SAMPLE_CNT] = {0};
 
 uint8_t dtm_value[2];
+uint8_t mtd_pin=0;
 
 uint16_t ain_val[EXT_AIN_SAMPLE_CNT];
 uint32_t ain_sum=0;
@@ -218,8 +219,9 @@ uint8_t UTIL_isDspError(void)
 
 void UTIL_setMTDpin(uint8_t onoff)
 {
+	mtd_pin = onoff;
 #ifdef SUPPORT_DRIVER_HW
-	HAL_GPIO_WritePin(MTD1_GPIO_Port, MTD1_Pin, (GPIO_PinState)onoff);
+	HAL_GPIO_WritePin(MTD1_GPIO_Port, MTD1_Pin, (GPIO_PinState)mtd_pin);
 #else
 
 #endif

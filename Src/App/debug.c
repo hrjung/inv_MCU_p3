@@ -248,6 +248,7 @@ extern uint32_t motor_run_start_time;
 extern uint8_t NFC_Access_flag;
 extern uint32_t NFC_Access_cnt;
 
+extern uint8_t mtd_pin;
 extern uint8_t mdout_value[];
 extern uint8_t mdin_value[];
 extern uint16_t ain_val[];
@@ -1070,7 +1071,7 @@ STATIC int test_ser(uint8_t dport)
     {
     	int i, idx[5] = {err_code_1_type, err_code_2_type, err_code_3_type, err_code_4_type, err_code_5_type};
 
-    	kprintf(dport, " error code = %d", (int)ERR_getErrorState());
+    	kprintf(dport, " error code = %d, mtd_pin=%d", (int)ERR_getErrorState(), mtd_pin);
     	for(i=0; i<5; i++)
     	{
     		kprintf(dport, "\r\n [%d] err_code=%d, status=%d, current=%d, freq=%d", \

@@ -156,6 +156,8 @@ int16_t COMM_getRecvLength(COMM_CMD_t cmd)
 	case SPICMD_CTRL_STOP:
 	case SPICMD_CTRL_DIR_F:
 	case SPICMD_CTRL_DIR_R:
+	case SPICMD_CTRL_EMER_IN:
+	case SPICMD_CTRL_EMER_OUT:
 	case SPICMD_TEST_CMD:
 	case SPICMD_PARAM_W:	return 7;
 	case SPICMD_PARAM_R:	return 9;
