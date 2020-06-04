@@ -1203,12 +1203,13 @@ void StartDefaultTask(void const * argument)
 * @retval None
 */
 
-void NfcNvmUpdateParam(int32_t tag_end)
+void NfcNvmUpdateParam(int32_t tag_end, int32_t tag_tryed)
 {
 	int8_t status;
 
 	// if tagged, wait tag_end
-	if(tag_end == 1)
+	//if(tag_end == 1)
+	if(tag_tryed == 1 && tag_end == 1)
 	{
 		// if tag end, update NVM -> table
 		//	check parameter table
@@ -1238,14 +1239,15 @@ void NfcNvmUpdateParam(int32_t tag_end)
 		  kputs(PORT_DEBUG, "nfc tag processed!\r\n");
 		}
 	}
-	else if(tag_end != 0 && tag_end != 1) // NFC write is incomplete -> restore
+	//else if(tag_end != 0 && tag_end != 1) // NFC write is incomplete -> restore
+	else if(tag_tryed == 1 || tag_end == 1) // NFC write is incomplete -> restore
 	{
 		// tag error : restore NVM <- table
 		osDelay(5);
 		status = HDLR_restoreNVM();
 		if(status == 0) {kputs(PORT_DEBUG, "nfc tag restore error\r\n"); }
 
-		kputs(PORT_DEBUG, "nfc tag imcomplete!\r\n");
+		kprintf(PORT_DEBUG, "nfc tag imcomplete! tryed=%d, end=%d\r\n", tag_end, tag_tryed);
 
 		UTIL_setLED(LED_COLOR_G, 0);
 	}
@@ -1259,7 +1261,7 @@ void NfcNvmTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN NfcNvmTaskFunc */
   int sys_index=SYSTEM_PARAM_SIZE;
-  int32_t tag_end=0;
+  int32_t tag_end=0, tag_tryed=0;
   int8_t status;
   static uint32_t prev_time_tick;
   static uint32_t bk_cnt=0;
@@ -1288,9 +1290,9 @@ void NfcNvmTaskFunc(void const * argument)
 		  NVM_getRunStopFlag(&run_stop); // read run_stop
 
 		  // read NFC tag flag
-		  tag_end=0;
-		  status = NVM_getNfcStatus(&tag_end);
-		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); tag_end=0;}
+		  tag_end=0, tag_tryed=0;
+		  status = NVM_getNfcStatus(&tag_end, &tag_tryed);
+		  if(status == 0) {kputs(PORT_DEBUG, "nfc tag error\r\n"); tag_end=0, tag_tryed=0;}
 
 		  NVM_getNfcMonitoring(); // read monitoring flag
 
@@ -1298,8 +1300,8 @@ void NfcNvmTaskFunc(void const * argument)
 	  }
 	  else
 	  {
-		  NfcNvmUpdateParam(tag_end);
-		  tag_end=0;
+		  NfcNvmUpdateParam(tag_end, tag_tryed);
+		  tag_end=0, tag_tryed=0;
 	  }
 
 

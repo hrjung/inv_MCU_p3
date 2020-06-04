@@ -504,6 +504,9 @@ int8_t HDLR_updatebyNfc(void)
 			}
 		}
 		index++;
+#ifdef SUPPORT_TASK_WATCHDOG
+		main_kickWatchdogNFC();
+#endif
 	}
 
 	if(fail_cnt > 0) // read error then retry

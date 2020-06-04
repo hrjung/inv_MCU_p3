@@ -333,11 +333,15 @@ void NVM_clearNfcMonitoring(void)
 	}
 }
 
-int8_t NVM_getNfcStatus(int32_t *tag_end)
+//int8_t NVM_getNfcStatus(int32_t *tag_end)
+int8_t NVM_getNfcStatus(int32_t *tag_tryed, int32_t *tag_end)
 {
 	uint8_t status;
 
 	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_NFC_TAGGED].addr, tag_end);
+	//if(status!=NVM_OK) return NVM_NOK;
+
+	status = NVM_read((uint16_t)sys_table[SYSTEM_PARAM_NFC_TRYED].addr, tag_tryed);
 	//if(status!=NVM_OK) return NVM_NOK;
 
 	return NVM_OK;
@@ -352,6 +356,12 @@ void NVM_clearNfcStatus(void)
 	status = NVM_write(sys_table[SYSTEM_PARAM_NFC_TAGGED].addr, sys_data[SYSTEM_PARAM_NFC_TAGGED]);
 	if(status == 1)
 		NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_NFC_TAGGED);
+
+	sys_data[SYSTEM_PARAM_NFC_TRYED] = 0;
+	sys_table[SYSTEM_PARAM_NFC_TRYED].need_update = WRITE_TO_NVM;
+	status = NVM_write(sys_table[SYSTEM_PARAM_NFC_TRYED].addr, sys_data[SYSTEM_PARAM_NFC_TRYED]);
+	if(status == 1)
+		NVM_clearSysParamUpdateFlag(SYSTEM_PARAM_NFC_TRYED);
 
 }
 

@@ -14,8 +14,7 @@
 #define 	NVM_OK		1
 
 #define 	NVM_SYS_PARAM_UPDATE_RETRY_MAX	10
-//#define NVM_BACKUP_START_ADDR	0x600
-//#define NVM_BACKUP_AVAILABLE_F	(0x5555)
+
 
 enum
 {
@@ -47,7 +46,8 @@ extern int8_t NVM_initSystemParam(void);
 //extern int8_t NVM_isInit(void);
 extern int8_t NVM_getNfcMonitoring(void);
 extern void NVM_clearNfcMonitoring(void);
-extern int8_t NVM_getNfcStatus(int32_t *tag_end);
+//extern int8_t NVM_getNfcStatus(int32_t *tag_end);
+extern int8_t NVM_getNfcStatus(int32_t *tag_started, int32_t *tag_end);
 extern void NVM_clearNfcStatus(void);
 extern int8_t NVM_getRunStopFlag(int32_t *run_stop);
 extern void NVM_clearRunStopFlag(void);
@@ -81,13 +81,6 @@ extern void NVM_clearInitParamCmd(void);
 extern uint8_t NVM_isResetEnabled(void);
 extern void NVM_clearResetCmd(void);
 
-#ifdef SUPPORT_PARAMETER_BACKUP
-extern uint8_t NVM_isBackupCmd(void);
-extern int8_t NVM_getBackupCmdNfc(void);
-extern void NVM_clearBackupCmd(void);
-extern int8_t NVM_setBackupAvailableFlag(int32_t flag);
-extern int NVM_isBackupAvailable(void);
-#endif
 
 extern void NVM_initSystemFlagStartup(void);
 
