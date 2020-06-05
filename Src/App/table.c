@@ -1459,6 +1459,10 @@ void table_initParam(void)
 		UTIL_startADC(); // start ADC
 	}
 
+	// set initial direction for DI or DI+AI
+	if(table_data[ctrl_in_type] == CTRL_IN_Digital	|| table_data[ctrl_in_type] == CTRL_IN_Din_Ain)
+		EXT_setInitialDirection(table_data[dir_cmd_type]);
+
 	// set dir_domain_type
 	param_table[dir_domain_type].param_func(dir_domain_type, table_data[dir_domain_type], REQ_FROM_TEST);
 //	dir_domain = (int16_t)table_getValue(dir_domain_type);

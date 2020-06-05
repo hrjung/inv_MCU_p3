@@ -45,6 +45,7 @@ extern int32_t EXI_DI_getStepValue(int8_t flag);
 extern int8_t EXT_DI_setupMultiFuncDin(int index, DIN_config_t func_set, int16_t option);
 extern uint8_t EXT_DI_convertMultiStep(void);
 extern int8_t EXT_DI_handleEmergency(void);
+extern void EXT_setInitialDirection(int32_t init_dir);
 extern int8_t EXT_DI_handleDin(int32_t ctrl_in);
 
 extern int8_t EXT_DO_handleDout(void);
