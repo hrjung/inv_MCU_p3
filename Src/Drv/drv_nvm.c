@@ -19,9 +19,6 @@
 #include "error.h"
 
 
-#define NVM_BACKUP_FLAG_ADDR	0x5F8
-
-
 #ifndef SUPPORT_DRIVER_HW
 static int32_t nvm_table[1024];
 #endif

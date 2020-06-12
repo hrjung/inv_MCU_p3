@@ -564,7 +564,14 @@ void EXT_DO_setDoutPin(int do_idx, int32_t DO_config)
 	case DOUT_trip_notify:
 		value = (int32_t)ERR_isErrorState();
 		if(value)
-			mdout_value[do_idx] = 1;
+		{
+			//kprintf(PORT_DEBUG, "stop=%d, error=%d\r\n", table_isMotorStop(), (int)ERR_getErrorState());
+			// expect power off, need not TRIP signal to DOut
+			if(table_isMotorStop() && ERR_getErrorState() == TRIP_REASON_VDC_UNDER)
+				mdout_value[do_idx] = 0;
+			else
+				mdout_value[do_idx] = 1;
+		}
 		else
 			mdout_value[do_idx] = 0;
 		break;

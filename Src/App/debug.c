@@ -670,6 +670,7 @@ STATIC int dout_ser(uint8_t dport)
 
 	if(arg_c == 1) // show DOUT status
 	{
+		kprintf(dport, "\r\n show status Dout_config[0]=%d, [1]=%d", (int)table_getValue(multi_Dout_0_type), (int)table_getValue(multi_Dout_1_type));
 		kprintf(dport, "\r\n show status Dout[0]=%d, [1]=%d, run_stop=%d", mdout_value[0], mdout_value[1], state_run_stop);
 	}
 	else // arg_c == 3
