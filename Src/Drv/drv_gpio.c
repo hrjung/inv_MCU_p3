@@ -111,6 +111,7 @@ void UTIL_setLED(uint8_t color, uint8_t blink_on)
 		LED_state[2].blink = blink_on;
 		//printf("LED B on, blink=%d\n", blink_on);
 		break;
+
 #if 0
 	case LED_COLOR_RG:
 #ifdef SUPPORT_DRIVER_HW

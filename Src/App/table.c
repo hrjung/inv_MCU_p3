@@ -1507,30 +1507,41 @@ int table_isDirectionValid(void)
 	return result;
 }
 
-void table_handleInitError(int8_t err_status)
+void table_handleInitError(int8_t err_status, int8_t dsp_error)
 {
 	int err_reason=0;
 
-	if(err_status&NVM_LOAD_ERR)
+	if(dsp_error)
 	{
-		kprintf(PORT_DEBUG, "nv_status = %d NV read error !\r\n", err_status);
-		err_reason = TRIP_REASON_MCU_INIT;
+		kprintf(PORT_DEBUG, "dsp wait error=%d !\r\n", dsp_error);
+		err_reason = TRIP_REASON_MCU_WAIT_FAIL;
 	}
-	else if(err_status&NVM_CRC_ERR)
+	else
 	{
-		kprintf(PORT_DEBUG, "nv_status = %d CRC error!\r\n", err_status);
-		err_reason = TRIP_REASON_MCU_CRC_FAILURE;
-	}
-	else if(err_status&NVM_COMM_ERR)
-	{
-		kprintf(PORT_DEBUG, "nv_status = %d COMM error!\r\n", err_status);
-		err_reason = TRIP_REASON_MCU_INIT;
-	}
-	else if(err_status&NVM_MOTOR_ERR)
-	{
-		kprintf(PORT_DEBUG, "nv_status = %d MOTOR type error!\r\n", err_status);
-		err_reason = TRIP_REASON_MCU_INIT;
+		if(err_status&NVM_LOAD_ERR)
+		{
+			kprintf(PORT_DEBUG, "nv_status = %d NV read error !\r\n", err_status);
+			err_reason = TRIP_REASON_MCU_INIT;
+		}
+		else if(err_status&NVM_CRC_ERR)
+		{
+			kprintf(PORT_DEBUG, "nv_status = %d CRC error!\r\n", err_status);
+			err_reason = TRIP_REASON_MCU_CRC_FAILURE;
+		}
+		else if(err_status&NVM_COMM_ERR)
+		{
+			kprintf(PORT_DEBUG, "nv_status = %d COMM error!\r\n", err_status);
+			//err_reason = TRIP_REASON_MCU_INIT;
+			err_reason = TRIP_REASON_MCU_COMM_FAIL;
+		}
+		else if(err_status&NVM_MOTOR_ERR)
+		{
+			kprintf(PORT_DEBUG, "nv_status = %d MOTOR type error!\r\n", err_status);
+			//err_reason = TRIP_REASON_MCU_INIT;
+			err_reason = TRIP_REASON_MCU_MOTOR_TYPE;
+		}
 	}
 
 	ERR_setErrorState(err_reason);
+
 }

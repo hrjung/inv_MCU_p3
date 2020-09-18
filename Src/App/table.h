@@ -330,6 +330,6 @@ extern int8_t table_updatebyTableQ(void);
 extern void table_initParam(void);
 extern int table_isDirectionValid(void);
 
-extern void table_handleInitError(int8_t err_status);
+extern void table_handleInitError(int8_t err_status, int8_t dsp_error);
 
 #endif /* SRC_TABLE_H_ */

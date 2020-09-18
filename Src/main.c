@@ -1578,11 +1578,12 @@ void mainHandlerTaskFunc(void const * argument)
 {
   /* USER CODE BEGIN mainHandlerTaskFunc */
   int8_t nv_status;
+  int8_t dsp_status=0;
 //	uint16_t addr=408;
 //	int32_t i2c_rvalue=0;
 //	uint8_t i2c_status;
 
-  osDelay(500); // DSP request wait 1 sec
+  osDelay(1000); // DSP request wait 1 sec
   kputs(PORT_DEBUG, "start mainHandler task\r\n");
 
 #ifdef SUPPORT_PRODUCTION_TEST_MODE
@@ -1606,15 +1607,17 @@ void mainHandlerTaskFunc(void const * argument)
 #endif
 
   UTIL_setLED(LED_COLOR_G, 0);
-  kprintf(PORT_DEBUG, "dsp_status = %d \r\n", UTIL_readDTMpin());
+  dsp_status = UTIL_readDTMpin(); // check DSP initialized
+  //dsp_status = DTM_DSP_TRIP_ERROR;
+
 #ifndef SUPPORT_UNIT_TEST
   nv_status = table_initNVM();
-  if(nv_status)
+  if(nv_status || dsp_status)
   {
-	  table_handleInitError(nv_status);
+	  table_handleInitError(nv_status, dsp_status);
   }
 
-  kprintf(PORT_DEBUG, "nv_status = %d  reset=%d\r\n", nv_status, reset_flag);
+  kprintf(PORT_DEBUG, "nv_status=%d, dsp_error=%d, reset=%d\r\n", nv_status, dsp_status, reset_flag);
 #endif
 
   // init queue
