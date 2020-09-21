@@ -76,6 +76,8 @@ STATIC int8_t table_setFactoryValue(PARAM_IDX_t index, int32_t value, int16_t op
 STATIC int8_t table_setTimeValue(PARAM_IDX_t index, int32_t value, int16_t option);
 int8_t table_setStatusValue(PARAM_IDX_t idx, int32_t value, int16_t option);
 
+extern int8_t err_state_f;
+
 extern void MB_UART_init(uint32_t baudrate_index);
 extern void MB_initTimer(int32_t b_index);
 extern void MB_setSlaveAddress(uint8_t addr);
@@ -1347,7 +1349,7 @@ int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, f
 	return 1;
 }
 
-int8_t table_updateCommError(uint16_t err_code)
+int8_t table_updateCommError(uint16_t err_code, int8_t init_flag)
 {
 	int i;
 	uint8_t nvm_status;
@@ -1363,15 +1365,30 @@ int8_t table_updateCommError(uint16_t err_code)
 		table_data[err_freq_1_type + (i+1)*ERRINFO_ITEM_CNT] = table_data[err_freq_1_type + i*ERRINFO_ITEM_CNT]; // freq
 
 #if 1
-		// update EEPROM
-		index = err_code_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
-		index = err_status_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
-		index = err_current_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
-		index = err_freq_1_type + (i+1)*ERRINFO_ITEM_CNT;
-		nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		if(init_flag)
+		{
+			// direct update EEPROM
+			index = err_code_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVM_writeParam(index, table_data[index]);
+			index = err_status_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVM_writeParam(index, table_data[index]);
+			index = err_current_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVM_writeParam(index, table_data[index]);
+			index = err_freq_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVM_writeParam(index, table_data[index]);
+		}
+		else
+		{
+			// update EEPROM
+			index = err_code_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+			index = err_status_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+			index = err_current_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+			index = err_freq_1_type + (i+1)*ERRINFO_ITEM_CNT;
+			nvm_status = NVMQ_enqueueNfcQ(index, table_data[index]);
+		}
 #endif
 	}
 
@@ -1387,11 +1404,21 @@ int8_t table_updateCommError(uint16_t err_code)
 	table_data[err_freq_1_type] = err_freq;
 
 #if 1
-	// update EEPROM
-	nvm_status = NVMQ_enqueueNfcQ(err_code_1_type, table_data[err_code_1_type]);
-	nvm_status = NVMQ_enqueueNfcQ(err_status_1_type, table_data[err_status_1_type]);
-	nvm_status = NVMQ_enqueueNfcQ(err_current_1_type, table_data[err_current_1_type]);
-	nvm_status = NVMQ_enqueueNfcQ(err_freq_1_type, table_data[err_freq_1_type]);
+	if(init_flag)
+	{
+		nvm_status = NVM_writeParam(err_code_1_type, table_data[err_code_1_type]);
+		nvm_status = NVM_writeParam(err_status_1_type, table_data[err_status_1_type]);
+		nvm_status = NVM_writeParam(err_current_1_type, table_data[err_current_1_type]);
+		nvm_status = NVM_writeParam(err_freq_1_type, table_data[err_freq_1_type]);
+	}
+	else
+	{
+		// update EEPROM
+		nvm_status = NVMQ_enqueueNfcQ(err_code_1_type, table_data[err_code_1_type]);
+		nvm_status = NVMQ_enqueueNfcQ(err_status_1_type, table_data[err_status_1_type]);
+		nvm_status = NVMQ_enqueueNfcQ(err_current_1_type, table_data[err_current_1_type]);
+		nvm_status = NVMQ_enqueueNfcQ(err_freq_1_type, table_data[err_freq_1_type]);
+	}
 #endif
 
 	return 1;
@@ -1542,6 +1569,11 @@ void table_handleInitError(int8_t err_status, int8_t dsp_error)
 		}
 	}
 
+	//err_reason = TRIP_REASON_MCU_CRC_FAILURE;
 	ERR_setErrorState(err_reason);
+
+	table_updateCommError(err_reason, 1); // initial error no need to get status from DSP
+
+	err_state_f = 1; // init error
 
 }

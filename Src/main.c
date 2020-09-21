@@ -1317,19 +1317,20 @@ void NfcNvmTaskFunc(void const * argument)
 		  UTIL_setLED(LED_COLOR_G, 0);
 	  }
 
-	  if(ERR_getErrorState() == TRIP_REASON_MCU_INIT) continue;
-
-	  // update system_parameter to NVM
-	  sys_index = NVM_getSysParamUpdateIndex();
-	  if(sys_index != SYSTEM_PARAM_SIZE)
+	  if(!ERR_isNvmError())
 	  {
-		  int8_t status=0;
+		  // update system_parameter to NVM
+		  sys_index = NVM_getSysParamUpdateIndex();
+		  if(sys_index != SYSTEM_PARAM_SIZE)
+		  {
+			  int8_t status=0;
 
-		  status = HDLR_updateSysParam(sys_index);
-		  if(status == 0) kprintf(PORT_DEBUG, "HDLR_updateSysParam index=%d ERROR\r\n", sys_index);
+			  status = HDLR_updateSysParam(sys_index);
+			  if(status == 0) kprintf(PORT_DEBUG, "HDLR_updateSysParam index=%d ERROR\r\n", sys_index);
 
-		  UTIL_setLED(LED_COLOR_G, 0);
-		  kputs(PORT_DEBUG, "HDLR_updateSysParam called\r\n");
+			  UTIL_setLED(LED_COLOR_G, 0);
+			  kputs(PORT_DEBUG, "HDLR_updateSysParam called\r\n");
+		  }
 	  }
 
 
@@ -1607,11 +1608,11 @@ void mainHandlerTaskFunc(void const * argument)
 #endif
 
   UTIL_setLED(LED_COLOR_G, 0);
-  dsp_status = UTIL_readDTMpin(); // check DSP initialized
-  //dsp_status = DTM_DSP_TRIP_ERROR;
 
 #ifndef SUPPORT_UNIT_TEST
-  nv_status = table_initNVM();
+  dsp_status = UTIL_readDTMpin(); // check DSP initialized
+  //dsp_status = 0; //DTM_DSP_TRIP_ERROR;
+  nv_status = table_initNVM(); // need initialize to read error for DSP wait error
   if(nv_status || dsp_status)
   {
 	  table_handleInitError(nv_status, dsp_status);

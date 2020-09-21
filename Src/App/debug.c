@@ -1477,7 +1477,7 @@ static int display_BoardInfo(uint8_t dport)
 void debugTaskFunc(void const * argument)
 {
 
-  osDelay(1500);
+  osDelay(2000);
 
   kputs(PORT_DEBUG, "start debugTask\r\n");
   /* Infinite loop */

@@ -313,7 +313,7 @@ extern int8_t table_setStatusValue(PARAM_IDX_t index, int32_t value, int16_t opt
 extern void table_setExtStatusValue(void);
 extern int8_t table_setStatusDSP(void);
 extern int8_t table_updateErrorDSP(uint16_t err_code, uint16_t status, float current, float freq);
-extern int8_t table_updateCommError(uint16_t err_code);
+extern int8_t table_updateCommError(uint16_t err_code, int8_t init_flag);
 
 extern int32_t table_getCtrllIn(void);
 

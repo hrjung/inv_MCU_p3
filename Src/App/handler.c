@@ -140,9 +140,9 @@ int8_t HDLR_handleDspError(void)
 	{
 		if(ERR_isCommError()) // Comm error cannot get response from DSP
 		{
-			err_code = TRIP_REASON_MCU_COMM_FAIL;
+			//err_code = TRIP_REASON_MCU_COMM_FAIL;
 			kputs(PORT_DEBUG, "HDLR_handleDspError get COMM Error\r\n");
-			table_updateCommError(err_code);
+			table_updateCommError(err_code, 0);
 		}
 		else
 		{
@@ -184,7 +184,7 @@ int8_t HDLR_readDspStatus(void)
 	uint16_t dummy[] = {0,0,0};
 	int8_t status;
 
-	 if(!ERR_isCommError()) // no comm error
+	 if(!(ERR_isCommError() || ERR_isInitialError()) ) // no comm error
 	 {
 #ifndef SUPPORT_UNIT_TEST
 		status = COMM_sendMessage(SPICMD_REQ_ST, dummy);

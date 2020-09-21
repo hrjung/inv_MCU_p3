@@ -31,9 +31,18 @@ uint8_t ERR_isCommError(void)
 	return (err_state == TRIP_REASON_MCU_COMM_FAIL);
 }
 
+uint8_t ERR_isInitialError(void)
+{
+	return (err_state == TRIP_REASON_MCU_INIT
+			|| err_state == TRIP_REASON_MCU_CRC_FAILURE
+			|| err_state == TRIP_REASON_MCU_MOTOR_TYPE
+			|| err_state == TRIP_REASON_MCU_WAIT_FAIL);
+}
+
 uint16_t ERR_isNvmError(void)
 {
-	return (err_state == TRIP_REASON_MCU_INIT);
+	return (err_state == TRIP_REASON_MCU_INIT
+			|| err_state == TRIP_REASON_MCU_CRC_FAILURE);
 }
 
 uint8_t ERR_getErrorState(void)
@@ -49,12 +58,15 @@ void ERR_setErrorState(TRIP_REASON_t err_code)
 	if(err_state == err_code || err_code == TRIP_REASON_NONE) return; // same error happened, ignore
 #endif
 
+	// ignore error after error
+	if(err_state != TRIP_REASON_NONE && err_state != TRIP_REASON_MCU_INPUT) return;
+
 	err_state = err_code;
 
 	if(err_state > TRIP_REASON_MAX) // trip from MCU
 	{
 #ifdef SUPPORT_RESTORE_EMERGENCY_STOP
-		if(err_state != TRIP_REASON_MCU_INPUT)
+		if(err_state != TRIP_REASON_MCU_INPUT) // emergency trip
 #endif
 			UTIL_setMTDpin(1); // notify to DSP
 	}
