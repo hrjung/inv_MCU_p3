@@ -728,19 +728,19 @@ int8_t EXT_AI_handleAin(void)
 					test_cmd = SPICMD_PARAM_W;
 				}
 				kprintf(PORT_DEBUG, " send SPICMD_PARAM_W  freq=%d, dir_chk=%d\r\n", freq, dir_check);
-#ifndef SUPPORT_UNIT_TEST
-				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-#endif
+//#ifndef SUPPORT_UNIT_TEST
+//				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
+//				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+//#endif
 			}
 			else
 			{
 				test_cmd = SPICMD_PARAM_W;
 				kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
-#ifndef SUPPORT_UNIT_TEST
-				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-#endif
+//#ifndef SUPPORT_UNIT_TEST
+//				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
+//				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+//#endif
 			}
 		}
 
@@ -777,11 +777,11 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 		{
 			test_cmd = SPICMD_PARAM_W;
 			kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
-	#ifndef SUPPORT_UNIT_TEST
-			status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-			if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-			else // if error, not update
-	#endif
+//	#ifndef SUPPORT_UNIT_TEST
+//			status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
+//			if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+//			else // if error, not update
+//	#endif
 			prev_adc_cmd = freq;
 		}
 	}

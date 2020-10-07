@@ -147,7 +147,7 @@ void OperationTimerCallback(void const * argument);
 /* USER CODE BEGIN PFP */
 
 // timer setup
-#define UIO_UPDATE_TIME_INTERVAL	10 // 10ms
+#define UIO_UPDATE_TIME_INTERVAL	50 // 50ms
 #define ACC_READ_TIME_INTERVAL		1000 // 1sec
 #define DSP_STATUS_TIME_INTERVAL	1000 // 1sec
 #define OPERATION_TIME_INTERVAL		60000 // 1 min
@@ -1788,7 +1788,7 @@ void userIoTimerCallback(void const * argument)
 	exec_do_cnt++;
 
 
-	if(user_io_handle_cnt++ > 20) // 200 ms, set flag for EXT IO handler
+	if(user_io_handle_cnt++ > 100) // 1sec, set flag for EXT IO handler
 	{
 		user_io_handle_cnt=0;
 		user_io_handle_f = 1;

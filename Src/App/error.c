@@ -18,6 +18,8 @@
 
 STATIC uint8_t err_state=TRIP_REASON_NONE;
 
+extern uint8_t mtd_pin;
+
 //extern int32_t table_getStatusValue(int16_t index);
 extern void table_getStatusFromTable(int32_t *status, float *current, float *freq);
 
@@ -71,6 +73,6 @@ void ERR_setErrorState(TRIP_REASON_t err_code)
 			UTIL_setMTDpin(1); // notify to DSP
 	}
 
-	kprintf(PORT_DEBUG, "set Error=%d\r\n", err_state);
+	kprintf(PORT_DEBUG, "set Error=%d, pin=%d\r\n", err_state, mtd_pin);
 }
 
