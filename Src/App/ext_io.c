@@ -681,6 +681,7 @@ int8_t EXT_AI_handleAin(void)
 	uint16_t dummy[3] = {0,0,0};
 	int8_t status=1;
 	int dir_check=0;
+	static int run_count=0;
 
 	if(!ain_ready_flag) return 1;
 
@@ -727,22 +728,33 @@ int8_t EXT_AI_handleAin(void)
 #endif
 					test_cmd = SPICMD_PARAM_W;
 				}
-				kprintf(PORT_DEBUG, " send SPICMD_PARAM_W  freq=%d, dir_chk=%d\r\n", freq, dir_check);
-//#ifndef SUPPORT_UNIT_TEST
-//				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-//				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-//#endif
+				if(run_count == 0)
+				{
+					kprintf(PORT_DEBUG, " send SPICMD_PARAM_W  freq=%d, dir_chk=%d\r\n", freq, dir_check);
+#ifndef SUPPORT_UNIT_TEST
+					//status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO); // not store at EEPROM
+					status = COMM_sendFreqValue(freq);
+					if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+#endif
+				}
 			}
 			else
 			{
-				test_cmd = SPICMD_PARAM_W;
-				kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
-//#ifndef SUPPORT_UNIT_TEST
-//				status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-//				if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-//#endif
+				if(run_count == 0)
+				{
+					test_cmd = SPICMD_PARAM_W;
+					kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
+#ifndef SUPPORT_UNIT_TEST
+					//status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO); // not store at EEPROM
+					status = COMM_sendFreqValue(freq);
+					if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+#endif
+				}
 			}
 		}
+
+		if(run_count > 5) run_count=0;
+		else run_count++;
 
 		if(status != 0) // if error, not update
 			prev_adc_cmd = freq;
@@ -756,8 +768,12 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 	uint16_t value;
 	int32_t freq, diff=0;
 	int8_t status, result=1;
+	static int run_count=0;
 
 	if(!ain_ready_flag) return 1;
+
+	if(run_count < 5) {run_count++; goto RUN_EXT_DI;} // process
+	else run_count = 0;
 
 	// read config, can be updated during running
 	EXT_AI_setConfig();
@@ -777,15 +793,17 @@ int8_t EXT_handleDAin(int32_t ctrl_in) // accept both DI, AI as control
 		{
 			test_cmd = SPICMD_PARAM_W;
 			kprintf(PORT_DEBUG, "time=%d, send SPICMD_PARAM_W  freq=%d\r\n", timer_100ms, freq);
-//	#ifndef SUPPORT_UNIT_TEST
-//			status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO);
-//			if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
-//			else // if error, not update
-//	#endif
+#ifndef SUPPORT_UNIT_TEST
+			//status = table_setFreqValue(value_type, freq, REQ_FROM_EXTIO); // not store at EEPROM
+			status = COMM_sendFreqValue(freq);
+			if(status == 0) { kprintf(PORT_DEBUG, "set freq=%d to DSP error! \r\n", freq); }
+			else // if error, not update
+#endif
 			prev_adc_cmd = freq;
 		}
 	}
 
+RUN_EXT_DI:
 	result = EXT_DI_handleDin(ctrl_in);
 
 	return result;

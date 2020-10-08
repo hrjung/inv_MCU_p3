@@ -147,7 +147,7 @@ void OperationTimerCallback(void const * argument);
 /* USER CODE BEGIN PFP */
 
 // timer setup
-#define UIO_UPDATE_TIME_INTERVAL	50 // 50ms
+#define UIO_UPDATE_TIME_INTERVAL	10 // 10ms
 #define ACC_READ_TIME_INTERVAL		1000 // 1sec
 #define DSP_STATUS_TIME_INTERVAL	1000 // 1sec
 #define OPERATION_TIME_INTERVAL		60000 // 1 min
@@ -388,7 +388,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
-  osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms UserIo update
+  osTimerStart(userIoTimerHandle, UIO_UPDATE_TIME_INTERVAL); // 10ms -> 50ms UserIo update
   osTimerStart(AccReadTimerHandle, ACC_READ_TIME_INTERVAL); // 1 sec to read Accelerometer
   osTimerStart(YstcTriggerTimerHandle, 100); //100ms
 
@@ -1788,7 +1788,7 @@ void userIoTimerCallback(void const * argument)
 	exec_do_cnt++;
 
 
-	if(user_io_handle_cnt++ > 100) // 1sec, set flag for EXT IO handler
+	if(user_io_handle_cnt++ > 20) // 200ms, set flag for EXT IO handler
 	{
 		user_io_handle_cnt=0;
 		user_io_handle_f = 1;

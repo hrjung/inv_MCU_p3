@@ -66,6 +66,7 @@ typedef enum
 extern int8_t COMM_convertValue(PARAM_IDX_t table_idx, uint16_t *buf);
 extern int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data);
 
+extern int8_t COMM_sendFreqValue(const int32_t freq);
 extern int8_t COMM_sendTestCmd(uint16_t cmd);
 
 #endif /* SRC_DSP_COMM_H_ */

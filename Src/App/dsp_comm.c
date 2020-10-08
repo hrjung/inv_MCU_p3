@@ -704,6 +704,23 @@ int8_t COMM_sendMessage(COMM_CMD_t cmd, const uint16_t* data)
 	return (result == COMM_SUCCESS);
 }
 
+int8_t COMM_sendFreqValue(const int32_t freq)
+{
+	int8_t status;
+	uint16_t buf[3] = {0,0,0};
+	float value_f;
+
+	buf[0] = (uint16_t)table_getDspAddr(value_type);
+
+	value_f = (float)((float)freq/10.0);
+	memcpy(&buf[1], &value_f, sizeof(float));
+
+	status = COMM_sendMessage(SPICMD_PARAM_W, buf);
+	if(status == 0) { kprintf(PORT_DEBUG, "set value_type to DSP error! \r\n"); return 0;}
+
+	return 1;
+}
+
 #if 0
 // only used at inverter initialize to sync motor parameter
 int8_t COMM_sendMotorType(void)
